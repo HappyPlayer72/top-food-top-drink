@@ -1,0 +1,519 @@
+'use client';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { X } from 'lucide-react';
+import {
+  DrinkQuickFilter,
+  FoodQuickFilter,
+  NavSection,
+  Restaurant,
+  Review,
+  UserAccount,
+  Vertical,
+} from '../types';
+import {
+  DRINK_VENUES,
+  INITIAL_RESTAURANTS,
+  TOURIST_ZONES,
+  WEEKEND_EVENTS,
+  recalculateRestaurantWithReview,
+} from '../data/restaurants';
+import { LoginScreen } from './LoginScreen';
+import { Navbar } from './Navbar';
+import { EditorialListView } from './EditorialListView';
+import { MapView } from './MapView';
+import { MonthlyTopView } from './MonthlyTopView';
+import { RestaurantDetailModal } from './RestaurantDetailModal';
+
+const USER_ACCOUNTS: UserAccount[] = [
+  {
+    id: 'andreea-m',
+    name: 'Andreea M.',
+    email: 'andreea@e-uvt.ro',
+    role: 'verified-local',
+    neighborhood: 'Iosefin',
+    weightMultiplier: 2.0,
+    description: 'Cont verificat Timișoara · review-urile tale au pondere 2,0×.',
+  },
+  {
+    id: 'luca-t',
+    name: 'Luca T.',
+    email: 'luca@visit.ro',
+    role: 'tourist',
+    weightMultiplier: 1.0,
+    description:
+      'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
+  },
+];
+
+const VERTICAL_TITLES: Record<Vertical, string> = {
+  food: 'topfood/timișoara — Unde mănâncă timișorenii, nu turiștii',
+  drink: 'topdrink/timișoara — Unde ies timișorenii, fără capcane',
+};
+
+function buildUrlForState(
+  vertical: Vertical,
+  navSection: NavSection,
+  venueSlugOrId: string | null
+): string {
+  const basePath =
+    vertical === 'drink' ? '/topdrink/timisoara' : '/topfood/timisoara';
+  const params = new URLSearchParams();
+  if (navSection !== 'top') {
+    params.set('section', navSection);
+  }
+  if (venueSlugOrId) {
+    params.set('venue', venueSlugOrId);
+  }
+  const qs = params.toString();
+  return qs ? `${basePath}?${qs}` : basePath;
+}
+
+export interface TopFoodShellProps {
+  initialVertical?: Vertical;
+  initialSection?: NavSection;
+}
+
+export function TopFoodShell({
+  initialVertical = 'food',
+  initialSection = 'top',
+}: TopFoodShellProps) {
+  const [vertical, setVertical] = useState<Vertical>(initialVertical);
+  const [navSection, setNavSection] = useState<NavSection>(initialSection);
+
+  const [foodRestaurants, setFoodRestaurants] =
+    useState<Restaurant[]>(INITIAL_RESTAURANTS);
+  const [drinkVenues, setDrinkVenues] =
+    useState<Restaurant[]>(DRINK_VENUES);
+
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [foodFilters, setFoodFilters] = useState<FoodQuickFilter[]>([]);
+  const [drinkFilters, setDrinkFilters] = useState<DrinkQuickFilter[]>([
+    'vineri-noaptea',
+  ]);
+  const [selectedNeighborhood, setSelectedNeighborhood] =
+    useState<string>('all');
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<
+    string | null
+  >(null);
+  const [savedIds, setSavedIds] = useState<string[]>(['ciorba-lui-sandu']);
+  const [accounts, setAccounts] = useState<UserAccount[]>(USER_ACCOUNTS);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showLoginScreen, setShowLoginScreen] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const urlReadyRef = useRef<boolean>(false);
+  const pendingSyncRef = useRef<{
+    vertical: Vertical;
+    navSection: NavSection;
+    selectedRestaurantId: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedDark = localStorage.getItem('topfood-dark-mode') === 'true';
+      setDarkMode(savedDark);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    try {
+      localStorage.setItem('topfood-dark-mode', String(darkMode));
+    } catch {
+      // ignore storage errors
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (!statusMessage) return;
+    const timer = window.setTimeout(() => {
+      setStatusMessage(null);
+    }, 3500);
+    return () => window.clearTimeout(timer);
+  }, [statusMessage]);
+
+  useEffect(() => {
+    const syncFromLocation = () => {
+      const { pathname, search } = window.location;
+      const params = new URLSearchParams(search);
+
+      const nextVertical: Vertical = pathname.startsWith('/topdrink')
+        ? 'drink'
+        : pathname.startsWith('/topfood')
+        ? 'food'
+        : initialVertical;
+
+      const rawSection = params.get('section');
+      const nextSection: NavSection =
+        rawSection === 'map' || rawSection === 'monthly' ? rawSection : 'top';
+
+      const venueParam = params.get('venue');
+      const matchedVenue = venueParam
+        ? INITIAL_RESTAURANTS.concat(DRINK_VENUES).find(
+            (r) => r.slug === venueParam || r.id === venueParam
+          ) ?? null
+        : null;
+      const nextVenueId = matchedVenue ? matchedVenue.id : null;
+
+      pendingSyncRef.current = {
+        vertical: nextVertical,
+        navSection: nextSection,
+        selectedRestaurantId: nextVenueId,
+      };
+      setVertical(nextVertical);
+      setNavSection(nextSection);
+      setSelectedRestaurantId(nextVenueId);
+    };
+
+    syncFromLocation();
+    urlReadyRef.current = true;
+
+    const handlePopState = () => {
+      syncFromLocation();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [initialVertical]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (showLoginScreen || selectedRestaurantId !== null) return;
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+
+      const target = e.target as HTMLElement | null;
+      const active = document.activeElement as HTMLElement | null;
+      const el = target ?? active;
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.tagName === 'SELECT' ||
+          el.isContentEditable)
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+      if (navSection !== 'top') {
+        setNavSection('top');
+        window.requestAnimationFrame(() => {
+          const input = document.getElementById(
+            'food-search-input'
+          ) as HTMLInputElement | null;
+          input?.focus();
+        });
+      } else {
+        const input = document.getElementById(
+          'food-search-input'
+        ) as HTMLInputElement | null;
+        input?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showLoginScreen, selectedRestaurantId, navSection]);
+
+  const currentUser = useMemo(
+    () =>
+      currentUserId
+        ? accounts.find((u) => u.id === currentUserId) ?? null
+        : null,
+    [accounts, currentUserId]
+  );
+
+  const handleLoginSuccess = (user: UserAccount) => {
+    setAccounts((prev) =>
+      prev.some((acc) => acc.id === user.id) ? prev : [...prev, user]
+    );
+    setCurrentUserId(user.id);
+    setShowLoginScreen(false);
+    setStatusMessage(`Autentificat ca ${user.name}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleContinueAsGuest = () => {
+    setCurrentUserId(null);
+    setShowLoginScreen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenLogin = () => {
+    setSelectedRestaurantId(null);
+    setShowLoginScreen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogout = () => {
+    setCurrentUserId(null);
+    setSelectedRestaurantId(null);
+    setShowLoginScreen(false);
+    setStatusMessage('Te-ai deconectat. Navighezi ca vizitator.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectUser = (userId: string) => {
+    setCurrentUserId(userId);
+    const matched = accounts.find((u) => u.id === userId);
+    if (matched) {
+      setStatusMessage(`Cont activ schimbat: ${matched.name}`);
+    }
+  };
+
+  const handleToggleFoodFilter = (f: FoodQuickFilter) => {
+    setFoodFilters((prev) =>
+      prev.includes(f) ? prev.filter((id) => id !== f) : [...prev, f]
+    );
+  };
+
+  const handleToggleDrinkFilter = (f: DrinkQuickFilter) => {
+    setDrinkFilters((prev) =>
+      prev.includes(f) ? prev.filter((id) => id !== f) : [...prev, f]
+    );
+  };
+
+  const allVenues = useMemo(
+    () => [...foodRestaurants, ...drinkVenues],
+    [foodRestaurants, drinkVenues]
+  );
+
+  const handleToggleSave = (id: string) => {
+    const isAlreadySaved = savedIds.includes(id);
+    const venueName = allVenues.find((r) => r.id === id)?.name;
+    setSavedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+    if (isAlreadySaved) {
+      setStatusMessage(
+        venueName ? `Scos din salvate: ${venueName}` : 'Local scos din salvate'
+      );
+    } else {
+      setStatusMessage(venueName ? `Salvat: ${venueName}` : 'Local salvat');
+    }
+  };
+
+  const activeVerticalVenues =
+    vertical === 'drink' ? drinkVenues : foodRestaurants;
+
+  const selectedRestaurant = useMemo(() => {
+    if (!selectedRestaurantId) return null;
+    return allVenues.find((r) => r.id === selectedRestaurantId) ?? null;
+  }, [allVenues, selectedRestaurantId]);
+
+  useEffect(() => {
+    document.title = VERTICAL_TITLES[vertical];
+    if (!urlReadyRef.current) return;
+
+    if (pendingSyncRef.current) {
+      const pending = pendingSyncRef.current;
+      if (
+        pending.vertical === vertical &&
+        pending.navSection === navSection &&
+        pending.selectedRestaurantId === selectedRestaurantId
+      ) {
+        pendingSyncRef.current = null;
+      }
+      return;
+    }
+
+    const venueKey = selectedRestaurant
+      ? selectedRestaurant.slug || selectedRestaurant.id
+      : null;
+    const nextUrl = buildUrlForState(vertical, navSection, venueKey);
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+      window.history.pushState(null, '', nextUrl);
+    }
+  }, [vertical, navSection, selectedRestaurantId, selectedRestaurant]);
+
+  const savedRestaurants = useMemo(
+    () => allVenues.filter((r) => savedIds.includes(r.id)),
+    [allVenues, savedIds]
+  );
+
+  const handleAddReview = (restaurantId: string, newReview: Review) => {
+    setFoodRestaurants((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId ? recalculateRestaurantWithReview(r, newReview) : r
+      )
+    );
+    setDrinkVenues((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId ? recalculateRestaurantWithReview(r, newReview) : r
+      )
+    );
+  };
+
+  const handleUpdateCrowdReport = (
+    venueId: string,
+    segments: 1 | 2 | 3 | 4 | 5,
+    label: string
+  ) => {
+    setDrinkVenues((prev) =>
+      prev.map((v) =>
+        v.id === venueId
+          ? { ...v, crowdSegments: segments, crowdLabel: label }
+          : v
+      )
+    );
+  };
+
+  const handleSwitchToMap = (restaurant?: Restaurant) => {
+    if (restaurant) {
+      setSelectedNeighborhood(restaurant.neighborhood);
+    }
+    setSelectedRestaurantId(null);
+    setNavSection('map');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFoodFilters([]);
+    setDrinkFilters([]);
+    setSelectedNeighborhood('all');
+  };
+
+  const isDrink = vertical === 'drink';
+
+  if (showLoginScreen) {
+    return (
+      <LoginScreen
+        vertical={vertical}
+        onVerticalChange={setVertical}
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode((prev) => !prev)}
+        demoUsers={USER_ACCOUNTS}
+        onLoginSuccess={handleLoginSuccess}
+        onContinueAsGuest={handleContinueAsGuest}
+      />
+    );
+  }
+
+  return (
+    <div
+      id="top"
+      className={`min-h-screen flex flex-col ${
+        isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
+      }`}
+    >
+      <Navbar
+        vertical={vertical}
+        onVerticalChange={(v) => {
+          setVertical(v);
+          setSelectedRestaurantId(null);
+        }}
+        navSection={navSection}
+        onNavSectionChange={(s) => {
+          setNavSection(s);
+          setSelectedRestaurantId(null);
+        }}
+        savedRestaurants={savedRestaurants}
+        onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
+        currentUser={currentUser}
+        availableUsers={accounts}
+        onSelectUser={handleSelectUser}
+        onOpenLogin={handleOpenLogin}
+        onLogout={handleLogout}
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode((prev) => !prev)}
+      />
+
+      <main className="flex-1">
+        {navSection === 'top' && (
+          <EditorialListView
+            vertical={vertical}
+            restaurants={foodRestaurants}
+            drinkVenues={drinkVenues}
+            weekendEvents={WEEKEND_EVENTS}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            foodFilters={foodFilters}
+            onToggleFoodFilter={handleToggleFoodFilter}
+            drinkFilters={drinkFilters}
+            onToggleDrinkFilter={handleToggleDrinkFilter}
+            onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
+            onOpenMonthlyTop={() => {
+              setNavSection('monthly');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onUpdateCrowdReport={handleUpdateCrowdReport}
+            onResetFilters={handleResetFilters}
+          />
+        )}
+
+        {navSection === 'map' && (
+          <MapView
+            vertical={vertical}
+            restaurants={activeVerticalVenues}
+            onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
+            selectedRestaurant={selectedRestaurant}
+            selectedNeighborhood={selectedNeighborhood}
+            onSelectNeighborhood={(n) => setSelectedNeighborhood(n)}
+            touristZones={TOURIST_ZONES}
+            onResetFilters={handleResetFilters}
+          />
+        )}
+
+        {navSection === 'monthly' && (
+          <MonthlyTopView
+            vertical={vertical}
+            restaurants={activeVerticalVenues}
+            onBack={() => {
+              setNavSection('top');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
+          />
+        )}
+      </main>
+
+      <RestaurantDetailModal
+        restaurant={selectedRestaurant}
+        currentUser={currentUser}
+        onClose={() => setSelectedRestaurantId(null)}
+        onAddReview={handleAddReview}
+        onRequireLogin={handleOpenLogin}
+        onLocateOnMap={handleSwitchToMap}
+        isSaved={
+          selectedRestaurant ? savedIds.includes(selectedRestaurant.id) : false
+        }
+        onToggleSave={handleToggleSave}
+      />
+
+      {statusMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-16 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 max-w-[calc(100vw-2rem)]"
+        >
+          <div
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-[6px] border shadow-lg text-[13px] font-semibold ${
+              isDrink
+                ? 'bg-[#143025] border-[#F2A33A]/60 text-[#F4EEE2]'
+                : 'bg-[#3A2418] border-[#3A2418] text-white'
+            }`}
+          >
+            <span>{statusMessage}</span>
+            <button
+              type="button"
+              onClick={() => setStatusMessage(null)}
+              aria-label="Închide notificarea"
+              className="btn-press opacity-75 hover:opacity-100 p-1 -mr-1 rounded"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default TopFoodShell;

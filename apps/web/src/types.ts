@@ -34,22 +34,12 @@ export type AuthorRole = 'verified-local' | 'tourist' | 'influencer' | 'regular'
 export interface UserAccount {
   id: string;
   name: string;
+  email?: string;
   role: 'verified-local' | 'tourist';
   neighborhood?: string;
   weightMultiplier: number;
   description: string;
 }
-
-export type SortOption = 'food-desc' | 'trap-asc' | 'gap-desc';
-
-export type QuickFilterId =
-  | 'top-food'
-  | 'zero-trap'
-  | 'budget-gems'
-  | 'splurge'
-  | 'open-now';
-
-export type ActiveTab = 'editorial' | 'map';
 
 export interface SignatureDish {
   name: string;
