@@ -2,6 +2,7 @@ import type { owner } from '@tftd/api';
 import { AvertizareaCard, CoasterScore, LocalVsTouristBars } from '@/components/BrandPrimitives';
 import { formatScore } from '@/types';
 import { AppealForm } from './AppealForm';
+import { cate } from '@/lib/ro';
 
 type Stats = Awaited<ReturnType<typeof owner.venueStats>>;
 
@@ -29,7 +30,7 @@ export function StatsPanel({ venueId, venueName, stats }: { venueId: string; ven
         {scores.honest != null ? <CoasterScore score={scores.honest} size="lg" /> : null}
         <div className="min-w-64 flex-1">
           <p className="text-[14px] text-muted-cafea">
-            Scor Onest din {scores.explanation?.reviewCount ?? 0} review-uri: {scores.explanation?.localCount ?? 0} de la localnici,{' '}
+            Scor Onest din {cate(scores.explanation?.reviewCount ?? 0, 'review', 'review-uri')}: {scores.explanation?.localCount ?? 0} de la localnici,{' '}
             {scores.explanation?.touristCount ?? 0} de la turiști. Localnicii verificați cântăresc ×2, review-urile plătite ×0,2, iar
             scorul e tras spre media orașului.
             {scores.explanation && !scores.explanation.enoughData ? ' Date puține: scorul se va mișca pe măsură ce vin review-uri noi.' : ''}
@@ -92,7 +93,7 @@ export function StatsPanel({ venueId, venueName, stats }: { venueId: string; ven
                       const c = cell(m, t);
                       return (
                         <td key={t} className="py-2 pr-3">
-                          {c ? `${formatScore(Number(c.avgRating))} · ${c.reviews} review-uri` : '—'}
+                          {c ? `${formatScore(Number(c.avgRating))} · ${cate(Number(c.reviews), 'review', 'review-uri')}` : '—'}
                         </td>
                       );
                     })}

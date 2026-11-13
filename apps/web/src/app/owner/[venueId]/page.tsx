@@ -42,7 +42,7 @@ export default async function VenueDashboard({ params }: { params: Promise<{ ven
     <div className="flex flex-col gap-10">
       <div>
         <Link href="/owner" className="inline-flex min-h-11 items-center text-[14px] hover:underline">
-          ← Localele tale
+          <span aria-hidden="true">←&nbsp;</span>Localele tale
         </Link>
         <h1 className="font-display text-[44px] leading-none">{venue.name}</h1>
         <nav aria-label="Secțiuni" className="mt-4 flex flex-wrap gap-2">

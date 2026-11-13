@@ -51,7 +51,7 @@ function ReviewItem({ venueId, review: r }: { venueId: string; review: Review })
       ))}
       <div className="flex flex-wrap gap-2">
         <details className="min-w-64 flex-1">
-          <summary className="inline-flex min-h-11 cursor-pointer items-center rounded-[4px] border border-hairline px-3 text-[14px] font-semibold">
+          <summary className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carou inline-flex min-h-11 cursor-pointer items-center rounded-[4px] border border-hairline px-3 text-[14px] font-semibold">
             Răspunde
           </summary>
           <form action={reply} className="mt-2 flex flex-col gap-2">
@@ -63,7 +63,7 @@ function ReviewItem({ venueId, review: r }: { venueId: string; review: Review })
           </form>
         </details>
         <details className="min-w-64 flex-1">
-          <summary className="inline-flex min-h-11 cursor-pointer items-center rounded-[4px] border border-hairline px-3 text-[14px] font-semibold">
+          <summary className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carou inline-flex min-h-11 cursor-pointer items-center rounded-[4px] border border-hairline px-3 text-[14px] font-semibold">
             Raportează
           </summary>
           <form action={report} className="mt-2 flex flex-col gap-2">

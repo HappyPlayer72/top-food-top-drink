@@ -30,9 +30,9 @@ export function AuthForm() {
       </div>
 
       {tab === 'login' ? (
-        <form action={login} className="mt-6 flex flex-col gap-4">
+        <form key={loginState.seq} action={login} className="mt-6 flex flex-col gap-4">
           <Field label="Nume de utilizator, email sau telefon">
-            <input name="login" required autoComplete="username" spellCheck={false} className={inputClass} />
+            <input name="login" defaultValue={loginState.values?.login} required autoComplete="username" autoCapitalize="none" spellCheck={false} className={inputClass} />
           </Field>
           <Field label="Parolă">
             <input name="password" type="password" required autoComplete="current-password" className={inputClass} />
@@ -41,15 +41,15 @@ export function AuthForm() {
           <SubmitButton pendingLabel="Se verifică…">Intră în cont</SubmitButton>
         </form>
       ) : (
-        <form action={register} className="mt-6 flex flex-col gap-4">
+        <form key={registerState.seq} action={register} className="mt-6 flex flex-col gap-4">
           <Field label="Nume de utilizator" hint="3–30 caractere: litere mici, cifre, punct sau underscore.">
-            <input name="username" required autoComplete="username" spellCheck={false} placeholder="ex. bistro.ana…" className={inputClass} />
+            <input name="username" defaultValue={registerState.values?.username} required autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="ex. bistro.ana…" className={inputClass} />
           </Field>
           <Field label="Numele afișat">
-            <input name="displayName" autoComplete="name" placeholder="ex. Ana Pop…" className={inputClass} />
+            <input name="displayName" defaultValue={registerState.values?.displayName} autoComplete="name" placeholder="ex. Ana Pop…" className={inputClass} />
           </Field>
           <Field label="Email">
-            <input name="email" type="email" required autoComplete="email" spellCheck={false} placeholder="ex. ana@bistro.ro…" className={inputClass} />
+            <input name="email" defaultValue={registerState.values?.email} type="email" required autoComplete="email" spellCheck={false} placeholder="ex. ana@bistro.ro…" className={inputClass} />
           </Field>
           <Field label="Parolă" hint="Cel puțin 8 caractere.">
             <input name="password" type="password" required minLength={8} autoComplete="new-password" className={inputClass} />

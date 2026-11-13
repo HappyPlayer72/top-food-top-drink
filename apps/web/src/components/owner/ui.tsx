@@ -27,7 +27,7 @@ export function Field({
 }
 
 export const inputClass =
-  'min-h-11 w-full rounded-[4px] border border-hairline bg-white px-3 py-2 text-[15px] text-cafea placeholder:text-muted-cafea/70 focus-visible:border-carou';
+  'min-h-11 w-full rounded-[4px] border border-hairline bg-white px-3 py-2 text-[16px] text-cafea placeholder:text-muted-cafea focus-visible:border-carou';
 
 /** Buton principal; rămâne activ până pornește cererea, apoi arată „…”. */
 export function SubmitButton({ children, pendingLabel = 'Se trimite…', variant = 'primary' }: {

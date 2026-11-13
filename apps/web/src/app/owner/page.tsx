@@ -28,7 +28,7 @@ export default async function OwnerHome() {
 
   return (
     <div className="flex flex-col gap-10">
-      <h1 className="font-display text-[44px] leading-none">Dashboard proprietar</h1>
+      <h1 className="font-display text-[44px] leading-none">Panoul proprietarului</h1>
 
       <Panel id="localele-tale" title="Localele tale">
         {mine.length ? (

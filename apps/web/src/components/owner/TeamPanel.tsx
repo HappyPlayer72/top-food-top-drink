@@ -20,7 +20,7 @@ export function TeamPanel({ venueId, team, ratings }: { venueId: string; team: T
     <div className="flex flex-col gap-8">
       <section aria-labelledby="echipa-lista" className="flex flex-col gap-3">
         <h3 id="echipa-lista" className="text-[18px] font-semibold text-cafea">
-          Echipa
+          Membri
         </h3>
         {team.length ? (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

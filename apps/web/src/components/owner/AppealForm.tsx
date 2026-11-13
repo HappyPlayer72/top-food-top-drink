@@ -10,7 +10,7 @@ export function AppealForm({ venueId, alreadyAppealed }: { venueId: string; alre
   if (state.ok) return <FormMessage state={state} />;
   return (
     <details className="rounded-[4px] border border-hairline p-3">
-      <summary className="min-h-11 cursor-pointer content-center text-[15px] font-semibold">
+      <summary className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carou min-h-11 cursor-pointer content-center text-[15px] font-semibold">
         {alreadyAppealed ? 'Ai o contestație în lucru. Mai trimite una' : 'Contestă eticheta de capcană'}
       </summary>
       <form action={action} className="mt-3 flex flex-col gap-3">

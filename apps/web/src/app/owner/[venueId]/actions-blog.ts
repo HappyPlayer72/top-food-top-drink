@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { owner, ServiceError } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { errorMessage, getUserId } from '@/lib/server/session';
-import { field, type FormState } from '@/lib/form';
+import { field, keep, type FormState } from '@/lib/form';
 import { parseBucharest } from '@/lib/time';
 
 async function requireUser(): Promise<string> {
@@ -42,11 +42,11 @@ function parsePost(fd: FormData): { input: owner.PostInput } | { error: string }
 
 export async function createPostAction(venueId: string, _: FormState, fd: FormData): Promise<FormState> {
   const parsed = parsePost(fd);
-  if ('error' in parsed) return parsed;
+  if ('error' in parsed) return keep(fd, parsed);
   try {
     await owner.createPost(getDb(), await requireUser(), venueId, parsed.input);
   } catch (e) {
-    return { error: errorMessage(e) };
+    return keep(fd, { error: errorMessage(e) });
   }
   revalidatePath(`/owner/${venueId}`);
   return { ok: true, message: 'Postarea a fost salvată.' };
@@ -55,11 +55,11 @@ export async function createPostAction(venueId: string, _: FormState, fd: FormDa
 /** Câmpul „Publică la" gol = rămâne data existentă. */
 export async function updatePostAction(venueId: string, postId: string, _: FormState, fd: FormData): Promise<FormState> {
   const parsed = parsePost(fd);
-  if ('error' in parsed) return parsed;
+  if ('error' in parsed) return keep(fd, parsed);
   try {
     await owner.updatePost(getDb(), await requireUser(), postId, parsed.input);
   } catch (e) {
-    return { error: errorMessage(e) };
+    return keep(fd, { error: errorMessage(e) });
   }
   revalidatePath(`/owner/${venueId}`);
   return { ok: true, message: 'Postarea a fost actualizată.' };

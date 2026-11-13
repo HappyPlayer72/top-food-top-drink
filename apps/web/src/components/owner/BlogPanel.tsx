@@ -25,9 +25,9 @@ export function BlogPanel({ venueId, posts }: { venueId: string; posts: OwnerPos
   const [state, create] = useActionState(createPostAction.bind(null, venueId), EMPTY);
   return (
     <div className="flex flex-col gap-6">
-      <form action={create} className="group flex flex-col gap-3">
+      <form key={state.seq} action={create} className="group flex flex-col gap-3">
         <h3 className="font-display text-[22px] leading-none text-cafea">Postare nouă</h3>
-        <PostFields />
+        <PostFields values={state.values} />
         <FormMessage state={state} />
         <div>
           <SubmitButton>Publică postarea</SubmitButton>
@@ -48,11 +48,11 @@ export function BlogPanel({ venueId, posts }: { venueId: string; posts: OwnerPos
 }
 
 /** Câmpurile comune formularului nou și celui de editare. Data evenimentului apare doar la „Eveniment" (CSS :has, fără state, deci se resetează odată cu formularul). */
-function PostFields({ post }: { post?: OwnerPost }) {
+function PostFields({ post, values }: { post?: OwnerPost; values?: Record<string, string> }) {
   return (
     <>
       <Field label="Tip">
-        <select name="type" defaultValue={post?.type ?? 'menu'} className={inputClass}>
+        <select name="type" defaultValue={values?.type ?? post?.type ?? 'menu'} className={inputClass}>
           {TYPES.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -61,21 +61,21 @@ function PostFields({ post }: { post?: OwnerPost }) {
         </select>
       </Field>
       <Field label="Titlu">
-        <input name="title" required maxLength={140} defaultValue={post?.title} className={inputClass} />
+        <input name="title" required maxLength={140} defaultValue={values?.title ?? post?.title} className={inputClass} />
       </Field>
       <Field label="Text">
-        <textarea name="body" required maxLength={5000} rows={4} defaultValue={post?.body} className={inputClass} />
+        <textarea name="body" required maxLength={5000} rows={4} defaultValue={values?.body ?? post?.body} className={inputClass} />
       </Field>
       <Field label="Poze (opțional)" hint="URL-uri care încep cu https://, unul pe linie.">
-        <textarea name="photos" rows={2} defaultValue={post?.photos.join('\n')} className={inputClass} />
+        <textarea name="photos" rows={2} defaultValue={values?.photos ?? post?.photos.join('\n')} className={inputClass} />
       </Field>
       <div className="hidden group-has-[option[value=event]:checked]:block">
         <Field label="Data evenimentului">
-          <input type="datetime-local" name="eventAt" defaultValue={toBucharestInput(post?.eventAt ?? null)} className={inputClass} />
+          <input type="datetime-local" name="eventAt" defaultValue={values?.eventAt ?? toBucharestInput(post?.eventAt ?? null)} className={inputClass} />
         </Field>
       </div>
       <Field label="Publică la" hint={post ? 'Gol = rămâne data de acum.' : 'Gol = acum'}>
-        <input type="datetime-local" name="publishAt" defaultValue={toBucharestInput(post?.publishAt ?? null)} className={inputClass} />
+        <input type="datetime-local" name="publishAt" defaultValue={values?.publishAt ?? toBucharestInput(post?.publishAt ?? null)} className={inputClass} />
       </Field>
     </>
   );
@@ -98,11 +98,11 @@ function PostItem({ venueId, post: p }: { venueId: string; post: OwnerPost }) {
       <p className="text-[15px] break-words whitespace-pre-line">{p.body}</p>
       <div className="flex flex-wrap items-start gap-2">
         <details className="min-w-64 flex-1">
-          <summary className="inline-flex min-h-11 cursor-pointer items-center rounded-[4px] border border-hairline px-3 text-[14px] font-semibold">
+          <summary className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carou inline-flex min-h-11 cursor-pointer items-center rounded-[4px] border border-hairline px-3 text-[14px] font-semibold">
             Editează
           </summary>
-          <form action={update} className="group mt-2 flex flex-col gap-3">
-            <PostFields post={p} />
+          <form key={state.seq} action={update} className="group mt-2 flex flex-col gap-3">
+            <PostFields post={p} values={state.values} />
             <FormMessage state={state} />
             <div>
               <SubmitButton>Salvează modificările</SubmitButton>
