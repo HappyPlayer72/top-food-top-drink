@@ -127,9 +127,12 @@ export function TopFoodShell({
   const [openReviewOnMount, setOpenReviewOnMount] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [storageHydrated, setStorageHydrated] = useState<boolean>(false);
 
   const urlReadyRef = useRef<boolean>(false);
-  const sessionReadyRef = useRef<boolean>(false);
+  const scrollPositionsRef = useRef<Partial<Record<NavSection, number>>>({});
+  const preLoginScrollYRef = useRef<number>(0);
+  const pendingScrollYRef = useRef<number | null>(null);
   const pendingSyncRef = useRef<{
     vertical: Vertical;
     navSection: NavSection;
@@ -141,6 +144,16 @@ export function TopFoodShell({
     try {
       const savedDark = localStorage.getItem('topfood-dark-mode') === 'true';
       setDarkMode(savedDark);
+      const rawSaved = localStorage.getItem('topfood-saved-ids');
+      if (rawSaved !== null) {
+        const parsedSaved = JSON.parse(rawSaved) as unknown;
+        if (
+          Array.isArray(parsedSaved) &&
+          parsedSaved.every((item) => typeof item === 'string')
+        ) {
+          setSavedIds(parsedSaved);
+        }
+      }
       const rawCustom = sessionStorage.getItem('topfood-custom-accounts');
       if (rawCustom) {
         const parsed = JSON.parse(rawCustom) as UserAccount[];
@@ -160,12 +173,12 @@ export function TopFoodShell({
     } catch {
       // ignore storage errors
     } finally {
-      sessionReadyRef.current = true;
+      setStorageHydrated(true);
     }
   }, []);
 
   useEffect(() => {
-    if (!sessionReadyRef.current) return;
+    if (!storageHydrated) return;
     try {
       const customAccounts = accounts.filter(
         (acc) => !USER_ACCOUNTS.some((u) => u.id === acc.id)
@@ -182,16 +195,26 @@ export function TopFoodShell({
     } catch {
       // ignore storage errors
     }
-  }, [accounts, currentUserId]);
+  }, [accounts, currentUserId, storageHydrated]);
+
+  useEffect(() => {
+    if (!storageHydrated) return;
+    try {
+      localStorage.setItem('topfood-saved-ids', JSON.stringify(savedIds));
+    } catch {
+      // ignore storage errors
+    }
+  }, [savedIds, storageHydrated]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
+    if (!storageHydrated) return;
     try {
       localStorage.setItem('topfood-dark-mode', String(darkMode));
     } catch {
       // ignore storage errors
     }
-  }, [darkMode]);
+  }, [darkMode, storageHydrated]);
 
   useEffect(() => {
     if (!statusMessage) return;
@@ -305,11 +328,35 @@ export function TopFoodShell({
     [accounts, currentUserId]
   );
 
+  const navigateToSection = (nextSection: NavSection) => {
+    setSelectedRestaurantId(null);
+    if (nextSection === navSection) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    scrollPositionsRef.current[navSection] = window.scrollY;
+    pendingScrollYRef.current =
+      nextSection === 'top' ? scrollPositionsRef.current.top ?? 0 : 0;
+    setNavSection(nextSection);
+  };
+
+  useEffect(() => {
+    if (pendingScrollYRef.current === null) return;
+    const targetY = pendingScrollYRef.current;
+    pendingScrollYRef.current = null;
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: targetY, behavior: 'auto' });
+    });
+  }, [navSection, showLoginScreen, vertical]);
+
   const handleLoginSuccess = (user: UserAccount) => {
     setAccounts((prev) =>
       prev.some((acc) => acc.id === user.id) ? prev : [...prev, user]
     );
     setCurrentUserId(user.id);
+    pendingScrollYRef.current = pendingReviewVenueId
+      ? null
+      : preLoginScrollYRef.current;
     setShowLoginScreen(false);
     if (pendingReviewVenueId) {
       setSelectedRestaurantId(pendingReviewVenueId);
@@ -317,21 +364,22 @@ export function TopFoodShell({
       setPendingReviewVenueId(null);
     }
     setStatusMessage(`Autentificat ca ${user.name}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleContinueAsGuest = () => {
     setCurrentUserId(null);
     setPendingReviewVenueId(null);
+    pendingScrollYRef.current = preLoginScrollYRef.current;
     setShowLoginScreen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenLogin = () => {
+    preLoginScrollYRef.current = window.scrollY;
+    scrollPositionsRef.current[navSection] = window.scrollY;
     setPendingReviewVenueId(selectedRestaurantId);
     setSelectedRestaurantId(null);
+    pendingScrollYRef.current = 0;
     setShowLoginScreen(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleLogout = () => {
@@ -339,7 +387,6 @@ export function TopFoodShell({
     setSelectedRestaurantId(null);
     setShowLoginScreen(false);
     setStatusMessage('Te-ai deconectat. Navighezi ca vizitator.');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectUser = (userId: string) => {
@@ -467,9 +514,7 @@ export function TopFoodShell({
     if (restaurant) {
       setSelectedNeighborhood(restaurant.neighborhood);
     }
-    setSelectedRestaurantId(null);
-    setNavSection('map');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateToSection('map');
   };
 
   const handleResetFilters = () => {
@@ -498,22 +543,23 @@ export function TopFoodShell({
   return (
     <div
       id="top"
-      className={`min-h-screen flex flex-col ${
+      className={`min-h-screen overflow-x-clip flex flex-col ${
         isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
       }`}
     >
       <Navbar
         vertical={vertical}
         onVerticalChange={(v) => {
+          scrollPositionsRef.current = {};
+          pendingScrollYRef.current = 0;
           setVertical(v);
+          setNavSection('top');
           setSelectedRestaurantId(null);
         }}
         navSection={navSection}
-        onNavSectionChange={(s) => {
-          setNavSection(s);
-          setSelectedRestaurantId(null);
-        }}
+        onNavSectionChange={navigateToSection}
         savedRestaurants={savedRestaurants}
+        onToggleSave={handleToggleSave}
         onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
         currentUser={currentUser}
         availableUsers={accounts}
@@ -538,10 +584,7 @@ export function TopFoodShell({
             drinkFilters={drinkFilters}
             onToggleDrinkFilter={handleToggleDrinkFilter}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
-            onOpenMonthlyTop={() => {
-              setNavSection('monthly');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onOpenMonthlyTop={() => navigateToSection('monthly')}
             onUpdateCrowdReport={handleUpdateCrowdReport}
             onResetFilters={handleResetFilters}
             initialFoodHeroIndex={initialFoodHeroIndex}
@@ -567,10 +610,7 @@ export function TopFoodShell({
             vertical={vertical}
             restaurants={activeVerticalVenues}
             topReviewers={topReviewers}
-            onBack={() => {
-              setNavSection('top');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onBack={() => navigateToSection('top')}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
           />
         )}
@@ -578,10 +618,7 @@ export function TopFoodShell({
         {navSection === 'scarnavii' && (
           <ScarnaviiView
             vertical={vertical}
-            onBack={() => {
-              setNavSection('top');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onBack={() => navigateToSection('top')}
           />
         )}
 
@@ -590,10 +627,7 @@ export function TopFoodShell({
             vertical={vertical}
             currentUser={currentUser}
             onRequireLogin={handleOpenLogin}
-            onBack={() => {
-              setNavSection('top');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onBack={() => navigateToSection('top')}
           />
         )}
       </main>
@@ -617,7 +651,11 @@ export function TopFoodShell({
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 w-max max-w-[calc(100vw-2rem)]"
+          className={`fixed left-1/2 -translate-x-1/2 z-[60] px-4 w-max max-w-[calc(100vw-2rem)] ${
+            selectedRestaurant !== null
+              ? 'bottom-[calc(5.75rem+env(safe-area-inset-bottom))]'
+              : 'bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-6'
+          }`}
         >
           <div
             className={`flex items-center gap-3 px-4 py-2.5 rounded-[6px] border shadow-lg text-[13px] font-semibold ${
