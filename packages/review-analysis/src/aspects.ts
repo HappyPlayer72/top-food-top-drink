@@ -3,6 +3,9 @@
  * Mai multe review-uri într-un singur apel, cu răspuns JSON validat (structured outputs).
  * Fără cheie API (ANTHROPIC_API_KEY sau `ant auth login`), cade pe un dicționar simplu de cuvinte.
  */
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
@@ -74,21 +77,20 @@ async function analyzeChunk(client: Anthropic, chunk: { id: string; text: string
       return { id: r.id, aspects, dishes: res.dishes.slice(0, 5) };
     });
   } catch (error) {
-    // Erorile de cerere (cheie greșită, model indisponibil) nu opresc analiza: cădem pe dicționar
-    if (error instanceof Anthropic.APIError) {
-      console.warn(`[review-analysis] Claude API ${error.status}: ${error.message}. Folosesc dicționarul.`);
-      return chunk.map((r) => keywordAspects(r, vertical));
-    }
-    throw error;
+    // Aspectele nu sunt critice: orice eroare (cheie lipsă/greșită, rate limit, rețea) nu blochează
+    // salvarea review-ului; cădem pe dicționar.
+    const detail = error instanceof Anthropic.APIError ? `${error.status}: ${error.message}` : String(error);
+    console.warn(`[review-analysis] Claude indisponibil (${detail}). Folosesc dicționarul.`);
+    return chunk.map((r) => keywordAspects(r, vertical));
   }
 }
 
+/** Clientul Claude doar dacă există credențiale (cheie, token sau profil `ant auth login`); altfel dicționarul. */
 function defaultClient(): Anthropic | null {
-  try {
-    return new Anthropic();
-  } catch {
-    return null;
-  }
+  const env = process.env;
+  const hasProfile = existsSync(join(homedir(), ".config", "anthropic"));
+  if (!env.ANTHROPIC_API_KEY && !env.ANTHROPIC_AUTH_TOKEN && !env.ANTHROPIC_PROFILE && !hasProfile) return null;
+  return new Anthropic();
 }
 
 // ---------- Fallback fără AI ----------
