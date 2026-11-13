@@ -1,0 +1,12 @@
+{
+  "name": "@tftd/scoring",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@tftd/db": "*",
+    "drizzle-orm": "^0.44.0"
+  }
+}

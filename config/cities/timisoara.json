@@ -8,10 +8,13 @@
     { "name": "Piața Libertății", "lat": 45.7559, "lng": 21.2276, "radiusM": 300 },
     { "name": "Bastion", "lat": 45.7590, "lng": 21.2318, "radiusM": 300 }
   ],
-  "neighborhoods": [],
+  "neighborhoods": [
+    "Cetate", "Iosefin", "Fabric", "Elisabetin", "Mehala", "Circumvalațiunii", "Complexul Studențesc",
+    "Calea Aradului", "Calea Lipovei", "Soarelui", "Fratelia", "Freidorf", "Ronaț", "Gara de Nord"
+  ],
   "localAveragePrices": {
-    "food": {},
-    "drink": { "beer05l": null, "cocktail": null }
+    "food": { "romanesc": 45, "pizza": 40, "bistro": 60, "street-food": 25, "patiserie": 15, "burger": 45, "asiatic": 50, "vegan": 45 },
+    "drink": { "beer05l": 14, "cocktail": 32 }
   },
-  "_todo": "Coordonatele zonelor turistice sunt aproximative; de verificat. De completat: poligonul granițelor, cartierele, prețurile medii pe categorii."
+  "_todo": "Coordonatele zonelor turistice și prețurile medii (lei/persoană) sunt estimări; de verificat. De completat: poligonul granițelor."
 }
