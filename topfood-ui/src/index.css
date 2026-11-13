@@ -1,0 +1,378 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Core 8 PDF Identity Tokens */
+  --color-carou: #B3261E;
+  --color-cafea: #3A2418;
+  --color-mustar: #E0A526;
+  --color-placuta: #1F4E8C;
+  --color-sticla: #17382C;
+  --color-chihlimbar: #F2A33A;
+  --color-spuma: #F4EEE2;
+  --color-carton: #B98A5E;
+
+  /* Quiet Structural Surfaces */
+  --color-paper: #FFFFFF;
+  --color-sponsored-food: #F2EFE9;
+  --color-sponsored-drink: #1E4335;
+  --color-hairline: #E6DFD5;
+  --color-muted-cafea: #6E5649;
+}
+
+:root {
+  --color-carou: #B3261E;
+  --color-cafea: #3A2418;
+  --color-mustar: #E0A526;
+  --color-placuta: #1F4E8C;
+  --color-sticla: #17382C;
+  --color-chihlimbar: #F2A33A;
+  --color-spuma: #F4EEE2;
+  --color-carton: #B98A5E;
+
+  /* /animate easing curves */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 100;
+    background-color: #FFFFFF;
+    color: #3A2418;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 100;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #B3261E;
+    outline-offset: 2px;
+  }
+}
+
+/* Archivo Variable Display (Condensed 62%, Weight 800) for Titles, Scores, Ranks */
+.font-display {
+  font-family: "Archivo", sans-serif;
+  font-variation-settings: "wdth" 62, "wght" 800;
+  font-stretch: 62%;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.font-display-light {
+  font-family: "Archivo", sans-serif;
+  font-variation-settings: "wdth" 62, "wght" 300;
+  font-stretch: 62%;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.font-display-regular {
+  font-family: "Archivo", sans-serif;
+  font-variation-settings: "wdth" 62, "wght" 400;
+  font-stretch: 62%;
+  font-weight: 400;
+}
+
+/* Strictly reserved for "Localnic" street-plate badge */
+.badge-placuta {
+  background-color: #1F4E8C;
+  color: #FFFFFF;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.88);
+  border: 2px solid #1F4E8C;
+  border-radius: 3px;
+}
+
+/* Trap badges: recognized by shape (triangle) AND color */
+.badge-capcana {
+  background-color: #B3261E;
+  color: #FFFFFF;
+  border-radius: 3px;
+}
+
+.badge-posibila-capcana {
+  background-color: #E0A526;
+  color: #3A2418;
+  border-radius: 3px;
+}
+
+/* Beer coaster ("Suportul de bere") for topdrink */
+.coaster-badge {
+  background-color: #F4EEE2;
+  color: #17382C;
+  border: 3px solid #B98A5E;
+  box-shadow: inset 0 0 0 2px rgba(185, 138, 94, 0.25);
+  border-radius: 9999px;
+}
+
+/* Custom subtle scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D6CFC5;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6E5649;
+}
+
+/* ============================================================================
+   /animate Motion System (GPU-only transform & opacity, custom easing curves)
+   ============================================================================ */
+
+/* Button & pill physical press feedback */
+.btn-press {
+  transition:
+    transform 150ms var(--ease-out),
+    background-color 150ms var(--ease-out),
+    border-color 150ms var(--ease-out),
+    color 150ms var(--ease-out);
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Interactive venue row & thumbnail zoom */
+.venue-row-interactive {
+  transition:
+    transform 180ms var(--ease-out),
+    background-color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+
+.venue-row-interactive:active {
+  transform: scale(0.99);
+}
+
+.venue-photo-zoom {
+  transition: transform 260ms var(--ease-out);
+  will-change: transform;
+}
+
+.venue-cta-arrow {
+  transition:
+    transform 180ms var(--ease-out),
+    opacity 180ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .venue-row-interactive:hover {
+    transform: translateY(-1px);
+  }
+
+  .venue-row-interactive:hover .venue-photo-zoom {
+    transform: scale(1.05);
+  }
+
+  .venue-row-interactive:hover .venue-cta-arrow {
+    transform: translateX(3px);
+    opacity: 1;
+  }
+}
+
+/* Staggered list/card entrance */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-fade-in {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeSlideUp 260ms var(--ease-out) forwards;
+  animation-delay: calc(var(--stagger-idx, 0) * 45ms);
+}
+
+/* GPU-accelerated bar fill (Localnici vs Turisti, CrowdMeter) */
+@keyframes scaleBarX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.bar-scale-fill {
+  transform-origin: left center;
+  animation: scaleBarX 280ms var(--ease-out) both;
+}
+
+/* Podium column upward rise */
+@keyframes podiumRise {
+  from {
+    opacity: 0.65;
+    transform: scaleY(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.podium-rise {
+  transform-origin: bottom center;
+  animation: podiumRise 280ms var(--ease-out) both;
+}
+
+/* Modal / Sheet / Popover entrances */
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes drawerSheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes popoverScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-backdrop-enter {
+  animation: backdropFadeIn 220ms var(--ease-out) forwards;
+}
+
+.modal-panel-enter {
+  animation: modalPanelIn 250ms var(--ease-out) forwards;
+}
+
+.drawer-sheet-enter {
+  animation: drawerSheetIn 280ms var(--ease-drawer) forwards;
+}
+
+.popover-enter {
+  transform-origin: top right;
+  animation: popoverScaleIn 180ms var(--ease-out) forwards;
+}
+
+/* Smooth accordion collapse using CSS grid */
+.collapse-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 200ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+
+.collapse-grid[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapse-inner {
+  overflow: hidden;
+}
+
+/* Clip-path segmented tab indicator */
+.tabs-clip-overlay {
+  transition: clip-path 240ms var(--ease-in-out);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .stagger-fade-in,
+  .bar-scale-fill,
+  .podium-rise,
+  .modal-backdrop-enter,
+  .modal-panel-enter,
+  .drawer-sheet-enter,
+  .popover-enter {
+    animation: backdropFadeIn 120ms ease forwards;
+    transform: none !important;
+  }
+
+  .btn-press,
+  .venue-row-interactive,
+  .venue-photo-zoom,
+  .venue-cta-arrow,
+  .collapse-grid,
+  .tabs-clip-overlay {
+    transition-duration: 120ms !important;
+  }
+
+  .btn-press:active,
+  .venue-row-interactive:active {
+    transform: none !important;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .venue-row-interactive:hover,
+    .venue-row-interactive:hover .venue-photo-zoom,
+    .venue-row-interactive:hover .venue-cta-arrow {
+      transform: none !important;
+    }
+  }
+}
