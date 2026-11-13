@@ -15,6 +15,7 @@ import {
   checkins, cities, createDb, employees, localVerifications, loyaltyPrograms, menuItems, partnerships, posts, reviewVotes, reviews, touristZones,
   userSocialLinks, users, venueManagers, venues, vibeChecks, type OpeningHours,
 } from "@tftd/db";
+import { hashPassword } from "@tftd/accounts";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
 import { freezeMonth, lastMonth } from "@tftd/leaderboard";
@@ -84,6 +85,16 @@ async function main() {
       });
     }
   }
+  // Conturile demo de pe ecranul de login (parola DEMO_PASSWORD, implicit „demo1234”)
+  const demoHash = await hashPassword(process.env.DEMO_PASSWORD ?? "demo1234");
+  await db.update(users).set({ email: "andreea@e-uvt.ro", passwordHash: demoHash, localNeighborhood: "Iosefin" }).where(sql`${users.id} = ${userIds.get("u0")!}`);
+  const [luca] = await db
+    .insert(users)
+    .values({ username: "luca.t", displayName: "Luca T.", email: "luca@visit.ro", passwordHash: demoHash, roles: ["user"] })
+    .returning({ id: users.id });
+  userIds.set("luca", luca!.id);
+  await db.update(users).set({ passwordHash: demoHash }).where(sql`${users.id} = ${userIds.get("owner-sandu")!}`);
+
   await db.insert(userSocialLinks).values({
     userId: userIds.get("influencer")!, platform: "tiktok", url: "https://www.tiktok.com/@exemplu", verified: true, followers: 24_000,
   });

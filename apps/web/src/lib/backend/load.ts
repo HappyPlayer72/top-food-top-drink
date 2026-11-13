@@ -8,7 +8,9 @@ import { getDb } from '../server/db';
 import { cities } from '@tftd/db';
 import { eq } from 'drizzle-orm';
 import { DRINK_VENUES, INITIAL_RESTAURANTS } from '../../data/restaurants';
-import type { Restaurant, TopReviewer, WeekendEvent } from '../../types';
+import type { Restaurant, TopReviewer, UserAccount, WeekendEvent } from '../../types';
+import { getUserId } from '../server/session';
+import { toUserAccount } from './user';
 import { monthlyBySlug, toRestaurant, toTopReviewer, toWeekendEvent } from './toRestaurant';
 
 const CITY = 'timisoara';
@@ -45,23 +47,31 @@ export type ShellData = {
   drinkVenues: Restaurant[];
   weekendEvents: WeekendEvent[];
   topReviewers: TopReviewer[];
+  /** true = datele vin din DB; acțiunile userilor merg pe backend */
+  backendOnline: true;
+  /** Userul din cookie-ul de sesiune (null = vizitator) */
+  initialUser: UserAccount | null;
 };
 
 export async function loadShellData(now = new Date()): Promise<ShellData | null> {
   const d = db();
   if (!d) return null;
   try {
-    const [foodRestaurants, drinkVenues, events, reviewers] = await Promise.all([
+    const userId = await getUserId();
+    const [foodRestaurants, drinkVenues, events, reviewers, initialUser] = await Promise.all([
       loadVertical(d, 'food', now),
       loadVertical(d, 'drink', now),
       weekendEvents(d, CITY, now),
       topReviewers(d, CITY, {}, now),
+      userId ? toUserAccount(d, userId, now) : Promise.resolve(null),
     ]);
     return {
       foodRestaurants,
       drinkVenues,
       weekendEvents: events.map(toWeekendEvent),
       topReviewers: reviewers.map(toTopReviewer),
+      backendOnline: true,
+      initialUser,
     };
   } catch (error) {
     console.error('[backend] Nu pot citi din baza de date, folosesc datele statice:', error);

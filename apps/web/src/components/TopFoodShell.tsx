@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, voteHelpful } from '@/app/actions/user';
 import { X } from 'lucide-react';
 import {
   DrinkQuickFilter,
@@ -87,6 +89,10 @@ export interface TopFoodShellProps {
   drinkVenues?: Restaurant[];
   weekendEvents?: WeekendEvent[];
   topReviewers?: TopReviewer[];
+  /** true când datele vin din DB: login, review-uri, „util” merg pe backend */
+  backendOnline?: boolean;
+  /** Userul din sesiune (cookie), când backend-ul e pornit */
+  initialUser?: UserAccount | null;
 }
 
 export function TopFoodShell({
@@ -98,7 +104,10 @@ export function TopFoodShell({
   drinkVenues: initialDrink = DRINK_VENUES,
   weekendEvents = WEEKEND_EVENTS,
   topReviewers,
+  backendOnline = false,
+  initialUser = null,
 }: TopFoodShellProps) {
+  const router = useRouter();
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
   const [navSection, setNavSection] = useState<NavSection>(initialSection);
 
@@ -200,6 +209,24 @@ export function TopFoodShell({
       // ignore storage errors
     }
   }, [accounts, currentUserId, storageHydrated]);
+
+  // Cu backend pornit, sesiunea din cookie decide cine e logat (nu sessionStorage)
+  useEffect(() => {
+    if (!storageHydrated || !backendOnline) return;
+    if (initialUser) {
+      setAccounts((prev) =>
+        prev.some((a) => a.id === initialUser.id) ? prev : [...prev, initialUser]
+      );
+      setCurrentUserId(initialUser.id);
+    } else {
+      setCurrentUserId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageHydrated, backendOnline]);
+
+  // După router.refresh(), datele noi din DB înlocuiesc lista din memorie
+  useEffect(() => setFoodRestaurants(initialFood), [initialFood]);
+  useEffect(() => setDrinkVenues(initialDrink), [initialDrink]);
 
   useEffect(() => {
     if (!storageHydrated) return;
@@ -387,6 +414,9 @@ export function TopFoodShell({
   };
 
   const handleLogout = () => {
+    if (backendOnline) {
+      void logoutUser().then(() => router.refresh());
+    }
     setCurrentUserId(null);
     setSelectedRestaurantId(null);
     setShowLoginScreen(false);
@@ -487,7 +517,25 @@ export function TopFoodShell({
     [allVenues, savedIds]
   );
 
-  const handleAddReview = (restaurantId: string, newReview: Review) => {
+  const handleAddReview = async (
+    restaurantId: string,
+    newReview: Review
+  ): Promise<{ ok: boolean; message?: string; error?: string }> => {
+    const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
+    if (backendOnline && venue?.venueId) {
+      const res = await submitReview({
+        venueId: venue.venueId,
+        rating: newReview.foodScore,
+        text: newReview.text,
+        weekendNight:
+          venue.vertical === 'drink' ? drinkFilters.includes('vineri-noaptea') : undefined,
+      });
+      if (res.ok) {
+        router.refresh();
+        return { ok: true, message: res.message };
+      }
+      if (!res.offline) return { ok: false, error: res.error };
+    }
     setFoodRestaurants((prev) =>
       prev.map((r) =>
         r.id === restaurantId ? recalculateRestaurantWithReview(r, newReview) : r
@@ -498,13 +546,43 @@ export function TopFoodShell({
         r.id === restaurantId ? recalculateRestaurantWithReview(r, newReview) : r
       )
     );
+    return { ok: true };
   };
+
+  /** „Util” pe backend; undefined = fără backend (modalul numără local) */
+  const handleVoteHelpful = backendOnline
+    ? async (reviewId: string) => {
+        const res = await voteHelpful(reviewId);
+        if (!res.ok && /Intră în cont/.test(res.error)) handleOpenLogin();
+        return res;
+      }
+    : undefined;
+
+  /** Login / cont nou / cont demo pe backend */
+  const handleAuthenticate = backendOnline
+    ? async (req: { mode: 'login' | 'register' | 'demo'; email: string; password?: string; name?: string }) => {
+        const res =
+          req.mode === 'demo'
+            ? await loginDemo(req.email)
+            : req.mode === 'register'
+              ? await registerUser({ name: req.name ?? '', email: req.email, password: req.password ?? '' })
+              : await loginUser({ email: req.email, password: req.password ?? '' });
+        if (res.ok) router.refresh();
+        return res;
+      }
+    : undefined;
 
   const handleUpdateCrowdReport = (
     venueId: string,
     segments: 1 | 2 | 3 | 4 | 5,
     label: string
   ) => {
+    const venue = drinkVenues.find((v) => v.id === venueId);
+    if (backendOnline && venue?.venueId) {
+      void reportCrowd(venue.venueId, segments).then((res) => {
+        if (!res.ok && !res.offline) setStatusMessage(res.error);
+      });
+    }
     setDrinkVenues((prev) =>
       prev.map((v) =>
         v.id === venueId
@@ -595,6 +673,7 @@ export function TopFoodShell({
         demoUsers={USER_ACCOUNTS}
         onLoginSuccess={handleLoginSuccess}
         onContinueAsGuest={handleContinueAsGuest}
+        authenticate={handleAuthenticate}
       />
     );
   }
@@ -700,6 +779,7 @@ export function TopFoodShell({
         onConsumeInitialReviewOpen={() => setOpenReviewOnMount(false)}
         onClose={() => setSelectedRestaurantId(null)}
         onAddReview={handleAddReview}
+        onVoteHelpful={handleVoteHelpful}
         onRequireLogin={handleOpenLogin}
         onLocateOnMap={handleSwitchToMap}
         isSaved={
