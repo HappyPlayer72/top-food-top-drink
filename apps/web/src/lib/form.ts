@@ -15,5 +15,8 @@ export function keep(fd: FormData, state: FormState): FormState {
   return { ...state, values, seq: Date.now() };
 }
 
-/** Pasul 1 al revendicării: cererea creată și numărul public unde ar pleca codul. Codul NU ajunge în browser. */
-export type ClaimState = FormState & { claimId?: string; sendTo?: string | null };
+/**
+ * Pasul 1 al revendicării: cererea creată și numărul public unde ar pleca codul. Codul NU ajunge în browser.
+ * `rejectedClaimId`: cererea respinsă pentru prea multe coduri greșite; formularul se întoarce la pasul 1.
+ */
+export type ClaimState = FormState & { claimId?: string; sendTo?: string | null; rejectedClaimId?: string };

@@ -33,7 +33,8 @@ export async function confirmClaimAction(prev: ClaimState, fd: FormData): Promis
     const userId = await requireUser();
     await accounts.confirmClaim(getDb(), userId, field(fd, 'claimId'), { code: field(fd, 'code') });
   } catch (e) {
-    return { ...prev, error: errorMessage(e) };
+    const error = errorMessage(e);
+    return { ...prev, error, rejectedClaimId: error === accounts.TOO_MANY_ATTEMPTS ? field(fd, 'claimId') : undefined };
   }
   revalidatePath('/owner');
   return { ok: true, message: 'Gata, acum administrezi localul.' };

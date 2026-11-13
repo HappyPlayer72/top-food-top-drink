@@ -15,7 +15,8 @@ export function ClaimForm({ venues }: { venues: Option[] }) {
 
   if (confirmed.ok) return <FormMessage state={confirmed} />;
 
-  if (started.claimId) {
+  const rejected = !!started.claimId && confirmed.rejectedClaimId === started.claimId;
+  if (started.claimId && !rejected) {
     return (
       <form action={confirm} className="flex max-w-md flex-col gap-4">
         <input type="hidden" name="claimId" value={started.claimId} />
@@ -61,7 +62,7 @@ export function ClaimForm({ venues }: { venues: Option[] }) {
           ))}
         </select>
       </Field>
-      <FormMessage state={started} />
+      <FormMessage state={rejected ? confirmed : started} />
       <SubmitButton pendingLabel="Se trimite codul…">Sunt proprietarul</SubmitButton>
     </form>
   );
