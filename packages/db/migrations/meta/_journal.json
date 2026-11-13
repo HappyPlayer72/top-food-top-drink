@@ -12,8 +12,15 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1794593286114,
-      "tag": "0001_vengeful_tigra",
+      "when": 1794596521721,
+      "tag": "0001_presentation_loyalty_votes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794601871986,
+      "tag": "0002_owner_claims_attempts",
       "breakpoints": true
     }
   ]

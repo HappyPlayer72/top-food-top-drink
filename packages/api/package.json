@@ -9,6 +9,7 @@
     "@tftd/accounts": "*",
     "@tftd/db": "*",
     "@tftd/ingestion": "*",
+    "@tftd/loyalty": "*",
     "@tftd/moderation": "*",
     "@tftd/monetization": "*",
     "@tftd/owner": "*",

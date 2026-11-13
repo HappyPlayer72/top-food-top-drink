@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronLeft, Trophy } from 'lucide-react';
-import { Restaurant, Vertical, formatScore } from '../types';
+import { Restaurant, TopReviewer, Vertical, formatScore } from '../types';
 import { TOP_LOCAL_REVIEWERS } from '../data/restaurants';
 import { InfluencerBadge, LocalnicBadge } from './BrandPrimitives';
 
@@ -11,6 +11,8 @@ export interface MonthlyTopViewProps {
   restaurants: Restaurant[];
   onBack: () => void;
   onSelectRestaurant: (restaurant: Restaurant) => void;
+  /** Din backend; lipsă = lista statică */
+  topReviewers?: TopReviewer[];
 }
 
 type MonthlyTab = 'localuri' | 'recenzenti' | 'angajati';
@@ -20,6 +22,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   restaurants,
   onBack,
   onSelectRestaurant,
+  topReviewers = TOP_LOCAL_REVIEWERS,
 }) => {
   const isDrink = vertical === 'drink';
   const [selectedMonth, setSelectedMonth] = useState<'2026-11' | '2026-10'>('2026-11');
@@ -95,7 +98,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
 
   return (
     <div
-      className={`min-h-screen pb-24 ${
+      className={`min-h-screen pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24 ${
         isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
       }`}
     >
@@ -125,26 +128,32 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                 isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
               }`}
             >
-              top
+              top-luna
             </strong>
           </span>
         </div>
 
         {/* Title + Month dropdown */}
         <div className="space-y-2">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
             <h1 className="font-display text-[36px] sm:text-[44px] leading-[0.95]">
               Topul lunii
             </h1>
 
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 max-w-full">
               <select
                 value={selectedMonth}
                 onChange={(e) =>
                   setSelectedMonth(e.target.value as '2026-11' | '2026-10')
                 }
                 aria-label="Selectează luna"
-                className={`appearance-none pl-3.5 pr-8 py-2 rounded-[4px] border text-[13px] font-semibold cursor-pointer ${
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none',
+                  backgroundImage: 'none',
+                }}
+                className={`appearance-none [-webkit-appearance:none] [-moz-appearance:none] bg-none max-w-full min-h-[44px] pl-3.5 pr-9 py-2 rounded-[4px] border text-[16px] sm:text-[13px] font-semibold cursor-pointer ${
                   isDrink
                     ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
                     : 'bg-white border-[#D6CFC5] text-[#3A2418]'
@@ -153,7 +162,10 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                 <option value="2026-11">Noiembrie 2026</option>
                 <option value="2026-10">Octombrie 2026 (arhivă)</option>
               </select>
-              <ChevronDown className="w-4 h-4 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-70" />
+              <ChevronDown
+                aria-hidden="true"
+                className="w-4 h-4 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-70"
+              />
             </div>
           </div>
 
@@ -196,7 +208,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                     role="tab"
                     aria-selected={active}
                     onClick={() => setActiveSubTab(tab.id)}
-                    className={`btn-press relative z-10 py-2 px-3 rounded-[3px] text-[13px] font-semibold ${
+                    className={`btn-press relative z-10 min-h-[44px] py-2 px-2 sm:px-3 rounded-[3px] text-[12px] min-[375px]:text-[13px] font-semibold ${
                       isDrink
                         ? 'text-[#F4EEE2]/75 hover:text-[#F4EEE2]'
                         : 'text-[#6E5649] hover:text-[#3A2418]'
@@ -237,72 +249,23 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
             =================================================================== */}
         {activeSubTab === 'localuri' && (
           <section aria-label="Podiumul lunii" className="space-y-0">
-            {/* Podium Columns: 2 - 1 - 3 */}
-            <div className="grid grid-cols-3 gap-2.5 items-end pt-3">
-              {/* #2 Left */}
-              {second && (
-                <button
-                  type="button"
-                  onClick={() => onSelectRestaurant(second)}
-                  className="venue-row-interactive text-center flex flex-col items-center group"
-                >
-                  <div
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 mb-2 shrink-0 ${
-                      isDrink
-                        ? 'border-[#2D5947] bg-[#122B22]'
-                        : 'border-[#3A2418] bg-[#ECE6DD]'
-                    }`}
-                  >
-                    <img
-                      src={second.photoUrl}
-                      alt={second.name}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover venue-photo-zoom"
-                    />
-                  </div>
-                  <span className="font-bold text-[14px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
-                    {second.name}
-                  </span>
-                  <span
-                    className={`text-[12px] font-semibold mt-1 mb-2.5 ${
-                      isDrink ? 'text-[#F2A33A]' : 'text-[#1F5E3B]'
-                    }`}
-                  >
-                    {second.monthlyStatusLabel ?? '▲ 3 locuri'}
-                  </span>
-                  <div
-                    style={{ animationDelay: '60ms' }}
-                    className={`podium-rise w-full h-28 rounded-t-[6px] flex flex-col items-center justify-center ${
-                      isDrink
-                        ? 'bg-[#285443] text-[#F4EEE2]'
-                        : 'bg-[#3A2418] text-white'
-                    }`}
-                  >
-                    <span className="font-display text-[30px] leading-none">
-                      2
-                    </span>
-                    <span className="text-[13px] mt-1 opacity-85 tabular-nums">
-                      {formatScore(second.displayScore)}
-                    </span>
-                  </div>
-                </button>
-              )}
-
-              {/* #1 Center (tallest) */}
+            {/* Podium Columns: logical DOM order #1 -> #2 -> #3, visual 2 - 1 - 3 */}
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 items-end pt-3">
+              {/* #1 Center (tallest, 1st in DOM for screen readers) */}
               {first && (
                 <button
                   type="button"
                   onClick={() => onSelectRestaurant(first)}
-                  className="venue-row-interactive text-center flex flex-col items-center group"
+                  className="order-2 venue-row-interactive text-center flex flex-col items-center group"
                 >
                   <Trophy
+                    aria-hidden="true"
                     className={`w-5 h-5 mb-1.5 ${
                       isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                     }`}
                   />
                   <div
-                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-[2.5px] mb-2 shrink-0 ${
+                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-[2.5px] mb-2 shrink-0 ${
                       isDrink
                         ? 'border-[#F2A33A] bg-[#122B22]'
                         : 'border-[#B3261E] bg-[#ECE6DD]'
@@ -316,44 +279,96 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
-                  <span className="font-bold text-[14px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                  <span className="font-bold text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                    <span className="sr-only">Locul 1: </span>
                     {first.name}
                   </span>
                   <span
-                    className={`text-[12px] mt-1 mb-2.5 ${
+                    className={`text-[11px] sm:text-[12px] mt-1 mb-2 sm:mb-2.5 leading-tight ${
                       isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
                     }`}
                   >
                     {first.monthlyStatusLabel ?? '= ca luna trecută'}
                   </span>
                   <div
-                    className={`podium-rise w-full h-36 rounded-t-[6px] flex flex-col items-center justify-center ${
+                    className={`podium-rise w-full h-32 sm:h-36 rounded-t-[6px] flex flex-col items-center justify-center ${
                       isDrink
                         ? 'bg-[#F2A33A] text-[#17382C]'
                         : 'bg-[#B3261E] text-white'
                     }`}
                   >
-                    <span className="font-display text-[36px] leading-none">
+                    <span className="font-display text-[32px] sm:text-[36px] leading-none">
                       1
                     </span>
-                    <span className="text-[14px] mt-1 font-semibold tabular-nums">
+                    <span className="text-[13px] sm:text-[14px] mt-1 font-semibold tabular-nums">
                       {formatScore(first.displayScore)}
                     </span>
                   </div>
                 </button>
               )}
 
-              {/* #3 Right */}
+              {/* #2 Left (2nd in DOM) */}
+              {second && (
+                <button
+                  type="button"
+                  onClick={() => onSelectRestaurant(second)}
+                  className="order-1 venue-row-interactive text-center flex flex-col items-center group"
+                >
+                  <div
+                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 mb-2 shrink-0 ${
+                      isDrink
+                        ? 'border-[#2D5947] bg-[#122B22]'
+                        : 'border-[#3A2418] bg-[#ECE6DD]'
+                    }`}
+                  >
+                    <img
+                      src={second.photoUrl}
+                      alt={second.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover venue-photo-zoom"
+                    />
+                  </div>
+                  <span className="font-bold text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                    <span className="sr-only">Locul 2: </span>
+                    {second.name}
+                  </span>
+                  <span
+                    className={`text-[11px] sm:text-[12px] font-semibold mt-1 mb-2 sm:mb-2.5 leading-tight ${
+                      isDrink ? 'text-[#F2A33A]' : 'text-[#1F5E3B]'
+                    }`}
+                  >
+                    {second.monthlyStatusLabel ?? '▲ 3 locuri'}
+                  </span>
+                  <div
+                    style={{ animationDelay: '60ms' }}
+                    className={`podium-rise w-full h-24 sm:h-28 rounded-t-[6px] flex flex-col items-center justify-center ${
+                      isDrink
+                        ? 'bg-[#285443] text-[#F4EEE2]'
+                        : 'bg-[#3A2418] text-white'
+                    }`}
+                  >
+                    <span className="font-display text-[26px] sm:text-[30px] leading-none">
+                      2
+                    </span>
+                    <span className="text-[13px] mt-1 opacity-85 tabular-nums">
+                      {formatScore(second.displayScore)}
+                    </span>
+                  </div>
+                </button>
+              )}
+
+              {/* #3 Right (3rd in DOM) */}
               {third && (
                 <button
                   type="button"
                   onClick={() => onSelectRestaurant(third)}
-                  className="venue-row-interactive text-center flex flex-col items-center group"
+                  className="order-3 venue-row-interactive text-center flex flex-col items-center group"
                 >
                   <div
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 mb-2 shrink-0 ${
+                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 mb-2 shrink-0 ${
                       isDrink
-                        ? 'border-[#B98A5E] bg-[#122B22]'
+                        ? 'border-[#CFA47A] bg-[#122B22]'
                         : 'border-[#E0A526] bg-[#ECE6DD]'
                     }`}
                   >
@@ -365,11 +380,12 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
-                  <span className="font-bold text-[14px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                  <span className="font-bold text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                    <span className="sr-only">Locul 3: </span>
                     {third.name}
                   </span>
                   <span
-                    className={`text-[12px] font-semibold mt-1 mb-2.5 ${
+                    className={`text-[11px] sm:text-[12px] font-semibold mt-1 mb-2 sm:mb-2.5 leading-tight ${
                       isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                     }`}
                   >
@@ -377,13 +393,13 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   </span>
                   <div
                     style={{ animationDelay: '110ms' }}
-                    className={`podium-rise w-full h-24 rounded-t-[6px] flex flex-col items-center justify-center ${
+                    className={`podium-rise w-full h-20 sm:h-24 rounded-t-[6px] flex flex-col items-center justify-center ${
                       isDrink
-                        ? 'bg-[#B98A5E] text-[#17382C]'
+                        ? 'bg-[#CFA47A] text-[#17382C]'
                         : 'bg-[#E0A526] text-[#3A2418]'
                     }`}
                   >
-                    <span className="font-display text-[28px] leading-none">
+                    <span className="font-display text-[24px] sm:text-[28px] leading-none">
                       3
                     </span>
                     <span className="text-[13px] mt-1 font-semibold tabular-nums">
@@ -416,11 +432,11 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                       type="button"
                       onClick={() => onSelectRestaurant(spot)}
                       style={{ '--stagger-idx': idx } as React.CSSProperties}
-                      className={`venue-row-interactive stagger-fade-in w-full px-4 py-3 flex items-center justify-between gap-4 text-left ${
+                      className={`venue-row-interactive stagger-fade-in w-full min-h-[60px] px-3 sm:px-4 py-3 flex items-center justify-between gap-2.5 sm:gap-4 text-left ${
                         isDrink ? 'hover:bg-[#1E4335]' : 'hover:bg-[#FAF8F5]'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                         <span
                           className={`font-display text-[20px] w-4 shrink-0 ${
                             isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
@@ -429,7 +445,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                           {rankNum}
                         </span>
                         <div
-                          className={`w-12 h-12 rounded-[4px] overflow-hidden shrink-0 border ${
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-[4px] overflow-hidden shrink-0 border ${
                             isDrink
                               ? 'border-[#285443] bg-[#122B22]'
                               : 'border-[#E6DFD5] bg-[#ECE6DD]'
@@ -458,7 +474,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
                         <span
                           className={`text-[12px] font-bold ${
                             isNew
@@ -500,7 +516,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAllReviewers((prev) => !prev)}
-                className={`btn-press text-[13px] font-semibold underline underline-offset-4 ${
+                className={`btn-press min-h-[44px] inline-flex items-center px-2 -mr-2 text-[13px] font-semibold underline underline-offset-4 ${
                   isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                 }`}
               >
@@ -508,24 +524,34 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-2.5">
+            <ol
+              className={`border-y divide-y ${
+                isDrink
+                  ? 'border-[#285443] divide-[#285443]'
+                  : 'border-[#E6DFD5] divide-[#E6DFD5]'
+              }`}
+            >
               {(showAllReviewers
-                ? TOP_LOCAL_REVIEWERS
-                : TOP_LOCAL_REVIEWERS.slice(0, 3)
+                ? topReviewers
+                : topReviewers.slice(0, 3)
               ).map((reviewer, idx) => (
-                <div
+                <li
                   key={reviewer.id}
                   style={{ '--stagger-idx': idx } as React.CSSProperties}
-                  className={`stagger-fade-in rounded-[6px] border px-4 py-3.5 flex items-center justify-between gap-3 ${
-                    isDrink
-                      ? 'border-[#285443] bg-[#143025]'
-                      : 'border-[#E6DFD5] bg-white'
-                  }`}
+                  className="stagger-fade-in py-3 flex items-center justify-between gap-3 cursor-default"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <span
+                      className={`font-display text-[16px] w-4 shrink-0 tabular-nums ${
+                        isDrink ? 'text-[#F4EEE2]/60' : 'text-[#6E5649]'
+                      }`}
+                    >
+                      {idx + 1}.
+                    </span>
+
                     {/* Avatar initials */}
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[13px] shrink-0 ${
+                      className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 ${
                         reviewer.role === 'verified-local'
                           ? 'bg-[#1F4E8C]/12 text-[#1F4E8C]'
                           : 'bg-[#3A2418]/10 text-[#3A2418]'
@@ -535,7 +561,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                     </div>
 
                     <div className="min-w-0 space-y-1">
-                      <div className="font-bold text-[15px] leading-tight">
+                      <div className="font-semibold text-[15px] leading-tight">
                         {reviewer.name}
                       </div>
                       <div>
@@ -552,7 +578,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   </div>
 
                   <div className="text-right shrink-0">
-                    <div className="font-display text-[22px] leading-none tabular-nums">
+                    <div className="font-display text-[20px] leading-none tabular-nums">
                       {reviewer.helpfulVotes}
                     </div>
                     <div
@@ -563,9 +589,9 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                       voturi utile
                     </div>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </section>
         )}
 
@@ -615,7 +641,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                             ? 'Angajatul lunii în oraș'
                             : `Echipa apreciată · ${emp.role}`}
                         </div>
-                        <div className="font-display text-[22px] leading-tight truncate">
+                        <div className="font-display text-[20px] sm:text-[22px] leading-tight line-clamp-2">
                           {emp.name} · {emp.venue}
                         </div>
                         <div

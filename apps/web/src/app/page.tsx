@@ -1,5 +1,25 @@
 import { TopFoodShell } from '@/components/TopFoodShell';
+import { loadShellData } from '@/lib/backend/load';
+import { DRINK_HERO_HEADERS, FOOD_HERO_HEADERS } from '@/data/heroHeaders';
 
-export default function HomePage() {
-  return <TopFoodShell initialVertical="food" />;
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  // Datele din backend; null = baza nu e disponibilă, se folosesc datele statice
+  const data = await loadShellData();
+  const initialFoodHeroIndex = Math.floor(
+    Math.random() * FOOD_HERO_HEADERS.length
+  );
+  const initialDrinkHeroIndex = Math.floor(
+    Math.random() * DRINK_HERO_HEADERS.length
+  );
+
+  return (
+    <TopFoodShell
+      initialVertical="food"
+      initialFoodHeroIndex={initialFoodHeroIndex}
+      initialDrinkHeroIndex={initialDrinkHeroIndex}
+      {...(data ?? {})}
+    />
+  );
 }

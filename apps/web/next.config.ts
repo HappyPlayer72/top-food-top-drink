@@ -2,29 +2,32 @@ import type { NextConfig } from 'next';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-// Next citește doar .env din apps/web; secretele proiectului stau în .env din rădăcină.
-const rootEnv = resolve(process.cwd(), '../../.env');
+// Cheile (DATABASE_URL etc.) stau în .env-ul din rădăcina repo-ului, comun cu backend-ul
+const rootEnv = resolve(__dirname, '../../.env');
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Pachetele backend se publică ca surse TypeScript (exports: ./src/index.ts).
+  // Pachetele backend-ului sunt TypeScript sursă (workspace-uri npm)
   transpilePackages: [
     '@tftd/api',
-    '@tftd/accounts',
     '@tftd/db',
-    '@tftd/owner',
+    '@tftd/accounts',
     '@tftd/ingestion',
+    '@tftd/leaderboard',
+    '@tftd/loyalty',
+    '@tftd/matching',
     '@tftd/moderation',
     '@tftd/monetization',
+    '@tftd/owner',
     '@tftd/review-analysis',
     '@tftd/scoring',
   ],
   serverExternalPackages: ['postgres'],
   // Monorepo: rădăcina pentru tracing e repo-ul, nu apps/web.
-  outputFileTracingRoot: resolve(process.cwd(), '../..'),
+  outputFileTracingRoot: resolve(__dirname, '../..'),
 };
 
 export default nextConfig;

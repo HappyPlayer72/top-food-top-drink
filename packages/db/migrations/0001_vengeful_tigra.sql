@@ -1,1 +1,0 @@
-ALTER TABLE "owner_claims" ADD COLUMN "attempts" integer DEFAULT 0 NOT NULL;
