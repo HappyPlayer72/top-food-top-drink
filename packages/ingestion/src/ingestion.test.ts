@@ -41,3 +41,13 @@ it("recunoaște platforma linkului", () => {
   expect(detectPlatform("https://m.facebook.com/story.php?id=1")).toBe("facebook");
   expect(detectPlatform("https://exemplu.ro/video")).toBeNull();
 });
+
+it("programul Google: perioadele devin { mon: [[...]] }, cu ore peste miezul nopții", async () => {
+  const { toOpeningHours } = await import("./google.ts");
+  expect(
+    toOpeningHours([
+      { open: { day: 1, hour: 11 }, close: { day: 1, hour: 22 } },
+      { open: { day: 5, hour: 18, minute: 30 }, close: { day: 6, hour: 2 } },
+    ]),
+  ).toEqual({ mon: [["11:00", "22:00"]], fri: [["18:30", "02:00"]] });
+});

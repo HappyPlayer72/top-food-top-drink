@@ -31,6 +31,8 @@ export interface RestaurantDetailModalProps {
   onLocateOnMap?: (restaurant: Restaurant) => void;
   isSaved?: boolean;
   onToggleSave?: (restaurantId: string) => void;
+  initialReviewOpen?: boolean;
+  onConsumeInitialReviewOpen?: () => void;
 }
 
 type ReviewFilterTab = 'verified-local' | 'tourist' | 'influencer' | 'all';
@@ -44,6 +46,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   onLocateOnMap,
   isSaved = false,
   onToggleSave,
+  initialReviewOpen = false,
+  onConsumeInitialReviewOpen,
 }) => {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilterTab>('verified-local');
   const [showScoreFormula, setShowScoreFormula] = useState(false);
@@ -89,6 +93,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       modalOverlayRef.current.scrollTop = 0;
     }
   }, [restaurant?.id]);
+
+  useEffect(() => {
+    if (!restaurant || !initialReviewOpen) return;
+    setIsReviewDrawerOpen(true);
+    onConsumeInitialReviewOpen?.();
+  }, [restaurant, initialReviewOpen, onConsumeInitialReviewOpen]);
 
   useEffect(() => {
     if (!isReviewDrawerOpen) return;
@@ -250,20 +260,20 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       aria-label={`Detalii ${restaurant.name}`}
     >
       <div
-        className={`modal-panel-enter min-h-screen pb-24 ${
+        className={`modal-panel-enter min-h-full flex flex-col ${
           isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
         }`}
       >
         {/* TOP BREADCRUMB BAR (No CarouMark here so CarouStrip appears only once under score) */}
         <header
-          className={`sticky top-0 z-30 border-b ${
+          className={`sticky top-0 z-30 border-b pt-[env(safe-area-inset-top)] ${
             isDrink
               ? 'bg-[#17382C]/95 border-[#285443]'
               : 'bg-white/95 border-[#E6DFD5]'
           } backdrop-blur-sm`}
         >
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 type="button"
                 onClick={onClose}
@@ -277,7 +287,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <span
-                className={`text-[14px] truncate ${
+                className={`text-[13px] sm:text-[14px] truncate ${
                   isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
                 }`}
               >
@@ -289,7 +299,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => onLocateOnMap(restaurant)}
-                className={`btn-press inline-flex items-center gap-1.5 text-[13px] font-semibold px-2.5 py-1.5 rounded-[4px] border shrink-0 ${
+                className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 text-[13px] font-semibold px-3 py-2 sm:py-1.5 rounded-[4px] border shrink-0 ${
                   isDrink
                     ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                     : 'border-[#E6DFD5] text-[#3A2418] hover:border-[#3A2418]'
@@ -302,7 +312,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           </div>
         </header>
 
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 space-y-7">
+        <div className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-4 pb-8 space-y-7">
           {/* VENUE PHOTO */}
           <div
             className={`w-full h-48 sm:h-64 rounded-[4px] overflow-hidden relative ${
@@ -318,9 +328,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
           {/* TITLE + TOWERING SCORE BLOCK (Rule #5: Score is the largest number on screen) */}
           <section className="space-y-3">
-            <div className="flex items-start justify-between gap-5">
-              <div className="min-w-0 space-y-2">
-                <h1 className="font-display text-[36px] sm:text-[46px] leading-[0.95]">
+            <div className="flex items-start justify-between gap-3 sm:gap-5">
+              <div className="min-w-0 flex-1 space-y-2">
+                <h1 className="font-display text-[30px] min-[375px]:text-[36px] sm:text-[46px] leading-[0.98] break-words">
                   {restaurant.name}
                 </h1>
 
@@ -380,14 +390,14 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       onClick={() => setShowScoreFormula((prev) => !prev)}
                       aria-expanded={showScoreFormula}
                       aria-controls="scor-onest-formula"
-                      className="btn-press text-[11px] font-semibold text-[#F2A33A] underline underline-offset-2 hover:opacity-80"
+                      className="btn-press min-h-[44px] sm:min-h-0 inline-flex items-center -my-2 sm:my-0 text-[11px] font-semibold text-[#F2A33A] underline underline-offset-2 hover:opacity-80"
                     >
                       {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
                     </button>
                   </div>
                 ) : (
-                  <div className="min-w-[116px] flex flex-col items-end">
-                    <span className="font-display text-[60px] sm:text-[68px] leading-[0.88] text-[#3A2418] tabular-nums">
+                  <div className="min-w-[92px] min-[375px]:min-w-[108px] sm:min-w-[116px] flex flex-col items-end">
+                    <span className="font-display text-[48px] min-[375px]:text-[58px] sm:text-[68px] leading-[0.88] text-[#3A2418] tabular-nums">
                       {formatScore(restaurant.foodQualityScore)}
                     </span>
                     <div className="w-full mt-2 mb-1">
@@ -401,7 +411,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       onClick={() => setShowScoreFormula((prev) => !prev)}
                       aria-expanded={showScoreFormula}
                       aria-controls="scor-onest-formula"
-                      className="btn-press mt-0.5 text-[11px] font-semibold text-[#6E5649] hover:text-[#3A2418] underline underline-offset-2"
+                      className="btn-press min-h-[44px] sm:min-h-0 inline-flex items-center -my-2 sm:my-0.5 text-[11px] font-semibold text-[#6E5649] hover:text-[#3A2418] underline underline-offset-2"
                     >
                       {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
                     </button>
@@ -482,7 +492,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     type="button"
                     onClick={() => setShowWhyTrap((prev) => !prev)}
                     aria-expanded={showWhyTrap}
-                    className={`btn-press font-semibold underline underline-offset-4 ${
+                    className={`btn-press min-h-[44px] sm:min-h-0 inline-flex items-center px-1 -mr-1 -my-2 sm:my-0 font-semibold underline underline-offset-4 ${
                       isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                     }`}
                   >
@@ -606,7 +616,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             </h2>
 
             {/* Filter Pills: Localnici | Turiști | Influenceri */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
               {(
                 [
                   {
@@ -626,7 +636,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => handleFilterClick(tab.id)}
-                    className={`btn-press px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border ${
+                    className={`btn-press shrink-0 min-h-[44px] sm:min-h-0 px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border whitespace-nowrap ${
                       active
                         ? isDrink
                           ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -645,7 +655,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setReviewFilter('all')}
-                  className={`btn-press text-[12px] font-semibold underline underline-offset-4 ml-1 ${
+                  className={`btn-press shrink-0 min-h-[44px] sm:min-h-0 px-2 text-[12px] font-semibold underline underline-offset-4 ${
                     isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
                   }`}
                 >
@@ -752,7 +762,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                           type="button"
                           onClick={() => handleToggleHelpful(reviewKey)}
                           aria-pressed={isHelpfulVoted}
-                          className={`btn-press inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] border text-[12px] font-semibold ${
+                          className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 rounded-[3px] border text-[12px] font-semibold ${
                             isHelpfulVoted
                               ? isDrink
                                 ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -802,9 +812,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 Din bucătărie
               </h2>
 
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 <div
-                  className={`w-24 h-24 rounded-[4px] overflow-hidden shrink-0 ${
+                  className={`w-20 h-20 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 ${
                     isDrink ? 'bg-[#1E4335]' : 'bg-[#ECE6DD]'
                   }`}
                 >
@@ -855,7 +865,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 Echipa
               </h2>
 
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {restaurant.team.map((member) => (
                   <EmployeeEcusonCard
                     key={member.name}
@@ -884,13 +894,13 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
         {/* BOTTOM STICKY BAR: Scrie un review + Bookmark */}
         <div
-          className={`fixed bottom-0 inset-x-0 z-40 border-t ${
+          className={`sticky bottom-0 z-40 border-t ${
             isDrink
               ? 'bg-[#17382C]/95 border-[#285443]'
               : 'bg-white/95 border-[#E6DFD5]'
           } backdrop-blur-sm`}
         >
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-3">
             <button
               type="button"
               onClick={() => {
@@ -900,7 +910,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 }
                 setIsReviewDrawerOpen(true);
               }}
-              className={`btn-press flex-1 py-3 px-5 rounded-[4px] font-bold text-[15px] hover:opacity-90 ${
+              className={`btn-press flex-1 min-h-[48px] py-3 px-4 sm:px-5 rounded-[4px] font-bold text-[15px] hover:opacity-90 ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#B3261E] text-white'
@@ -934,7 +944,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
         {/* INTERACTIVE REVIEW SUBMISSION DRAWER */}
         {isReviewDrawerOpen && currentUser && (
           <div
-            className="modal-backdrop-enter fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            className="modal-backdrop-enter fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
             onClick={() => setIsReviewDrawerOpen(false)}
           >
             <div
@@ -942,17 +952,18 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               role="dialog"
               aria-modal="true"
               aria-labelledby="review-drawer-title"
-              className={`drawer-sheet-enter w-full sm:max-w-lg rounded-[6px] border p-5 space-y-4 max-h-[90vh] overflow-y-auto ${
+              className={`drawer-sheet-enter w-full max-w-full sm:max-w-lg rounded-t-[12px] sm:rounded-[6px] border px-4 pt-3 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-4 max-h-[92dvh] overflow-y-auto ${
                 isDrink
                   ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
                   : 'bg-white border-[#3A2418] text-[#3A2418]'
               }`}
               onClick={(e) => e.stopPropagation()}
             >
+              <div className="sm:hidden w-10 h-1 rounded-full mx-auto bg-current opacity-20" />
               <div className="flex items-center justify-between gap-2">
                 <h3
                   id="review-drawer-title"
-                  className="font-display text-[26px] leading-none"
+                  className="font-display text-[22px] sm:text-[26px] leading-tight"
                 >
                   Scrie un review · {restaurant.name}
                 </h3>
@@ -1012,7 +1023,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                           isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
                         }`}
                       >
-                        Stabilit din contul tău activ (fără opțiune manuală).
+                        Publicat cu rolul contului tău (
+                        {currentUser.role === 'verified-local'
+                          ? 'Localnic verificat'
+                          : 'Vizitator'}
+                        ).
                       </p>
                     </div>
                     <span
@@ -1048,7 +1063,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         aria-label="Scrie nota între 1 și 10"
                         aria-invalid={Boolean(formError)}
                         aria-describedby={formError ? 'review-form-error' : undefined}
-                        className={`w-20 px-2.5 py-1 rounded-[4px] border text-right font-display text-[24px] leading-none tabular-nums ${
+                        className={`w-20 min-h-[44px] px-2.5 py-1 rounded-[4px] border text-right font-display text-[22px] sm:text-[24px] leading-none tabular-nums ${
                           isDrink
                             ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]'
                             : 'bg-white border-[#3A2418] text-[#3A2418]'
@@ -1149,7 +1164,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     <span className="text-[13px] font-semibold block">
                       Cine te-a servit? (opțional, pentru Angajatul lunii)
                     </span>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {restaurant.team.map((member) => (
                         <EmployeeEcusonCard
                           key={member.name}
@@ -1183,7 +1198,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     aria-invalid={Boolean(formError)}
                     aria-describedby={formError ? 'review-form-error' : undefined}
                     placeholder="Ce ai comandat, cum a fost porția și prețul?"
-                    className={`w-full px-3 py-2 rounded-[4px] border text-[14px] ${
+                    className={`w-full px-3 py-2 rounded-[4px] border text-[16px] sm:text-[14px] ${
                       isDrink
                         ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]'
                         : 'bg-white border-[#3A2418] text-[#3A2418]'
@@ -1203,7 +1218,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
                 <button
                   type="submit"
-                  className={`btn-press w-full py-3 rounded-[4px] font-bold text-[15px] ${
+                  className={`btn-press w-full min-h-[48px] py-3 rounded-[4px] font-bold text-[15px] ${
                     isDrink
                       ? 'bg-[#F2A33A] text-[#17382C]'
                       : 'bg-[#B3261E] text-white'

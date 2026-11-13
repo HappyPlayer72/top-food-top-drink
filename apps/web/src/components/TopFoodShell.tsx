@@ -8,6 +8,8 @@ import {
   NavSection,
   Restaurant,
   Review,
+  TopReviewer,
+  WeekendEvent,
   UserAccount,
   Vertical,
 } from '../types';
@@ -23,6 +25,8 @@ import { Navbar } from './Navbar';
 import { EditorialListView } from './EditorialListView';
 import { MapView } from './MapView';
 import { MonthlyTopView } from './MonthlyTopView';
+import { ScarnaviiView } from './ScarnaviiView';
+import { FidelityView } from './FidelityView';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
 
 const USER_ACCOUNTS: UserAccount[] = [
@@ -54,7 +58,8 @@ const VERTICAL_TITLES: Record<Vertical, string> = {
 function buildUrlForState(
   vertical: Vertical,
   navSection: NavSection,
-  venueSlugOrId: string | null
+  venueSlugOrId: string | null,
+  showLogin = false
 ): string {
   const basePath =
     vertical === 'drink' ? '/topdrink/timisoara' : '/topfood/timisoara';
@@ -65,6 +70,9 @@ function buildUrlForState(
   if (venueSlugOrId) {
     params.set('venue', venueSlugOrId);
   }
+  if (showLogin) {
+    params.set('login', '1');
+  }
   const qs = params.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }
@@ -72,19 +80,32 @@ function buildUrlForState(
 export interface TopFoodShellProps {
   initialVertical?: Vertical;
   initialSection?: NavSection;
+  initialFoodHeroIndex?: number;
+  initialDrinkHeroIndex?: number;
+  /** Date din backend (src/lib/backend/load.ts); lipsă = datele statice din src/data */
+  foodRestaurants?: Restaurant[];
+  drinkVenues?: Restaurant[];
+  weekendEvents?: WeekendEvent[];
+  topReviewers?: TopReviewer[];
 }
 
 export function TopFoodShell({
   initialVertical = 'food',
   initialSection = 'top',
+  initialFoodHeroIndex = 0,
+  initialDrinkHeroIndex = 0,
+  foodRestaurants: initialFood = INITIAL_RESTAURANTS,
+  drinkVenues: initialDrink = DRINK_VENUES,
+  weekendEvents = WEEKEND_EVENTS,
+  topReviewers,
 }: TopFoodShellProps) {
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
   const [navSection, setNavSection] = useState<NavSection>(initialSection);
 
   const [foodRestaurants, setFoodRestaurants] =
-    useState<Restaurant[]>(INITIAL_RESTAURANTS);
+    useState<Restaurant[]>(initialFood);
   const [drinkVenues, setDrinkVenues] =
-    useState<Restaurant[]>(DRINK_VENUES);
+    useState<Restaurant[]>(initialDrink);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [foodFilters, setFoodFilters] = useState<FoodQuickFilter[]>([]);
@@ -100,24 +121,68 @@ export function TopFoodShell({
   const [accounts, setAccounts] = useState<UserAccount[]>(USER_ACCOUNTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLoginScreen, setShowLoginScreen] = useState<boolean>(false);
+  const [pendingReviewVenueId, setPendingReviewVenueId] = useState<
+    string | null
+  >(null);
+  const [openReviewOnMount, setOpenReviewOnMount] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const urlReadyRef = useRef<boolean>(false);
+  const sessionReadyRef = useRef<boolean>(false);
   const pendingSyncRef = useRef<{
     vertical: Vertical;
     navSection: NavSection;
     selectedRestaurantId: string | null;
+    showLoginScreen: boolean;
   } | null>(null);
 
   useEffect(() => {
     try {
       const savedDark = localStorage.getItem('topfood-dark-mode') === 'true';
       setDarkMode(savedDark);
+      const rawCustom = sessionStorage.getItem('topfood-custom-accounts');
+      if (rawCustom) {
+        const parsed = JSON.parse(rawCustom) as UserAccount[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAccounts([
+            ...USER_ACCOUNTS,
+            ...parsed.filter(
+              (c) => !USER_ACCOUNTS.some((u) => u.id === c.id)
+            ),
+          ]);
+        }
+      }
+      const savedUserId = sessionStorage.getItem('topfood-current-user-id');
+      if (savedUserId) {
+        setCurrentUserId(savedUserId);
+      }
+    } catch {
+      // ignore storage errors
+    } finally {
+      sessionReadyRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!sessionReadyRef.current) return;
+    try {
+      const customAccounts = accounts.filter(
+        (acc) => !USER_ACCOUNTS.some((u) => u.id === acc.id)
+      );
+      sessionStorage.setItem(
+        'topfood-custom-accounts',
+        JSON.stringify(customAccounts)
+      );
+      if (currentUserId) {
+        sessionStorage.setItem('topfood-current-user-id', currentUserId);
+      } else {
+        sessionStorage.removeItem('topfood-current-user-id');
+      }
     } catch {
       // ignore storage errors
     }
-  }, []);
+  }, [accounts, currentUserId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -149,24 +214,36 @@ export function TopFoodShell({
 
       const rawSection = params.get('section');
       const nextSection: NavSection =
-        rawSection === 'map' || rawSection === 'monthly' ? rawSection : 'top';
+        rawSection === 'map' ||
+        rawSection === 'monthly' ||
+        rawSection === 'scarnavii' ||
+        rawSection === 'fidelitate'
+          ? rawSection
+          : pathname.startsWith('/fidelitate')
+          ? 'fidelitate'
+          : pathname.startsWith('/scarnavii')
+          ? 'scarnavii'
+          : initialSection;
 
       const venueParam = params.get('venue');
       const matchedVenue = venueParam
-        ? INITIAL_RESTAURANTS.concat(DRINK_VENUES).find(
+        ? initialFood.concat(initialDrink).find(
             (r) => r.slug === venueParam || r.id === venueParam
           ) ?? null
         : null;
       const nextVenueId = matchedVenue ? matchedVenue.id : null;
+      const nextShowLogin = params.get('login') === '1';
 
       pendingSyncRef.current = {
         vertical: nextVertical,
         navSection: nextSection,
         selectedRestaurantId: nextVenueId,
+        showLoginScreen: nextShowLogin,
       };
       setVertical(nextVertical);
       setNavSection(nextSection);
       setSelectedRestaurantId(nextVenueId);
+      setShowLoginScreen(nextShowLogin);
     };
 
     syncFromLocation();
@@ -234,17 +311,24 @@ export function TopFoodShell({
     );
     setCurrentUserId(user.id);
     setShowLoginScreen(false);
+    if (pendingReviewVenueId) {
+      setSelectedRestaurantId(pendingReviewVenueId);
+      setOpenReviewOnMount(true);
+      setPendingReviewVenueId(null);
+    }
     setStatusMessage(`Autentificat ca ${user.name}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleContinueAsGuest = () => {
     setCurrentUserId(null);
+    setPendingReviewVenueId(null);
     setShowLoginScreen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenLogin = () => {
+    setPendingReviewVenueId(selectedRestaurantId);
     setSelectedRestaurantId(null);
     setShowLoginScreen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -273,9 +357,18 @@ export function TopFoodShell({
   };
 
   const handleToggleDrinkFilter = (f: DrinkQuickFilter) => {
-    setDrinkFilters((prev) =>
-      prev.includes(f) ? prev.filter((id) => id !== f) : [...prev, f]
-    );
+    setDrinkFilters((prev) => {
+      if (prev.includes(f)) {
+        return prev.filter((id) => id !== f);
+      }
+      const next =
+        f === 'vineri-noaptea'
+          ? prev.filter((id) => id !== 'in-timpul-saptamanii')
+          : f === 'in-timpul-saptamanii'
+          ? prev.filter((id) => id !== 'vineri-noaptea')
+          : prev;
+      return [...next, f];
+    });
   };
 
   const allVenues = useMemo(
@@ -315,7 +408,8 @@ export function TopFoodShell({
       if (
         pending.vertical === vertical &&
         pending.navSection === navSection &&
-        pending.selectedRestaurantId === selectedRestaurantId
+        pending.selectedRestaurantId === selectedRestaurantId &&
+        pending.showLoginScreen === showLoginScreen
       ) {
         pendingSyncRef.current = null;
       }
@@ -325,12 +419,17 @@ export function TopFoodShell({
     const venueKey = selectedRestaurant
       ? selectedRestaurant.slug || selectedRestaurant.id
       : null;
-    const nextUrl = buildUrlForState(vertical, navSection, venueKey);
+    const nextUrl = buildUrlForState(
+      vertical,
+      navSection,
+      venueKey,
+      showLoginScreen
+    );
     const currentUrl = `${window.location.pathname}${window.location.search}`;
     if (nextUrl !== currentUrl) {
       window.history.pushState(null, '', nextUrl);
     }
-  }, [vertical, navSection, selectedRestaurantId, selectedRestaurant]);
+  }, [vertical, navSection, selectedRestaurantId, selectedRestaurant, showLoginScreen]);
 
   const savedRestaurants = useMemo(
     () => allVenues.filter((r) => savedIds.includes(r.id)),
@@ -431,7 +530,7 @@ export function TopFoodShell({
             vertical={vertical}
             restaurants={foodRestaurants}
             drinkVenues={drinkVenues}
-            weekendEvents={WEEKEND_EVENTS}
+            weekendEvents={weekendEvents}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             foodFilters={foodFilters}
@@ -445,6 +544,8 @@ export function TopFoodShell({
             }}
             onUpdateCrowdReport={handleUpdateCrowdReport}
             onResetFilters={handleResetFilters}
+            initialFoodHeroIndex={initialFoodHeroIndex}
+            initialDrinkHeroIndex={initialDrinkHeroIndex}
           />
         )}
 
@@ -465,6 +566,7 @@ export function TopFoodShell({
           <MonthlyTopView
             vertical={vertical}
             restaurants={activeVerticalVenues}
+            topReviewers={topReviewers}
             onBack={() => {
               setNavSection('top');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -472,11 +574,35 @@ export function TopFoodShell({
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
           />
         )}
+
+        {navSection === 'scarnavii' && (
+          <ScarnaviiView
+            vertical={vertical}
+            onBack={() => {
+              setNavSection('top');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {navSection === 'fidelitate' && (
+          <FidelityView
+            vertical={vertical}
+            currentUser={currentUser}
+            onRequireLogin={handleOpenLogin}
+            onBack={() => {
+              setNavSection('top');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
       </main>
 
       <RestaurantDetailModal
         restaurant={selectedRestaurant}
         currentUser={currentUser}
+        initialReviewOpen={openReviewOnMount}
+        onConsumeInitialReviewOpen={() => setOpenReviewOnMount(false)}
         onClose={() => setSelectedRestaurantId(null)}
         onAddReview={handleAddReview}
         onRequireLogin={handleOpenLogin}
@@ -491,7 +617,7 @@ export function TopFoodShell({
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-16 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 max-w-[calc(100vw-2rem)]"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 w-max max-w-[calc(100vw-2rem)]"
         >
           <div
             className={`flex items-center gap-3 px-4 py-2.5 rounded-[6px] border shadow-lg text-[13px] font-semibold ${
@@ -505,9 +631,9 @@ export function TopFoodShell({
               type="button"
               onClick={() => setStatusMessage(null)}
               aria-label="Închide notificarea"
-              className="btn-press opacity-75 hover:opacity-100 p-1 -mr-1 rounded"
+              className="btn-press opacity-75 hover:opacity-100 w-9 h-9 -mr-2 -my-1.5 flex items-center justify-center rounded"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

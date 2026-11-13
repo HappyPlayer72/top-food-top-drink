@@ -1,12 +1,25 @@
-import type { Metadata } from 'next';
 import { TopFoodShell } from '@/components/TopFoodShell';
+import { loadShellData } from '@/lib/backend/load';
+import { DRINK_HERO_HEADERS, FOOD_HERO_HEADERS } from '@/data/heroHeaders';
 
-export const metadata: Metadata = {
-  title: 'topdrink/timișoara — Unde ies timișorenii, fără capcane',
-  description:
-    'Ghidul onest al barurilor, cafenelelor și cluburilor din Timișoara, cu scoruri ponderate de localnici și detector de capcane turistice.',
-};
+export const dynamic = 'force-dynamic';
 
-export default function TopDrinkTimisoaraPage() {
-  return <TopFoodShell initialVertical="drink" />;
+export default async function TopDrinkTimisoaraPage() {
+  // Datele din backend; null = baza nu e disponibilă, se folosesc datele statice
+  const data = await loadShellData();
+  const initialFoodHeroIndex = Math.floor(
+    Math.random() * FOOD_HERO_HEADERS.length
+  );
+  const initialDrinkHeroIndex = Math.floor(
+    Math.random() * DRINK_HERO_HEADERS.length
+  );
+
+  return (
+    <TopFoodShell
+      initialVertical="drink"
+      initialFoodHeroIndex={initialFoodHeroIndex}
+      initialDrinkHeroIndex={initialDrinkHeroIndex}
+      {...(data ?? {})}
+    />
+  );
 }

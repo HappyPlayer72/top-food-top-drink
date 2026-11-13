@@ -1478,7 +1478,16 @@ export function recalculateRestaurantWithReview(
 ): Restaurant {
   const updatedReviews = [newReview, ...restaurant.reviews];
 
-  const baselineWeight = 12.0;
+  const prevCounts = restaurant.reviewCounts ?? {
+    locals: 0,
+    tourists: 0,
+    influencers: 0,
+  };
+
+  const baselineWeight = Math.max(
+    12.0,
+    prevCounts.locals * 2.0 + prevCounts.tourists * 1.0 + prevCounts.influencers * 0.2
+  );
   const reviewWeight = newReview.weightMultiplier;
 
   const newFoodQualityScore = Number(
@@ -1504,25 +1513,28 @@ export function recalculateRestaurantWithReview(
   const isLocalReviewer =
     newReview.authorRole === 'verified-local' ||
     newReview.authorRole === 'regular';
+  const localsBaseline = Math.max(8, prevCounts.locals * 2.0);
   const newLocalsScore = isLocalReviewer
     ? Number(
         (
-          (restaurant.localsScore * 8 + newReview.foodScore * reviewWeight) /
-          (8 + reviewWeight)
+          (restaurant.localsScore * localsBaseline +
+            newReview.foodScore * reviewWeight) /
+          (localsBaseline + reviewWeight)
         ).toFixed(1)
       )
     : restaurant.localsScore;
 
+  const touristsBaseline = Math.max(6, prevCounts.tourists * 1.0);
   const newTouristsScore =
     newReview.authorRole === 'tourist'
-      ? Number(((restaurant.touristsScore * 6 + newReview.foodScore) / 7).toFixed(1))
+      ? Number(
+          (
+            (restaurant.touristsScore * touristsBaseline + newReview.foodScore) /
+            (touristsBaseline + 1)
+          ).toFixed(1)
+        )
       : restaurant.touristsScore;
 
-  const prevCounts = restaurant.reviewCounts ?? {
-    locals: 0,
-    tourists: 0,
-    influencers: 0,
-  };
   const updatedCounts = {
     locals: prevCounts.locals + (isLocalReviewer ? 1 : 0),
     tourists: prevCounts.tourists + (newReview.authorRole === 'tourist' ? 1 : 0),

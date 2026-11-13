@@ -104,8 +104,15 @@ const LEXICON: Record<string, string[]> = {
   muzica: ["muzica", "muzică", "dj", "live", "concert", "rock", "jazz", "techno", "music"],
   aglomeratie: ["plin", "aglomerat", "coada", "coadă", "gol", "loc", "crowded", "busy", "queue"],
 };
-const POSITIVE = ["bun", "buna", "bună", "excelent", "super", "recomand", "gustos", "gustoasă", "ieftin", "curat", "rapid", "amabil", "great", "good", "amazing", "friendly", "delicious"];
-const NEGATIVE = ["prost", "proasta", "proastă", "scump", "murdar", "rece", "lent", "nepoliticos", "slab", "slăbuț", "bad", "rude", "slow", "dirty", "overpriced", "expensive"];
+const POSITIVE = [
+  "bun", "buna", "bună", "excelent", "excelentă", "super", "recomand", "gustos", "gustoasă", "ieftin", "curat", "rapid", "amabil", "amabilă",
+  "cinstit", "cinstită", "corect", "corecte", "mare", "mari", "fain", "faină", "preferat", "prietenos", "prietenoasă", "rece și bună",
+  "great", "good", "amazing", "friendly", "delicious", "lovely", "tasty", "beautiful",
+];
+const NEGATIVE = [
+  "prost", "proasta", "proastă", "scump", "murdar", "rece", "lent", "lentă", "nepoliticos", "slab", "slăbuț", "banal", "banală", "mici", "dublu",
+  "bad", "rude", "slow", "dirty", "overpriced", "expensive", "average", "touristy",
+];
 
 export function keywordAspects(r: { id: string; text: string }, vertical: Vertical): AspectResult {
   const allowed = vertical === "food" ? FOOD_ASPECTS : DRINK_ASPECTS;

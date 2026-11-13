@@ -4,7 +4,8 @@
  */
 import { and, avg, count, desc, eq, gte, sql } from "drizzle-orm";
 import {
-  employeeRatings, employees, forbidden, invalid, notFound, posts, reports, reviewReplies, reviews, venueManagers, venues, type Db,
+  employeeRatings, employees, forbidden, invalid, menuItems, notFound, posts, reports, reviewReplies, reviews, venueManagers, venues, type Db,
+  type OpeningHours,
 } from "@tftd/db";
 
 export async function assertManager(db: Db, userId: string, venueId: string) {
@@ -41,6 +42,63 @@ export async function appealTrapLabel(db: Db, userId: string, venueId: string, r
   await assertManager(db, userId, venueId);
   const [report] = await db.insert(reports).values({ targetType: "trap_appeal", targetId: venueId, reportedBy: userId, reason }).returning();
   return report!;
+}
+
+// ---------- Prezentarea localului: meniu, poze, text, program ----------
+
+export type MenuItemInput = { name: string; priceLei?: number | null; description?: string | null; mustOrder?: boolean };
+
+/** Înlocuiește lista „Ce să comanzi” (max 12 feluri, în ordinea dată). */
+export async function setMenu(db: Db, userId: string, venueId: string, items: MenuItemInput[]) {
+  await assertManager(db, userId, venueId);
+  if (items.length > 12) throw invalid("Maxim 12 feluri recomandate.");
+  for (const i of items) {
+    if (!i.name.trim() || i.name.length > 80) throw invalid("Numele unui fel are 1–80 de caractere.");
+    if (i.priceLei != null && (!Number.isInteger(i.priceLei) || i.priceLei < 0 || i.priceLei > 5000)) throw invalid("Preț invalid.");
+  }
+  await db.transaction(async (tx) => {
+    await tx.delete(menuItems).where(eq(menuItems.venueId, venueId));
+    if (items.length) {
+      await tx.insert(menuItems).values(
+        items.map((i, position) => ({ venueId, name: i.name.trim(), priceLei: i.priceLei ?? null, description: i.description ?? null, mustOrder: !!i.mustOrder, position })),
+      );
+    }
+  });
+}
+
+/** Titlu, text de prezentare, ocazii, poze și program. Poze = URL-uri deja încărcate de aplicație. */
+export async function updatePresentation(
+  db: Db,
+  userId: string,
+  venueId: string,
+  input: { headline?: string; writeup?: string[]; occasionTags?: string[]; drinkTags?: string[]; photos?: string[]; openingHours?: OpeningHours },
+) {
+  await assertManager(db, userId, venueId);
+  if (input.headline && input.headline.length > 140) throw invalid("Titlul are maxim 140 de caractere.");
+  if (input.writeup && input.writeup.join("").length > 3000) throw invalid("Textul are maxim 3000 de caractere.");
+  if (input.photos && (input.photos.length > 30 || input.photos.some((p) => !/^https:\/\//.test(p)))) throw invalid("Maxim 30 de poze, cu linkuri https.");
+  if (input.openingHours) validateHours(input.openingHours);
+  const [v] = await db
+    .update(venues)
+    .set({
+      ...(input.headline !== undefined ? { editorialHeadline: input.headline.trim() || null } : {}),
+      ...(input.writeup !== undefined ? { editorialWriteup: input.writeup.map((p) => p.trim()).filter(Boolean) } : {}),
+      ...(input.occasionTags !== undefined ? { occasionTags: input.occasionTags } : {}),
+      ...(input.drinkTags !== undefined ? { drinkTags: input.drinkTags } : {}),
+      ...(input.photos !== undefined ? { photos: input.photos } : {}),
+      ...(input.openingHours !== undefined ? { openingHours: input.openingHours } : {}),
+    })
+    .where(eq(venues.id, venueId))
+    .returning();
+  return v!;
+}
+
+function validateHours(h: OpeningHours) {
+  for (const ranges of Object.values(h)) {
+    for (const [a, b] of ranges ?? []) {
+      if (!/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b)) throw invalid("Ora se scrie HH:MM (ex. 11:00).");
+    }
+  }
 }
 
 // ---------- Mini-blog ----------
