@@ -1,9 +1,17 @@
-# UX/UI review: topfood-ui
+# UX/UI review: apps/web
 
-Date: 13 November 2026
-Scope: `topfood-ui/` (React 19 + Vite + Tailwind 4), compared against `design/README.md` and `TOP FOOD TOP DRINK — Identitate vizuală.pdf`.
+| | |
+| --- | --- |
+| **Version** | 2, 13 November 2026 |
+| **Code reviewed** | `main` at `5571e36` ("Merge pull request #3 from HappyPlayer72/serban"), which matches the `oli` branch apart from this file |
+| **App** | `apps/web` (Next.js 15, React 19, Tailwind 4). The old `topfood-ui/` prototype was removed on `main` |
+| **Compared with** | `design/README.md` and `TOP FOOD TOP DRINK — Identitate vizuală.pdf` |
+| **Previous version** | v1 reviewed `topfood-ui/` (commit `8ca0bea`). Section 3 tracks what happened to each v1 issue |
 
-**Verdict: UI 8/10, UX 6/10.** It looks like the brand and the main idea (locals vs tourists, explained scores, quiet sponsored slots) comes across. But two layout bugs hide the venue page's main button and the review form, the map doesn't work on phones, and the demo's scoring can be swung by one review.
+**Verdict: UI 8/10, UX 6.5/10** (v1: 8 and 6).
+The move to Next.js fixed several big problems: real URLs with a working Back button, a usable map on phones, per-vertical page titles, a search box on topdrink, and better accessibility in pop-ups.
+But the two v1 demo blockers are still there: the venue page's "Scrie un review" bar isn't pinned, and one review swings the score.
+The new login also creates a trust problem: anyone can make themselves a 2,0× "verified local" by ticking one checkbox.
 
 ---
 
@@ -11,119 +19,130 @@ Scope: `topfood-ui/` (React 19 + Vite + Tailwind 4), compared against `design/RE
 
 | Step | Result |
 | --- | --- |
-| Install Node.js | v26.13.1 LTS (official nodejs.org build, checksum verified) in `~/.local/node`. No sudo needed. |
-| `npm install` | OK. npm blocked esbuild's postinstall script; the build still works. |
+| Node.js | v26.13.1 LTS in `~/.local/node` (installed during v1) |
+| `npm install` (in `apps/web`) | OK. It rewrites about 2,000 lines of the root `package-lock.json`, so the committed lockfile is out of sync (restored afterwards) |
 | `tsc --noEmit` | **Pass**, 0 errors |
-| `vite build` | **Pass**: JS 379 kB (107 kB gzip), CSS 44 kB (8.7 kB gzip) |
-| `vite` dev server | Runs on `http://localhost:5173` |
-| Console errors | One `ERR_BLOCKED_BY_CLIENT` (a blocked external request, not app code) |
+| `next build` | **Pass**: 3 routes (`/`, `/topfood/timisoara`, `/topdrink/timisoara`), all static, 146 kB first-load JS |
+| `next dev` | Runs on `http://localhost:3000`; no console errors |
+| Server-rendered HTML | Lists are in the HTML (good for SEO). Venue pages (`?venue=…`) have the same title and no venue content in the HTML. `/topfood/timisoara/ciorba-lui-sandu` returns **404** |
 
-To run it again:
+To run it:
 
 ```bash
 export PATH=$HOME/.local/node/bin:$PATH
-cd topfood-ui && npm run dev
+cd apps/web && npm install && npm run dev
 ```
 
 Tested in the Claude desktop app's browser pane at 1280×860 (desktop) and 375×812 (phone).
 
 ---
 
-## 2. Flows tested
+## 2. Flows tested (v2)
 
 | # | Flow | Result |
 | --- | --- | --- |
-| 1 | topfood home loads, top list, trap sidebar | ✅ Works, close to the mockup |
-| 2 | Filter "Fără capcane" | ✅ Works (it also hides the "Atenție în Piața Unirii" warning box) |
-| 3 | Search "Plăcintă" (with diacritics) | ✅ Finds Plăcintăria Elisabetin |
-| 4 | Search "placinta" (no diacritics) | ❌ "Niciun local nu corespunde căutării" |
-| 5 | Search result labelling | ❌ A single result shows "#1 În topul localnicilor" even when it ranks #3 |
-| 6 | Switch to topdrink | ⚠️ Works, but the background is cream (`#F6F3EB`), not bottle green; the browser tab title still says "topfood" |
-| 7 | topdrink: "Vineri noaptea" + "În timpul săptămânii" | ❌ Leaves 1 bar, still titled "Topul de vineri" and badged "#1" |
-| 8 | Crowd report ("Spune cât e de plin unde ești") | ✅ Submits and updates the bar right away. ⚠️ Escape doesn't close the sheet; the confirmation appears at the top of the page, away from the button |
-| 9 | Map (desktop) | ✅ Works. ⚠️ Trap pins and zone labels overlap in the centre; a raw "45.7526°N, 21.2300°E" readout is shown to users |
-| 10 | Map (phone) | ❌ List covers 320 of 375 px; map can't be dragged by touch; "Deschide fișa localului" button is 37 px under the bottom nav |
-| 11 | Venue page | ✅ Matches the mockup layout. ❌ URL never changes (`/` the whole time, history length 1) |
-| 12 | "Scrie un review" bar | ❌ Not pinned: sits at the very bottom of the page (y≈1,667 px on desktop, ≈1,776 px on phone) |
-| 13 | Review form position | ❌ After scrolling, the form's top (title, author, score) was 340 px above the screen |
-| 14 | Review validation (empty text) | ✅ Shows "Scrie cel puțin câteva cuvinte concrete despre experiență." |
-| 15 | Submit review (local account, score 6) | ✅ Posts, count 112 → 113. ❌ Honest score 9,1 → 8,7 and locals 9,4 → 8,7 from **one** review |
-| 16 | Monthly top | ✅ Renders. ⚠️ Different venues from the home top; #2 renamed; #3 uses mustard (the trap colour) |
-| 17 | Refresh after posting a review | ⚠️ Review is gone (state is in memory only; fine for a demo) |
+| 1 | `/topfood/timisoara` loads | ✅ No console errors; close to the mockup |
+| 2 | Open a venue | ✅ URL becomes `?venue=ciorba-lui-sandu`. ⚠️ Page title stays the vertical's title |
+| 3 | Browser Back from a venue | ✅ Closes the venue and returns to the list |
+| 4 | Deep link `/topdrink/timisoara?venue=pivnita-cu-bolta` | ✅ Opens the venue directly |
+| 5 | "Scrie un review" bar | ❌ Still not pinned: y≈1,694 px on an 860 px screen |
+| 6 | Guest taps "Intră în cont ca să scrii un review" | ⚠️ Login screen opens, but the venue is closed and `?venue` is dropped. After logging in you land on the home page |
+| 7 | Demo login (Andreea M.) | ✅ One click, with an "Autentificat ca Andreea M." toast |
+| 8 | Refresh while logged in | ⚠️ Logged out (session kept in memory only) |
+| 9 | Register as "Localnic" with `test.user@example.com` + ticked checkbox | ❌ Becomes "Cont verificat Iosefin", weight 2,0× |
+| 10 | topdrink background | ❌ Still cream `#F6F3EB`, not bottle green |
+| 11 | topdrink search "pivnita" | ❌ "Niciun bar nu corespunde…" (only "Pivnița" works) |
+| 12 | topdrink "Vineri noaptea" + "În timpul săptămânii" | ❌ 1 bar left, still titled "Topul de vineri" |
+| 13 | Map on a phone | ✅ List starts closed, new legend, venue card sits above the bottom nav |
+| 14 | Monthly top | ✅ Real venue name now ("Pizzeria din Fabric"). ⚠️ #3 still mustard; breadcrumb says `/top` while the URL is `?section=monthly` |
+| 15 | Phone header (logged out) | ⚠️ The red "Intră în cont" button wraps onto 2 lines |
+| 16 | Phone, topdrink #1 card | ❌ "Ce să iei: …" chip runs into "Vezi fișa" (the same overlap as v1's food card) |
+
+Not re-run in the browser because the code is unchanged from v1: the review form position and the score change after one review. Both have the same cause in the same code.
 
 ---
 
-## 3. What works well
+## 3. Status of v1 issues
 
-- **Brand followed closely:** colours, Archivo condensed for titles and scores, decimal commas (`9,1`), the checked strip once per screen, the blue street-sign badge for locals, and the warning triangle on traps.
-- **Scores explain themselves:** separate locals/tourists bars, "De ce?" on every venue, and "Cum calculăm asta" with the 5 weighted signals.
-- **Sponsored slots look quieter:** no photo, no rank, a muted score, and "Sponsorizat. Nu schimbă scorul și nici locul în top."
-- **The demo is convincing:** switching between a local (2,0×) and a tourist (1,0×) account, posting a review, and watching the numbers move.
-- **Careful details:** empty states, Escape closes the venue page, background scroll lock, visible focus outlines, `prefers-reduced-motion` support, and no horizontal scroll at 375 px.
-- **Mobile home page** is very close to PDF page 3.
+| v1 # | Issue | Status in `apps/web` | Where |
+| --- | --- | --- | --- |
+| 1 | `forwards` animation breaks fixed elements on the venue page (review bar, review form) | ❌ **Open** | `app/globals.css:335` |
+| 2 | One review swings the score (baseline of 8 instead of the review count) | ❌ **Open** | `data/restaurants.ts:1510` |
+| 3 | topdrink cream by default | ❌ **Open** | `app/globals.css:418` |
+| 4 | Map unusable on phones | ✅ **Fixed**: touch panning, list closes below 768 px, card clears the nav | `MapView.tsx:217`, `:838` |
+| 5 | No URLs; Back leaves the site | 🟡 **Mostly fixed**: query-param URLs, Back works, deep links work. Path-style routes from the README still 404; no per-venue title or meta | `TopFoodShell.tsx:54`, `:309` |
+| 6 | Contradicting topdrink filters; "Topul de vineri" heading fixed | ❌ **Open** | `EditorialListView.tsx:154`, `:401` |
+| 7 | "#1" badge on filtered and search results | ❌ **Open** | `EditorialListView.tsx:476`, `:917` |
+| 8 | Search needs diacritics | ❌ **Open** (now in both food and drink search) | `EditorialListView.tsx:111`, `:149` |
+| 9 | Hard-coded text | 🟡 **Partly**: "Clasamentul lunii noiembrie" is gone; "4.180" and "Trei terase" remain | `EditorialListView.tsx:840`, `:1029` |
+| 10 | Monthly top: rename, fake October, mustard #3 | 🟡 **Partly**: rename fixed; mustard #3 remains | `MonthlyTopView.tsx:383` |
+| 11 | Accessibility in pop-ups | 🟡 **Partly**: crowd sheet now has `role="dialog"` and Escape; review form has `aria-invalid` and `role="alert"`; podium `focus:outline-none` removed. Small text links (18–21 px tall) remain | — |
+| 12 | Developer wording in the review form | ❌ **Open** | `RestaurantDetailModal.tsx:1015`, `:1089` |
+| 13 | Chip overlaps "Vezi fișa" | ❌ **Open**; now on topdrink too | `EditorialListView.tsx:505` |
+| 14 | Trap thresholds differ between map and list | ❌ **Open** | `MapView.tsx` |
+| 15 | Raw lat/long readout on the map | ❌ **Open** | `MapView.tsx:1300` |
+| 16 | Locals' blue badge used for scores | ❌ **Open** | — |
+| 17 | External fonts and photos, no placeholders | ❌ **Open** | `app/layout.tsx` |
+
+**Summary:** 1 fixed, 4 partly fixed, 12 open.
 
 ---
 
-## 4. Bugs and problems, by priority
+## 4. New in v2
 
-### P0: fix before the demo
+### What got better
+- **Real routes** `/topfood/timisoara` and `/topdrink/timisoara`, server-rendered lists, and page titles per vertical.
+- **URL state** for venue and section, so Back, deep links and sharing work.
+- **Login screen** on brand, with one-click demo accounts, a clear 2,0× vs 1,0× explanation, and "Explorează fără cont" (explore without an account). Guests can browse everything.
+- **A toast** for login, logout and saving a venue (`role="status"`).
+- **"Cum calculăm Scorul Onest?"** (how we calculate the honest score) on the home list, explaining the 2,0× / 1,0× / 0,2× weights and the pull towards the city average. This covers product rule 3 (every score is explained).
+- **topdrink search box**, the "/" shortcut to focus search, and a map legend.
 
-1. **The venue page's fixed elements are broken.** In `topfood-ui/src/index.css:304`, `.modal-panel-enter` uses `animation: … forwards`, so the panel keeps a `transform` after animating. Any `transform` makes `position: fixed` children position against that element instead of the screen. As a result:
-   - the "Scrie un review" bar (`RestaurantDetailModal.tsx:826`) only appears at the end of the page;
-   - the review form (`RestaurantDetailModal.tsx:867`) opens partly off-screen.
+### New problems
 
-   **Fix:** remove `forwards` from `.modal-panel-enter` (the end state is the default anyway), or end the keyframe at `transform: none`.
+**P0: trust in the scores**
 
-2. **One review moves the score far too much.** `data/restaurants.ts:1563` weights the existing locals' score as if it came from 8 reviews (and the tourists' score from 6, at `:1571`), while the page says 112 and 26. During a demo, two "1" reviews would knock the #1 venue off the top, which undercuts the "honest score" pitch. **Fix:** use `reviewCounts.locals` and `reviewCounts.tourists` as the baseline weights.
+- **N1. Anyone can become a "verified local".**
+  - In registration, "Localnic" (2,0×) is pre-selected (`LoginScreen.tsx:53`).
+  - Without a university email, one ticked checkbox ("Confirm că locuiesc în Timișoara…") is enough.
+  - Login also accepts any email plus any 6-character password and creates an account. An address ending in `@e-uvt.ro` or `@upt.ro` becomes a local automatically (`LoginScreen.tsx:20`). That ties "local" to "student", which the product doesn't mean.
 
-3. **topdrink isn't green by default.** `index.css:383` (light theme) turns Sticlă `#17382C` into cream. Bottle green only appears in dark mode. The identity's whole topdrink idea is missing on first load. **Fix:** keep topdrink green in both themes, or remove the light override for drink.
+  Together with v1 #2 (one review swings the score), the demo shows the score is easy to game. **Fix:** default to "Turist"; make local status come from the simulated GPS check-in the spec describes (`CLAUDE.md` MVP step 4), or label self-declared locals as unverified at 1,0×.
 
-### P1: important
+**P1**
 
-4. **The map doesn't work on phones** (`MapView.tsx`):
-   - the list is open by default (`:196`) at a fixed `w-80` (`:500`);
-   - panning only uses mouse events (`:725`); add pointer or touch events;
-   - the bottom venue card sits under the bottom nav.
+- **N2. Logging in from a venue loses your place.** `handleOpenLogin` (`TopFoodShell.tsx:247`) clears the venue. Return to the same venue, with the review form open, after logging in.
+- **N3. The login doesn't survive a refresh.** `currentUserId` is plain React state (`TopFoodShell.tsx:101`). Keep it in `sessionStorage` for the demo.
+- **N4. Logged-in users can switch into the demo accounts.** The "Cont activ" (active account) switcher in the profile menu (`Navbar.tsx:261`) lets anyone act as Andreea. Show it only in a demo mode.
+- **N5. The login screen has no URL**, so Back from it leaves the page you came from.
 
-   **Fix:** close the list by default below `md`, show it as a bottom sheet, and add bottom padding for the nav.
-5. **No URLs.** `/` never changes, so you can't share a venue, and Back leaves the site. Add routes for `/topfood/timisoara`, `/topdrink/timisoara`, `/…/{slug}` and `/…/top` (the spec's Next.js app needs these for SEO anyway). Also set `document.title` per vertical and venue.
-6. **topdrink filters contradict each other** (`EditorialListView.tsx:137`). "Vineri noaptea" and "În timpul săptămânii" should be one either/or choice, and the heading (`:231`, "Topul de vineri") should follow it. The "plin acum, din raportări" subtitle suggests sorting by how busy places are, but the list is sorted by score.
-7. **"#1" badges are wrong on filtered lists** (`EditorialListView.tsx:263`, `:674`). The first item of a search or filter result is always labelled #1 in the top. Show the real rank, or drop the badge while a filter or search is active.
-8. **Search needs diacritics.** Normalize both sides with `s.normalize('NFD').replace(/\p{M}/gu, '')`. Most people type without diacritics on their phones.
+**P2**
 
-### P2: polish
+- **N6. Unlabelled controls on the login screen.** 5 buttons have no accessible name, and the GDPR checkbox is read as "on".
+- **N7. The red "Intră în cont" button wraps onto 2 lines on a 375 px phone.** Use an icon, or "Cont", below `sm`.
+- **N8. The monthly breadcrumb shows `topfood/timisoara/top`** (`MonthlyTopView.tsx:122`), but the URL is `?section=monthly` and the README says `top-luna`.
 
-9. **Hard-coded text:** "după 4.180 de review-uri" (`EditorialListView.tsx:641`), "Clasamentul lunii noiembrie" (`:890`), and "Trei terase din centru…" (`:908`).
-10. **The monthly top doesn't match the home top.** It's a separate list (La Doi Pași, Langoș & Co, Mămăliga Urbană… never appear on the home page). Pizzeria din Fabric is renamed "Cuptorul din Fabric" (`MonthlyTopView.tsx:261`), and the October archive is this month minus 0,1 (`:44`). The #3 podium uses mustard `#E0A526` (`:377`), which the design reserves for "Posibilă capcană".
-11. **Accessibility:**
-    - the crowd-report sheet has no `role="dialog"`, no Escape handling, and doesn't move or trap focus;
-    - the podium buttons use `focus:outline-none`;
-    - "Vezi tot topul", "Clasamentul lunii…" and "Cum calculăm asta" are 19–21 px tall (aim for at least 44 px);
-    - the bottom nav shows the active tab only with bold text.
-12. **Text written for developers** in the review form: "Stabilit din contul tău activ (fără opțiune manuală)." and "Numere întregi (1–10), slider sau tastare". There are also two inputs (number field and slider) for one value; a row of 1–10 buttons is simpler on a phone.
-13. **The "Recomandat" chip overlaps "Vezi fișa"** on the #1 card at 375 px.
-14. **Trap thresholds disagree between screens.**
-    - The map groups venues as 0–25 / 26–60 / 61–100 and labels them with "%".
-    - The list uses "possible" from 60 and "trap" from 80, and shows the value as "din 100".
-15. **The map shows raw lat/long** (`MapView.tsx:1140`). Remove it or keep it in debug builds only.
-16. **The blue locals' badge is used for scores** ("Localnici 9,4"). The design reserves it for people who are locals.
-17. **Photos and fonts come from Unsplash and Google Fonts** with no placeholders. On a slow connection, cards show empty grey boxes and system fonts for a few seconds. Bundle the fonts and use local photos for the demo.
+### Repository health
+
+- `apps/web/tsconfig.tsbuildinfo` and `topfood-ui/.vite/deps/*` are committed; they're build output. Add them to `.gitignore` and remove them from git.
+- The root `package-lock.json` doesn't match `apps/web/package.json`. Run `npm install` once and commit the lockfile, so teammates don't get a large lockfile diff on every install.
+- `apps/web/README.md` lists routes (`/{slug}`, `/top-luna`, `/weekend`, `/u/{username}`, `/owner`, `/admin`) that don't exist yet.
 
 ---
 
 ## 5. Suggested order
 
-1. Remove `forwards` in `index.css:304` (one line; fixes items 1a and 1b).
-2. Fix the score baseline in `recalculateRestaurantWithReview`.
-3. Make topdrink green by default.
-4. Phone map: list closed by default, touch panning, card above the nav.
+1. Blocker 1: remove `forwards` (section 5).
+2. Blocker 2: real review counts as score baselines (section 5).
+3. Blocker 3: topdrink green by default (section 5).
+4. Login: default to "Turist", make local status hard to self-assign (N1), and return to the venue after login (N2).
 5. Either/or Friday/weekday choice; real ranks in filtered lists; search without diacritics.
-6. Routing and page titles.
-7. Polish items 9–17.
+6. Path routes `/topfood/timisoara/[slug]` with `generateMetadata` per venue (SEO, as planned in the spec).
+7. P2 items and repository cleanup.
 
 ## 6. Not covered
 
 - Real touch gestures (the emulator sends mouse clicks).
 - Screen readers, and the dark theme in every view.
-- Performance on a real phone and slow networks.
-- `apps/web` (only a README exists) and the backend packages.
+- Lighthouse or performance on a real phone.
+- Backend packages, `apps/worker`, and the `/owner` and `/admin` pages (they don't exist yet).
