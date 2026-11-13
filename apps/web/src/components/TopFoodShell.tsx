@@ -606,7 +606,9 @@ export function TopFoodShell({
         {navSection === 'scarnavii' && (
           <ScarnaviiView
             vertical={vertical}
+            restaurants={activeVerticalVenues}
             onBack={() => navigateToSection('top')}
+            onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
           />
         )}
 

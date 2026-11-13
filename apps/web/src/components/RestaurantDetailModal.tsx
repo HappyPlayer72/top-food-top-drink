@@ -1,7 +1,19 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bookmark, Check, ChevronLeft, MapPin, ThumbsUp, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  BookOpen,
+  Bookmark,
+  Calendar,
+  Check,
+  ChevronLeft,
+  Clock,
+  MapPin,
+  Scale,
+  ThumbsUp,
+  X,
+} from 'lucide-react';
 import {
   AuthorRole,
   Restaurant,
@@ -9,6 +21,12 @@ import {
   UserAccount,
   formatScore,
 } from '../types';
+import {
+  getTodayDayName,
+  getVenueLastUpdated,
+  getVenueMenu,
+  getVenueWeeklyHours,
+} from '../data/venueExtras';
 import {
   AvertizareaCard,
   CarouStrip,
@@ -75,6 +93,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [reviewFilter, setReviewFilter] = useState<ReviewFilterTab>('verified-local');
   const [showScoreFormula, setShowScoreFormula] = useState(false);
   const [showWhyTrap, setShowWhyTrap] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showHours, setShowHours] = useState(false);
+  const [showGoogleCompare, setShowGoogleCompare] = useState(false);
   const [isReviewDrawerOpen, setIsReviewDrawerOpen] = useState(false);
   const [localSaved, setLocalSaved] = useState(false);
   const [helpfulVotedKeys, setHelpfulVotedKeys] = useState<Record<string, boolean>>({});
@@ -109,6 +130,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewFilter(hasLocal ? 'verified-local' : 'all');
     setShowScoreFormula(false);
     setShowWhyTrap(false);
+    setShowMenu(false);
+    setShowHours(false);
+    setShowGoogleCompare(false);
     setIsReviewDrawerOpen(false);
     setHelpfulVotedKeys({});
     setPraisedEmployee('');
@@ -257,6 +281,19 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
   const isDrink = restaurant.vertical === 'drink';
   const saved = onToggleSave ? isSaved : localSaved;
+
+  const lastUpdated = getVenueLastUpdated(restaurant);
+  const menuCategories = getVenueMenu(restaurant);
+  const menuItemCount = menuCategories.reduce(
+    (acc, cat) => acc + cat.items.length,
+    0
+  );
+  const weeklyHours = getVenueWeeklyHours(restaurant);
+  const todayDayName = getTodayDayName();
+  const googleOn10 = Number((restaurant.googleRawRating * 2).toFixed(1));
+  const googleVsTopDiff = Number(
+    (googleOn10 - restaurant.foodQualityScore).toFixed(1)
+  );
 
   const counts = restaurant.reviewCounts ?? {
     locals: restaurant.reviews.filter(
@@ -503,6 +540,31 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   {restaurant.openUntilLabel ?? restaurant.hours}
                 </p>
 
+                <div
+                  className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] ${
+                    isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                    <span>Actualizat: {lastUpdated}</span>
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span
+                    className={`font-semibold ${
+                      restaurant.openNow
+                        ? isDrink
+                          ? 'text-[#6EE7B7]'
+                          : 'text-[#1E6B43]'
+                        : isDrink
+                        ? 'text-[#FCA5A5]'
+                        : 'text-[#B3261E]'
+                    }`}
+                  >
+                    {restaurant.openNow ? 'Deschis acum' : 'Închis acum'}
+                  </span>
+                </div>
+
                 {(restaurant.isPartner || restaurant.isSponsored) && (
                   <div className="flex flex-wrap items-center gap-2 pt-0.5">
                     {restaurant.isPartner && (
@@ -599,6 +661,363 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     media). Localurile cu puține review-uri sunt trase ușor spre media
                     orașului, ca un singur vot extrem să nu deformeze clasamentul.
                   </p>
+                </div>
+              </div>
+            </div>
+
+            {/* OPȚIUNI LOCAL: Meniu · Program de funcționare · Compară cu Google Maps */}
+            <div className="pt-1 space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMenu((prev) => !prev)}
+                  aria-expanded={showMenu}
+                  aria-controls="locale-menu-panel"
+                  className={`btn-press min-h-[44px] px-3.5 py-2 rounded-[4px] border text-[13px] font-semibold inline-flex items-center gap-2 ${
+                    showMenu
+                      ? isDrink
+                        ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                        : 'bg-[#3A2418] text-white border-[#3A2418]'
+                      : isDrink
+                      ? 'bg-[#143025] text-[#F4EEE2] border-[#2D5947] hover:border-[#F2A33A]'
+                      : 'bg-[#FAF8F5] text-[#3A2418] border-[#D6CFC5] hover:border-[#3A2418]'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4 shrink-0" />
+                  <span>{showMenu ? 'Ascunde meniul' : `Vezi meniul (${menuItemCount})`}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowHours((prev) => !prev)}
+                  aria-expanded={showHours}
+                  aria-controls="locale-hours-panel"
+                  className={`btn-press min-h-[44px] px-3.5 py-2 rounded-[4px] border text-[13px] font-semibold inline-flex items-center gap-2 ${
+                    showHours
+                      ? isDrink
+                        ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                        : 'bg-[#3A2418] text-white border-[#3A2418]'
+                      : isDrink
+                      ? 'bg-[#143025] text-[#F4EEE2] border-[#2D5947] hover:border-[#F2A33A]'
+                      : 'bg-[#FAF8F5] text-[#3A2418] border-[#D6CFC5] hover:border-[#3A2418]'
+                  }`}
+                >
+                  <Clock className="w-4 h-4 shrink-0" />
+                  <span>{showHours ? 'Ascunde programul' : 'Program de funcționare'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleCompare((prev) => !prev)}
+                  aria-expanded={showGoogleCompare}
+                  aria-controls="locale-google-compare-panel"
+                  className={`btn-press min-h-[44px] px-3.5 py-2 rounded-[4px] border text-[13px] font-semibold inline-flex items-center gap-2 ${
+                    showGoogleCompare
+                      ? isDrink
+                        ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                        : 'bg-[#3A2418] text-white border-[#3A2418]'
+                      : isDrink
+                      ? 'bg-[#143025] text-[#F4EEE2] border-[#2D5947] hover:border-[#F2A33A]'
+                      : 'bg-[#FAF8F5] text-[#3A2418] border-[#D6CFC5] hover:border-[#3A2418]'
+                  }`}
+                >
+                  <Scale className="w-4 h-4 shrink-0" />
+                  <span>
+                    {showGoogleCompare
+                      ? 'Ascunde comparația'
+                      : `Vs. Google Maps (${formatScore(restaurant.googleRawRating)}★)`}
+                  </span>
+                </button>
+              </div>
+
+              {/* Panel 1: Meniu complet */}
+              <div
+                id="locale-menu-panel"
+                className="collapse-grid"
+                data-open={showMenu}
+              >
+                <div className="collapse-inner">
+                  <div
+                    className={`p-4 rounded-[4px] border space-y-4 ${
+                      isDrink
+                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                        : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b pb-2.5 border-current/15">
+                      <h3 className="font-display text-[22px] leading-none">
+                        Meniu
+                      </h3>
+                      <span
+                        className={`text-[12px] ${
+                          isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                        }`}
+                      >
+                        Ultima actualizare: <strong>{lastUpdated}</strong>
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
+                      {menuCategories.map((category) => (
+                        <div key={category.title} className="space-y-2">
+                          <h4
+                            className={`text-[11px] font-bold uppercase tracking-wider ${
+                              isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
+                            }`}
+                          >
+                            {category.title}
+                          </h4>
+                          <div
+                            className={`divide-y ${
+                              isDrink ? 'divide-[#285443]' : 'divide-[#E6DFD5]'
+                            }`}
+                          >
+                            {category.items.map((item) => (
+                              <div
+                                key={item.name}
+                                className="py-2 first:pt-0 last:pb-0 flex items-start justify-between gap-3"
+                              >
+                                <div className="min-w-0 space-y-0.5">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-[14px] leading-snug">
+                                      {item.name}
+                                    </span>
+                                    {item.isMustOrder && (
+                                      <span
+                                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[2px] ${
+                                          isDrink
+                                            ? 'bg-[#F2A33A] text-[#17382C]'
+                                            : 'bg-[#B3261E] text-white'
+                                        }`}
+                                      >
+                                        De neratat
+                                      </span>
+                                    )}
+                                    {item.portion && (
+                                      <span
+                                        className={`text-[11px] ${
+                                          isDrink ? 'text-[#F4EEE2]/60' : 'text-[#6E5649]'
+                                        }`}
+                                      >
+                                        ({item.portion})
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.description && (
+                                    <p
+                                      className={`text-[12px] leading-snug ${
+                                        isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                                      }`}
+                                    >
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <span
+                                  className={`font-display text-[17px] leading-none shrink-0 tabular-nums pt-0.5 ${
+                                    isDrink ? 'text-[#F2A33A]' : 'text-[#3A2418]'
+                                  }`}
+                                >
+                                  {item.priceRon === 0 ? 'Gratuit' : `${item.priceRon} lei`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Panel 2: Program de funcționare */}
+              <div
+                id="locale-hours-panel"
+                className="collapse-grid"
+                data-open={showHours}
+              >
+                <div className="collapse-inner">
+                  <div
+                    className={`p-4 rounded-[4px] border space-y-3 ${
+                      isDrink
+                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                        : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 border-current/15">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-display text-[22px] leading-none">
+                          Program de funcționare
+                        </h3>
+                        <span
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-[2px] ${
+                            restaurant.openNow
+                              ? isDrink
+                                ? 'bg-[#1E4335] text-[#6EE7B7] border border-[#2D5947]'
+                                : 'bg-[#E8F5EE] text-[#1E6B43]'
+                              : isDrink
+                              ? 'bg-[#3B1D1D] text-[#FCA5A5]'
+                              : 'bg-[#FDECEC] text-[#B3261E]'
+                          }`}
+                        >
+                          {restaurant.openNow ? 'Deschis acum' : 'Închis'}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-[12px] ${
+                          isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                        }`}
+                      >
+                        Actualizat: <strong>{lastUpdated}</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[13px]">
+                      {weeklyHours.map((entry) => {
+                        const isToday = entry.day === todayDayName;
+                        const isClosed = entry.hours.toLowerCase() === 'închis';
+                        return (
+                          <div
+                            key={entry.day}
+                            className={`flex items-center justify-between py-1 px-2 rounded-[3px] ${
+                              isToday
+                                ? isDrink
+                                  ? 'bg-[#1E4335] font-bold text-[#F2A33A]'
+                                  : 'bg-[#EFE9E0] font-bold text-[#3A2418]'
+                                : ''
+                            }`}
+                          >
+                            <span>
+                              {entry.day}
+                              {isToday ? ' (azi)' : ''}
+                            </span>
+                            <span
+                              className={`tabular-nums ${
+                                isClosed
+                                  ? isDrink
+                                    ? 'text-[#FCA5A5]/80'
+                                    : 'text-[#B3261E]'
+                                  : ''
+                              }`}
+                            >
+                              {entry.hours}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Panel 3: Comparație TOP FOOD / TOP DRINK vs. Google Maps */}
+              <div
+                id="locale-google-compare-panel"
+                className="collapse-grid"
+                data-open={showGoogleCompare}
+              >
+                <div className="collapse-inner">
+                  <div
+                    className={`p-4 rounded-[4px] border space-y-3.5 ${
+                      isDrink
+                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                        : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b pb-2.5 border-current/15">
+                      <h3 className="font-display text-[22px] leading-none">
+                        {isDrink ? 'TOP DRINK' : 'TOP FOOD'} vs. Google Maps
+                      </h3>
+                      <span
+                        className={`text-[12px] font-bold px-2 py-0.5 rounded-[2px] ${
+                          googleVsTopDiff >= 1.5
+                            ? isDrink
+                              ? 'bg-[#3B1D1D] text-[#FCA5A5]'
+                              : 'bg-[#FDECEC] text-[#B3261E]'
+                            : isDrink
+                            ? 'bg-[#1E4335] text-[#F2A33A]'
+                            : 'bg-[#EFE9E0] text-[#3A2418]'
+                        }`}
+                      >
+                        {googleVsTopDiff > 0
+                          ? `+${formatScore(googleVsTopDiff)} pct pe Google Maps`
+                          : googleVsTopDiff < 0
+                          ? `${formatScore(googleVsTopDiff)} pct față de Google Maps`
+                          : 'Scor identic'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {/* TOP FOOD / TOP DRINK bar */}
+                      <div className="flex items-center gap-3">
+                        <span className="w-28 shrink-0 text-[13px] font-bold">
+                          {isDrink ? 'TOP DRINK' : 'TOP FOOD'}
+                        </span>
+                        <div
+                          className={`flex-1 h-2.5 rounded-[2px] overflow-hidden ${
+                            isDrink ? 'bg-[#285443]' : 'bg-[#EAE3D9]'
+                          }`}
+                        >
+                          <div
+                            className={`h-full bar-scale-fill ${
+                              isDrink ? 'bg-[#F2A33A]' : 'bg-[#B3261E]'
+                            }`}
+                            style={{
+                              width: `${Math.min(100, Math.max(4, restaurant.foodQualityScore * 10))}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="font-display text-[20px] leading-none tabular-nums w-14 text-right">
+                          {formatScore(restaurant.foodQualityScore)}
+                          <span className="text-[12px] font-sans opacity-70">/10</span>
+                        </span>
+                      </div>
+
+                      {/* Google Maps bar */}
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-28 shrink-0 text-[13px] font-semibold ${
+                            isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'
+                          }`}
+                        >
+                          Google Maps
+                        </span>
+                        <div
+                          className={`flex-1 h-2.5 rounded-[2px] overflow-hidden ${
+                            isDrink ? 'bg-[#285443]' : 'bg-[#EAE3D9]'
+                          }`}
+                        >
+                          <div
+                            className="h-full bg-[#9C8978] bar-scale-fill"
+                            style={{
+                              width: `${Math.min(100, Math.max(4, googleOn10 * 10))}%`,
+                              animationDelay: '60ms',
+                            }}
+                          />
+                        </div>
+                        <span className="font-display text-[20px] leading-none tabular-nums w-14 text-right">
+                          {formatScore(restaurant.googleRawRating)}
+                          <span className="text-[12px] font-sans opacity-70">★</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <p
+                      className={`text-[12px] leading-relaxed ${
+                        isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                      }`}
+                    >
+                      Nota Google Maps ({formatScore(restaurant.googleRawRating)}★, echivalent{' '}
+                      <strong>{formatScore(googleOn10)}/10</strong>) este o medie neponderată.{' '}
+                      {googleVsTopDiff >= 1.5
+                        ? 'Diferența mare arată că recenziile turistice și cele de trecere ridică artificial media pe Google.'
+                        : Math.abs(googleVsTopDiff) <= 0.6
+                        ? 'Scorurile sunt aliniate: atât localnicii, cât și vizitatorii de pe Google confirmă calitatea.'
+                        : googleVsTopDiff < 0
+                        ? 'Localnicii de pe platformă îl apreciază mai mult decât media generală de pe Google Maps.'
+                        : 'Localnicii de pe platformă evaluează puțin mai exigent decât media generală de pe Google Maps.'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
