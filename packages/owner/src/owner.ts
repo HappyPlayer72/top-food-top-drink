@@ -4,7 +4,7 @@
  */
 import { and, avg, count, desc, eq, gte, sql } from "drizzle-orm";
 import {
-  employeeRatings, employees, forbidden, invalid, notFound, posts, reports, reviewReplies, reviews, users, venueManagers, venues, type Db,
+  employeeRatings, employees, forbidden, invalid, notFound, posts, reports, reviewReplies, reviews, ServiceError, users, venueManagers, venues, type Db,
 } from "@tftd/db";
 
 export async function assertManager(db: Db, userId: string, venueId: string) {
@@ -27,13 +27,26 @@ export async function replyToReview(db: Db, userId: string, reviewId: string, te
   return reply!;
 }
 
-/** Raportarea nu ascunde review-ul; ajunge în coada de admin. */
+/**
+ * Raportarea nu ascunde review-ul; ajunge în coada de admin. Doar managerul localului review-ului raportează,
+ * și doar o dată cât timp raportul e deschis (altfel un cont ar putea inunda coada de admin).
+ */
 export async function reportReview(db: Db, userId: string, reviewId: string, reason: string) {
-  const [r] = await db.select({ id: reviews.id }).from(reviews).where(eq(reviews.id, reviewId));
+  const [r] = await db.select({ venueId: reviews.venueId }).from(reviews).where(eq(reviews.id, reviewId));
   if (!r) throw notFound("Review-ul");
+  await assertManager(db, userId, r.venueId);
   if (reason.trim().length < 10) throw invalid("Spune pe scurt de ce raportezi (minim 10 caractere).");
-  const [report] = await db.insert(reports).values({ targetType: "review", targetId: reviewId, reportedBy: userId, reason: reason.trim() }).returning();
-  return report!;
+  return db.transaction(async (tx) => {
+    // Lock per (user, review): rafalele paralele de cereri nu pot trece de verificarea de mai jos.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`report:${userId}:${reviewId}`}))`);
+    const [open] = await tx
+      .select({ id: reports.id })
+      .from(reports)
+      .where(and(eq(reports.targetType, "review"), eq(reports.targetId, reviewId), eq(reports.reportedBy, userId), eq(reports.status, "open")));
+    if (open) throw new ServiceError("conflict", "Ai raportat deja acest review. Decide un admin.");
+    const [report] = await tx.insert(reports).values({ targetType: "review", targetId: reviewId, reportedBy: userId, reason: reason.trim() }).returning();
+    return report!;
+  });
 }
 
 /** Contestația etichetei de capcană turistică → admin. */
