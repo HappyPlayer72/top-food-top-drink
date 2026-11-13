@@ -1,7 +1,8 @@
 /** Acțiunile userilor din pagini: scrie review, raportează cât e de plin. */
 import { and, eq, gte } from "drizzle-orm";
-import { checkins, employees, invalid, notFound, reviews, venues, vibeChecks, type Db } from "@tftd/db";
+import { checkins, employees, invalid, notFound, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
 import { rateEmployee } from "@tftd/owner";
+import { detectPlatform, processSubmission, submitSocialLink, type SocialAnalysis } from "@tftd/ingestion";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
 
@@ -86,4 +87,28 @@ export async function submitVibe(db: Db, userId: string | null, venueId: string,
     .values({ venueId, userId, level, createdAt: now, expiresAt: new Date(now.getTime() + 2 * 3_600_000) })
     .returning();
   return row!;
+}
+
+/**
+ * „Lipește link TikTok/Instagram”: salvează linkul și îl procesează pe loc (embed + „reclamă?”),
+ * ca demo-ul să nu aștepte jobul `proceseaza-linkuri`. Dacă procesarea pică, linkul rămâne `failed`.
+ */
+export async function submitSocialLinkNow(
+  db: Db,
+  input: { venueId: string; url: string; userId: string | null },
+): Promise<{ status: "processed" | "failed" | "duplicate"; analysis: SocialAnalysis | null }> {
+  // Doar „platformă nesuportată” e mesaj pentru user; erorile de DB rămân erori interne (fără SQL în UI).
+  if (!detectPlatform(input.url)) throw invalid("Linkul trebuie să fie de pe TikTok, Instagram, Facebook sau YouTube.");
+  let row = await submitSocialLink(db, input);
+  if (!row) {
+    // Un link care a eșuat (ex. rețea) la același local se poate reîncerca; restul sunt duplicate.
+    const [prev] = await db.select().from(socialSubmissions).where(eq(socialSubmissions.url, input.url));
+    if (prev?.status !== "failed" || prev.venueId !== input.venueId) return { status: "duplicate", analysis: null };
+    row = prev;
+  }
+  try {
+    return { status: "processed", analysis: await processSubmission(db, row.id) };
+  } catch {
+    return { status: "failed", analysis: null };
+  }
 }

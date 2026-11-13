@@ -22,6 +22,30 @@
   --color-muted-cafea: #6E5649;
 }
 
+/* Tokenii zonei /owner (valorile sunt la `.owner-shell`, mai jos): aceeași identitate ca pe paginile publice. */
+@theme inline {
+  --color-o-bg: var(--o-bg);
+  --color-o-fg: var(--o-fg);
+  --color-o-muted: var(--o-muted);
+  --color-o-line: var(--o-line);
+  --color-o-quiet: var(--o-quiet);
+  --color-o-field: var(--o-field);
+  --color-o-field-line: var(--o-field-line);
+  --color-o-accent: var(--o-accent);
+  --color-o-accent-fg: var(--o-accent-fg);
+  --color-o-accent-hover: var(--o-accent-hover);
+  --color-o-active: var(--o-active);
+  --color-o-active-fg: var(--o-active-fg);
+  --color-o-outline: var(--o-outline);
+  --color-o-danger: var(--o-danger);
+  --color-o-card: var(--o-card);
+  --color-o-surface: var(--o-surface);
+  --color-o-star: var(--o-star);
+  --color-o-star-off: var(--o-star-off);
+  --color-o-avatar: var(--o-avatar);
+  --color-o-avatar-fg: var(--o-avatar-fg);
+}
+
 :root {
   --color-carou: #B3261E;
   --color-cafea: #3A2418;
@@ -664,4 +688,106 @@ html.dark .bg-\[\#E0A526\].text-\[\#3A2418\] {
 
 html.dark .bg-\[\#F2A33A\] {
   color: #17382C;
+}
+
+/* ============================================================================
+   /owner: aceeași identitate ca pe paginile publice.
+   Food: alb, carduri #FAF8F5, Carou (și Evening Slate când site-ul e în mod întunecat).
+   Drink: Sticlă mereu întunecat, carduri #143025, Chihlimbar.
+   Dashboard-ul pune `data-vertical`, iar :has() recolorează tot shell-ul, inclusiv antetul.
+   ============================================================================ */
+.owner-shell {
+  --o-bg: #FFFFFF;
+  --o-fg: #3A2418;
+  --o-muted: #6E5649;
+  --o-line: #E6DFD5;
+  --o-card: #FAF8F5;
+  --o-surface: #F2EFE9;
+  /* gri modest: răspunsurile localului și tot ce e plătit (regula 3) */
+  --o-quiet: #F2EFE9;
+  --o-field: #FFFFFF;
+  --o-field-line: #8F7F72;
+  --o-accent: #B3261E;
+  --o-accent-fg: #FFFFFF;
+  --o-accent-hover: #9E1F18;
+  --o-active: #3A2418;
+  --o-active-fg: #FFFFFF;
+  --o-outline: #3A2418;
+  --o-danger: #B3261E;
+  --o-focus: #B3261E;
+  --o-star: #B3261E;
+  --o-star-off: #E6DFD5;
+  --o-avatar: #3A2418;
+  --o-avatar-fg: #FFFFFF;
+  background-color: var(--o-bg);
+  color: var(--o-fg);
+  color-scheme: light;
+}
+
+html.dark .owner-shell {
+  --o-bg: #22262E;
+  --o-fg: #F4EEE2;
+  --o-muted: #B6BAC4;
+  --o-line: #4A5364;
+  --o-card: #2B303A;
+  --o-surface: #313743;
+  --o-quiet: #313743;
+  --o-field: #22262E;
+  --o-field-line: #6C7484;
+  --o-active: #F4EEE2;
+  --o-active-fg: #22262E;
+  --o-outline: #F4EEE2;
+  --o-danger: #FFB4AC;
+  --o-focus: #F2A33A;
+  --o-star: #E5534B;
+  --o-star-off: #4A5364;
+  --o-avatar: #F4EEE2;
+  --o-avatar-fg: #22262E;
+  color-scheme: dark;
+}
+
+.owner-shell:has([data-vertical="drink"]),
+html.dark .owner-shell:has([data-vertical="drink"]) {
+  --o-bg: #17382C;
+  --o-fg: #F4EEE2;
+  --o-muted: #C9C1AE;
+  --o-line: #285443;
+  --o-card: #143025;
+  --o-surface: #1A3D30;
+  --o-quiet: #1E4335;
+  --o-field: #122B22;
+  --o-field-line: #5A8472;
+  --o-accent: #F2A33A;
+  --o-accent-fg: #17382C;
+  --o-accent-hover: #F6B65C;
+  --o-active: #F2A33A;
+  --o-active-fg: #17382C;
+  --o-outline: #F2A33A;
+  --o-danger: #FFB4AC;
+  --o-focus: #F2A33A;
+  --o-star: #F2A33A;
+  --o-star-off: rgba(244, 238, 226, 0.2);
+  --o-avatar: #F4EEE2;
+  --o-avatar-fg: #17382C;
+  color-scheme: dark;
+}
+
+.owner-shell :is(a, button, input, select, textarea, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--o-focus);
+  outline-offset: 2px;
+}
+
+/* Logo-ul și linkul „Vezi topul” urmează verticala localului deschis. */
+.owner-drink-only { display: none; }
+.owner-shell:has([data-vertical="drink"]) .owner-food-only { display: none; }
+.owner-shell:has([data-vertical="drink"]) .owner-drink-only { display: inline-flex; }
+
+/* <summary> folosit ca buton: fără triunghiul implicit al browserului. */
+.owner-summary { list-style: none; }
+.owner-summary::-webkit-details-marker { display: none; }
+details[open] > .owner-summary .owner-chevron { transform: rotate(180deg); }
+.owner-chevron { transition: transform 180ms var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-chevron { transition: none; }
 }

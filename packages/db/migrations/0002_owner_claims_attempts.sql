@@ -1,0 +1,1 @@
+ALTER TABLE "owner_claims" ADD COLUMN IF NOT EXISTS "attempts" integer DEFAULT 0 NOT NULL;
