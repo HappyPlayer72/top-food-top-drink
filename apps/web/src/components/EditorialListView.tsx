@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, X } from 'lucide-react';
 import {
   DrinkQuickFilter,
@@ -70,9 +70,83 @@ const CROWD_PRESETS: {
 }[] = [
   { segments: 1, title: 'Liber / Liniștit', reportLabel: 'Liber și liniștit, chiar acum' },
   { segments: 2, title: 'Locuri la mese', reportLabel: 'Locuri libere la mese, chiar acum' },
+  { segments: 3, title: 'Atmosferă lejeră / Locuri la bar', reportLabel: 'Atmosferă lejeră, locuri la bar, chiar acum' },
   { segments: 4, title: 'Animat / Aproape plin', reportLabel: 'Animat, aproape plin, chiar acum' },
   { segments: 5, title: 'Plin / Coadă la intrare', reportLabel: 'Plin, coadă la intrare, chiar acum' },
 ];
+
+const HorizontalFilterStrip: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+}> = ({ children, className = '' }) => {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [fadeState, setFadeState] = useState<{ left: boolean; right: boolean }>({
+    left: false,
+    right: false,
+  });
+
+  const updateFade = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 2;
+    if (!hasOverflow) {
+      setFadeState((prev) =>
+        prev.left || prev.right ? { left: false, right: false } : prev
+      );
+      return;
+    }
+    const left = el.scrollLeft > 4;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    setFadeState((prev) =>
+      prev.left === left && prev.right === right ? prev : { left, right }
+    );
+  }, []);
+
+  useEffect(() => {
+    updateFade();
+    const el = scrollRef.current;
+    if (!el) return;
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(updateFade);
+      ro.observe(el);
+    }
+    window.addEventListener('resize', updateFade);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', updateFade);
+    };
+  }, [updateFade, children]);
+
+  const maskImage =
+    fadeState.left && fadeState.right
+      ? 'linear-gradient(to right, transparent 0%, black 20px, black calc(100% - 32px), transparent 100%)'
+      : fadeState.right
+      ? 'linear-gradient(to right, black 0%, black calc(100% - 32px), transparent 100%)'
+      : fadeState.left
+      ? 'linear-gradient(to right, transparent 0%, black 20px, black 100%)'
+      : undefined;
+
+  return (
+    <div
+      ref={scrollRef}
+      onScroll={updateFade}
+      style={
+        maskImage
+          ? {
+              maskImage,
+              WebkitMaskImage: maskImage,
+            }
+          : undefined
+      }
+      className={`flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 py-0.5 sm:mx-0 sm:px-0 sm:py-0 sm:flex-wrap ${
+        fadeState.right ? 'pr-8 sm:pr-0' : ''
+      } ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
 
 export const EditorialListView: React.FC<EditorialListViewProps> = ({
   vertical,
@@ -113,17 +187,119 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   const [vibeSubmittedNotice, setVibeSubmittedNotice] = useState<string | null>(
     null
   );
+  const [vibeSwipeY, setVibeSwipeY] = useState(0);
+  const [isVibeSwiping, setIsVibeSwiping] = useState(false);
+  const [hasVibeDragged, setHasVibeDragged] = useState(false);
+
+  const vibeDialogRef = useRef<HTMLDivElement | null>(null);
+  const vibePreviousFocusRef = useRef<HTMLElement | null>(null);
+  const vibeTouchStartYRef = useRef<number | null>(null);
+  const vibeCanSwipeRef = useRef(false);
 
   useEffect(() => {
     if (!isVibeModalOpen) return;
+
+    setVibeSwipeY(0);
+    setIsVibeSwiping(false);
+    setHasVibeDragged(false);
+    vibePreviousFocusRef.current = document.activeElement as HTMLElement | null;
+
+    const getFocusableElements = (): HTMLElement[] => {
+      const root = vibeDialogRef.current;
+      if (!root) return [];
+      const nodes = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      return nodes.filter(
+        (el) => el.offsetParent !== null || el === document.activeElement
+      );
+    };
+
+    const focusTimer = window.requestAnimationFrame(() => {
+      const focusables = getFocusableElements();
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        vibeDialogRef.current?.focus();
+      }
+    });
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsVibeModalOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const focusables = getFocusableElements();
+      if (focusables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      const inside = active && vibeDialogRef.current?.contains(active);
+
+      if (e.shiftKey) {
+        if (!inside || active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (!inside || active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusTimer);
+      window.removeEventListener('keydown', handleKeyDown);
+      vibePreviousFocusRef.current?.focus();
+    };
   }, [isVibeModalOpen]);
+
+  const handleVibeTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const target = e.target as HTMLElement | null;
+    const isHandleOrHeader = Boolean(target?.closest('[data-vibe-drag-handle]'));
+    const atScrollTop = (vibeDialogRef.current?.scrollTop ?? 0) <= 0;
+    if (!isHandleOrHeader && (!atScrollTop || target?.closest('select'))) {
+      vibeCanSwipeRef.current = false;
+      return;
+    }
+    vibeCanSwipeRef.current = true;
+    vibeTouchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleVibeTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!vibeCanSwipeRef.current || vibeTouchStartYRef.current === null) return;
+    const deltaY = e.touches[0].clientY - vibeTouchStartYRef.current;
+    if (deltaY > 4) {
+      setIsVibeSwiping(true);
+      setHasVibeDragged(true);
+      setVibeSwipeY(deltaY);
+    } else {
+      setVibeSwipeY(0);
+    }
+  };
+
+  const handleVibeTouchEnd = () => {
+    if (!vibeCanSwipeRef.current) return;
+    vibeCanSwipeRef.current = false;
+    vibeTouchStartYRef.current = null;
+    setIsVibeSwiping(false);
+    if (vibeSwipeY >= 80) {
+      setVibeSwipeY(0);
+      setIsVibeModalOpen(false);
+    } else {
+      setVibeSwipeY(0);
+    }
+  };
 
   // Filtered Food Lists
   const filteredFoodOrganic = useMemo(() => {
@@ -160,10 +336,22 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
 
   const foodTraps = useMemo(() => {
     if (foodFilters.includes('fara-capcane')) return [];
+    const q = normalizeRo(searchQuery.trim());
     return restaurants
       .filter((r) => r.touristTrapIndex >= 60)
+      .filter((r) => {
+        if (q) {
+          const hay = normalizeRo(
+            `${r.name} ${r.shortCategory ?? r.cuisine} ${
+              r.shortNeighborhood ?? r.neighborhood
+            } ${r.whatToOrder.map((d) => d.name).join(' ')}`
+          );
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
       .sort((a, b) => b.touristTrapIndex - a.touristTrapIndex);
-  }, [restaurants, foodFilters]);
+  }, [restaurants, foodFilters, searchQuery]);
 
   const totalFoodReviews = useMemo(
     () =>
@@ -369,7 +557,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 space-y-6 sm:space-y-8">
           {/* Hero */}
           <section className="space-y-3.5 sm:space-y-4">
-            <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#F4EEE2] max-w-xl">
+            <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#F4EEE2] max-w-xl text-balance">
               {activeDrinkHero}
             </h1>
 
@@ -403,7 +591,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             </div>
 
             {/* Filter Pills (Chihlimbar #F2A33A active) */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-0.5 sm:pb-0">
+            <HorizontalFilterStrip className="pb-0.5 sm:pb-0">
               {DRINK_FILTER_PILLS.map((pill) => {
                 const active = drinkFilters.includes(pill.id);
                 return (
@@ -421,7 +609,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   </button>
                 );
               })}
-            </div>
+            </HorizontalFilterStrip>
 
             {vibeSubmittedNotice && (
               <div className="stagger-fade-in px-3.5 py-2 rounded-[4px] bg-[#1E4335] border border-[#F2A33A]/50 text-[13px] text-[#F4EEE2] flex items-center justify-between gap-2">
@@ -497,7 +685,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   <button
                     type="button"
                     onClick={handleResetAll}
-                    className="btn-press px-3.5 py-2 rounded-[4px] bg-[#F2A33A] text-[#17382C] text-[13px] font-bold hover:brightness-105"
+                    className="btn-press min-h-[44px] inline-flex items-center px-4 py-2 rounded-[4px] bg-[#F2A33A] text-[#17382C] text-[13px] font-bold hover:brightness-105"
                   >
                     Resetează filtrele
                   </button>
@@ -561,8 +749,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                               Ce să iei:
                             </span>
                             <span className="min-w-0 truncate">
-                              {featuredDrink.whatToOrder[0].name} ·{' '}
-                              {featuredDrink.whatToOrder[0].priceRon} lei
+                              {featuredDrink.whatToOrder[0].name}
+                            </span>
+                            <span className="shrink-0 font-semibold tabular-nums">
+                              · {featuredDrink.whatToOrder[0].priceRon} lei
                             </span>
                           </div>
                         )}
@@ -621,9 +811,13 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                                 {venue.priceRangeLabel}
                               </div>
                               {venue.whatToOrder[0] && (
-                                <div className="text-[12px] text-[#F2A33A]/90 mt-1 truncate">
-                                  Recomandat: {venue.whatToOrder[0].name} (
-                                  {venue.whatToOrder[0].priceRon} lei)
+                                <div className="flex items-center gap-1 text-[12px] text-[#F2A33A]/90 mt-1 min-w-0">
+                                  <span className="min-w-0 truncate">
+                                    Recomandat: {venue.whatToOrder[0].name}
+                                  </span>
+                                  <span className="shrink-0 tabular-nums">
+                                    ({venue.whatToOrder[0].priceRon} lei)
+                                  </span>
                                 </div>
                               )}
                               {venue.crowdSegments && venue.crowdLabel && (
@@ -724,28 +918,47 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             onClick={() => setIsVibeModalOpen(false)}
           >
             <div
+              ref={vibeDialogRef}
+              tabIndex={-1}
               role="dialog"
               aria-modal="true"
               aria-labelledby="vibe-modal-title"
-              className="drawer-sheet-enter w-full max-w-full sm:max-w-md bg-[#17382C] border border-[#2D5947] text-[#F4EEE2] rounded-t-[12px] sm:rounded-[6px] px-4 pt-3 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-4 max-h-[90dvh] overflow-y-auto"
+              onTouchStart={handleVibeTouchStart}
+              onTouchMove={handleVibeTouchMove}
+              onTouchEnd={handleVibeTouchEnd}
+              onTouchCancel={handleVibeTouchEnd}
+              style={{
+                transform:
+                  vibeSwipeY > 0 ? `translateY(${vibeSwipeY}px)` : undefined,
+                transition: isVibeSwiping
+                  ? 'none'
+                  : 'transform 200ms var(--ease-out)',
+              }}
+              className={`${
+                hasVibeDragged ? '' : 'drawer-sheet-enter'
+              } w-full max-w-full sm:max-w-md bg-[#17382C] border border-[#2D5947] text-[#F4EEE2] rounded-t-[12px] sm:rounded-[6px] px-4 pt-2 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-4 max-h-[90dvh] overflow-y-auto overscroll-contain focus:outline-none`}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="sm:hidden w-10 h-1 rounded-full mx-auto bg-[#F4EEE2]/25" />
-              <div className="flex items-center justify-between gap-2">
-                <h3
-                  id="vibe-modal-title"
-                  className="font-display text-[22px] sm:text-[24px] leading-none"
-                >
-                  Raportează cât e de plin
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsVibeModalOpen(false)}
-                  aria-label="Închide"
-                  className="btn-press w-11 h-11 flex items-center justify-center -mr-2 rounded-[4px] text-[#F4EEE2]/70 hover:text-[#F4EEE2]"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              <div data-vibe-drag-handle="true" className="space-y-3">
+                <div className="sm:hidden py-1.5 -my-1 cursor-grab active:cursor-grabbing">
+                  <div className="w-10 h-1 rounded-full mx-auto bg-[#F4EEE2]/30" />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <h3
+                    id="vibe-modal-title"
+                    className="font-display text-[22px] sm:text-[24px] leading-none"
+                  >
+                    Raportează cât e de plin
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setIsVibeModalOpen(false)}
+                    aria-label="Închide"
+                    className="btn-press w-11 h-11 flex items-center justify-center -mr-2 rounded-[4px] text-[#F4EEE2]/70 hover:text-[#F4EEE2]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleVibeSubmit} className="space-y-4">
@@ -828,9 +1041,9 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
     <div className="bg-white text-[#3A2418] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
       {/* HERO BLOCK */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 pb-5 sm:pb-6 space-y-3.5 sm:space-y-4">
-        <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#3A2418] max-w-xl">
+        <h1 className="font-display text-[32px] min-[375px]:text-[36px] sm:text-[54px] leading-[0.96] text-[#3A2418] max-w-2xl text-balance">
           {activeFoodHero.main}
-          <span className="hidden sm:inline">{activeFoodHero.tail}</span>
+          <span>{activeFoodHero.tail}</span>
         </h1>
 
         <div className="max-w-lg space-y-1.5">
@@ -863,7 +1076,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         </div>
 
         {/* Quick Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pt-0.5">
+        <HorizontalFilterStrip className="pt-0.5">
           {FOOD_FILTER_PILLS.map((pill) => {
             const active = foodFilters.includes(pill.id);
             return (
@@ -881,7 +1094,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               </button>
             );
           })}
-        </div>
+        </HorizontalFilterStrip>
       </section>
 
       {/* SINGLE CAROU STRIP ON HOME SCREEN (Rule #1: appears once!) */}
@@ -949,7 +1162,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               <button
                 type="button"
                 onClick={handleResetAll}
-                className="btn-press px-3.5 py-2 rounded-[4px] bg-[#3A2418] text-white text-[13px] font-semibold hover:opacity-90"
+                className="btn-press min-h-[44px] inline-flex items-center px-4 py-2 rounded-[4px] bg-[#3A2418] text-white text-[13px] font-semibold hover:opacity-90"
               >
                 Resetează filtrele
               </button>
@@ -1020,8 +1233,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                             Recomandat:
                           </span>
                           <span className="min-w-0 truncate">
-                            {featuredFood.whatToOrder[0].name} ·{' '}
-                            {featuredFood.whatToOrder[0].priceRon} lei
+                            {featuredFood.whatToOrder[0].name}
+                          </span>
+                          <span className="shrink-0 font-semibold tabular-nums">
+                            · {featuredFood.whatToOrder[0].priceRon} lei
                           </span>
                         </div>
                       ) : (

@@ -140,6 +140,23 @@ const SECONDARY_CAMERA_KEYS = [
   'Elisabetin',
 ] as const;
 
+const TIMISOARA_COS_LAT = Math.cos((45.7525 * Math.PI) / 180);
+
+function getScreenDeltaPx(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+  zoom: number
+): { dx: number; dy: number; dist: number } {
+  const worldPx = 512 * Math.pow(2, zoom);
+  const pxPerDegLng = worldPx / 360;
+  const pxPerDegLat = pxPerDegLng / TIMISOARA_COS_LAT;
+  const dx = (lng1 - lng2) * pxPerDegLng;
+  const dy = (lat2 - lat1) * pxPerDegLat;
+  return { dx, dy, dist: Math.hypot(dx, dy) };
+}
+
 function getTierStyles(tier: TrapTier, trapIndex: number) {
   if (tier === 'tourist-trap' && trapIndex >= 80) {
     return {
@@ -216,6 +233,10 @@ export function MapView({
     lng: NEIGHBORHOOD_CAMERAS.ALL.lng,
   });
   const [mapReady, setMapReady] = useState<boolean>(false);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(false);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(false);
+  const [sheetDragY, setSheetDragY] = useState<number>(0);
+  const [isSheetDragging, setIsSheetDragging] = useState<boolean>(false);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibreglType.Map | null>(null);
@@ -224,12 +245,72 @@ export function MapView({
   const venueMarkersRef = useRef<Map<string, maplibreglType.Marker>>(new Map());
   const zoneBadgeMarkersRef = useRef<maplibreglType.Marker[]>([]);
   const landmarkMarkersRef = useRef<maplibreglType.Marker[]>([]);
+  const cameraRailRef = useRef<HTMLDivElement | null>(null);
+  const sheetTouchStartYRef = useRef<number | null>(null);
+
+  const updateRailFade = useCallback(() => {
+    const el = cameraRailRef.current;
+    if (!el) return;
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (typeof window === 'undefined') return;
+    const handleViewportChange = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+      updateRailFade();
+    };
+    handleViewportChange();
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+      setShowLandmarks(false);
+    }
+    window.addEventListener('resize', handleViewportChange);
+    return () => window.removeEventListener('resize', handleViewportChange);
+  }, [updateRailFade]);
+
+  useEffect(() => {
+    if (!sidebarOpen) {
+      setSheetDragY(0);
+      setIsSheetDragging(false);
+      sheetTouchStartYRef.current = null;
+    }
+    updateRailFade();
+  }, [sidebarOpen, updateRailFade]);
+
+  const handleSheetTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLElement>) => {
+      if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+      sheetTouchStartYRef.current = e.touches[0]?.clientY ?? null;
+    },
+    []
+  );
+
+  const handleSheetTouchMove = useCallback(
+    (e: React.TouchEvent<HTMLElement>) => {
+      if (sheetTouchStartYRef.current === null) return;
+      const currentY = e.touches[0]?.clientY;
+      if (currentY === undefined) return;
+      const deltaY = currentY - sheetTouchStartYRef.current;
+      if (deltaY > 8) {
+        setIsSheetDragging(true);
+        setSheetDragY(Math.min(deltaY, 320));
+      } else if (deltaY <= 0) {
+        setSheetDragY(0);
+      }
+    },
+    []
+  );
+
+  const handleSheetTouchEnd = useCallback(() => {
+    if (sheetTouchStartYRef.current === null) return;
+    if (isSheetDragging && sheetDragY > 68) {
       setSidebarOpen(false);
     }
-  }, []);
+    sheetTouchStartYRef.current = null;
+    setIsSheetDragging(false);
+    setSheetDragY(0);
+  }, [isSheetDragging, sheetDragY]);
 
   useEffect(() => {
     if (!activeZoneId) return;
@@ -295,10 +376,15 @@ export function MapView({
   const flyToCamera = useCallback(
     (camKey: string) => {
       const cam = NEIGHBORHOOD_CAMERAS[camKey] ?? NEIGHBORHOOD_CAMERAS.ALL;
+      const isSmallScreen =
+        typeof window !== 'undefined' && window.innerWidth < 768;
       setActiveCam(camKey);
       mapRef.current?.flyTo({
         center: [cam.lng, cam.lat],
-        zoom: cam.zoom,
+        zoom: camKey === 'ALL' && isSmallScreen ? 13.1 : cam.zoom,
+        padding: isSmallScreen
+          ? { top: 48, bottom: 16, left: 8, right: 8 }
+          : { top: 0, bottom: 0, left: 0, right: 0 },
         duration: 750,
         essential: true,
       });
@@ -341,12 +427,17 @@ export function MapView({
 
   useEffect(() => {
     if (!selectedNeighborhood || !mapReady) return;
+    const isSmallScreen =
+      typeof window !== 'undefined' && window.innerWidth < 768;
     if (selectedNeighborhood === 'All' || selectedNeighborhood === 'all') {
       const cam = NEIGHBORHOOD_CAMERAS.ALL;
       setActiveCam('ALL');
       mapRef.current?.flyTo({
         center: [cam.lng, cam.lat],
-        zoom: cam.zoom,
+        zoom: isSmallScreen ? 13.1 : cam.zoom,
+        padding: isSmallScreen
+          ? { top: 48, bottom: 16, left: 8, right: 8 }
+          : { top: 0, bottom: 0, left: 0, right: 0 },
         duration: 700,
       });
       return;
@@ -540,11 +631,14 @@ export function MapView({
         ? applyTopFoodMapSkin(rawStyleRef.current, isDrink)
         : baseStyle;
 
+      const isSmallScreen =
+        typeof window !== 'undefined' && window.innerWidth < 768;
+
       const map = new maplibregl.Map({
         container,
         style: skinnedStyle,
         center: [NEIGHBORHOOD_CAMERAS.ALL.lng, NEIGHBORHOOD_CAMERAS.ALL.lat],
-        zoom: NEIGHBORHOOD_CAMERAS.ALL.zoom,
+        zoom: isSmallScreen ? 13.1 : NEIGHBORHOOD_CAMERAS.ALL.zoom,
         minZoom: 12,
         maxZoom: 18.5,
         attributionControl: false,
@@ -554,6 +648,11 @@ export function MapView({
 
       map.on('load', () => {
         if (cancelled) return;
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+          map.setPadding({ top: 48, bottom: 16, left: 8, right: 8 });
+        }
+        map.resize();
+        setMapZoom(map.getZoom());
         syncCustomGeoLayers(map);
         setMapReady(true);
       });
@@ -691,6 +790,7 @@ export function MapView({
   }, [sidebarOpen]);
 
   // Sync Tourist Zone Badge Markers (300m pills)
+  const isZoomedOut = mapZoom < 14.8;
   useEffect(() => {
     const map = mapRef.current;
     const maplibregl = maplibreModuleRef.current;
@@ -701,19 +801,35 @@ export function MapView({
 
     if (!showTouristRings) return;
 
-    for (const zone of touristZones) {
+    // At city-wide zoom (< 14.8), show only the active zone badge (or Piața Unirii)
+    // so the 4 overlapping central 300m badges do not collide with pins or each other.
+    const zonesToRender = isZoomedOut
+      ? touristZones.filter((z) =>
+          activeZoneId
+            ? z.id === activeZoneId
+            : z.id === 'piata-unirii' || z === touristZones[0]
+        )
+      : touristZones;
+
+    for (const zone of zonesToRender) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `px-2 py-0.5 rounded-[3px] text-[10px] font-bold shadow-sm border transition-transform hover:scale-105 ${
-        activeZoneId === zone.id
-          ? 'bg-[#B3261E] text-white border-[#3A2418]'
-          : 'bg-[#E0A526] text-[#3A2418] border-[#3A2418]/40'
-      }`;
-      btn.textContent = `${zone.shortName} · ${zone.radiusM} m`;
+      btn.className =
+        'group min-w-[44px] min-h-[44px] inline-flex items-center justify-center bg-transparent cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A]';
       btn.setAttribute(
         'aria-label',
         `Zonă turistică ${zone.name}, rază ${zone.radiusM} metri`
       );
+
+      const pill = document.createElement('span');
+      pill.className = `px-2 py-1 rounded-[3px] text-[11px] leading-none font-bold shadow-sm border whitespace-nowrap transition-transform group-hover:scale-105 ${
+        activeZoneId === zone.id
+          ? 'bg-[#B3261E] text-white border-[#3A2418]'
+          : 'bg-[#E0A526] text-[#3A2418] border-[#3A2418]'
+      }`;
+      pill.textContent = `${zone.shortName} · ${zone.radiusM} m`;
+      btn.appendChild(pill);
+
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         setActiveZoneId((prev) => (prev === zone.id ? null : zone.id));
@@ -726,7 +842,7 @@ export function MapView({
         .addTo(map);
       zoneBadgeMarkersRef.current.push(marker);
     }
-  }, [mapReady, showTouristRings, touristZones, activeZoneId]);
+  }, [mapReady, showTouristRings, touristZones, activeZoneId, isZoomedOut]);
 
   // Sync Editorial Landmark Markers
   useEffect(() => {
@@ -748,10 +864,10 @@ export function MapView({
             ? 'bg-[#F4EEE2] border-[#17382C]'
             : 'bg-white border-[#6E5649]'
         }"></span>
-        <span class="mt-0.5 px-1.5 py-0.5 rounded-[2px] text-[9.5px] font-semibold whitespace-nowrap ${
+        <span class="mt-0.5 px-1.5 py-0.5 rounded-[2px] text-[11px] leading-tight font-semibold whitespace-nowrap ${
           isDrink
-            ? 'bg-[#143025]/85 text-[#F4EEE2]/85'
-            : 'bg-[#F6F2EA]/90 text-[#6E5649]'
+            ? 'bg-[#143025]/90 text-[#F4EEE2]'
+            : 'bg-[#F6F2EA]/95 text-[#3A2418]'
         }">${lm.name}</span>
       `;
 
@@ -762,7 +878,14 @@ export function MapView({
     }
   }, [mapReady, showLandmarks, isDrink]);
 
-  // Sync Venue Pins (TOP FOOD / TOP DRINK skinned markers)
+  // Sync Venue Pins (TOP FOOD / TOP DRINK skinned markers with clustering & spreading)
+  const layoutZoom = isZoomedOut
+    ? Math.min(14.5, Math.floor(mapZoom * 2) / 2)
+    : mapZoom < 16.4
+    ? 15.5
+    : 17.0;
+  const showAllLabels = isMobileViewport ? mapZoom >= 15.4 : mapZoom >= 14.9;
+
   useEffect(() => {
     const map = mapRef.current;
     const maplibregl = maplibreModuleRef.current;
@@ -771,9 +894,192 @@ export function MapView({
     venueMarkersRef.current.forEach((m) => m.remove());
     venueMarkersRef.current.clear();
 
-    const showAllLabels = mapZoom >= 14.9;
+    const CLUSTER_RADIUS_PX = 48;
+    const SPREAD_MIN_DIST_PX = 56;
 
-    for (const restaurant of visibleRestaurants) {
+    type ClusterGroup = {
+      items: Restaurant[];
+      lat: number;
+      lng: number;
+    };
+
+    const clusters: ClusterGroup[] = [];
+    const singleOffsets = new Map<string, [number, number]>();
+
+    if (isZoomedOut) {
+      const visited = new Set<string>();
+      for (let i = 0; i < visibleRestaurants.length; i++) {
+        const seed = visibleRestaurants[i];
+        if (visited.has(seed.id)) continue;
+        visited.add(seed.id);
+        const group: Restaurant[] = [seed];
+
+        for (let j = i + 1; j < visibleRestaurants.length; j++) {
+          const candidate = visibleRestaurants[j];
+          if (visited.has(candidate.id)) continue;
+          const { dist } = getScreenDeltaPx(
+            seed.coordinates.lat,
+            seed.coordinates.lng,
+            candidate.coordinates.lat,
+            candidate.coordinates.lng,
+            layoutZoom
+          );
+          if (dist <= CLUSTER_RADIUS_PX) {
+            visited.add(candidate.id);
+            group.push(candidate);
+          }
+        }
+
+        const avgLat =
+          group.reduce((sum, r) => sum + r.coordinates.lat, 0) / group.length;
+        const avgLng =
+          group.reduce((sum, r) => sum + r.coordinates.lng, 0) / group.length;
+        clusters.push({ items: group, lat: avgLat, lng: avgLng });
+      }
+    } else {
+      // Unclustered zoom (>= 14.8): apply subtle screen-aware spreading when pins sit < 56px apart
+      for (const r of visibleRestaurants) {
+        singleOffsets.set(r.id, [0, 0]);
+        clusters.push({
+          items: [r],
+          lat: r.coordinates.lat,
+          lng: r.coordinates.lng,
+        });
+      }
+
+      for (let i = 0; i < visibleRestaurants.length; i++) {
+        for (let j = i + 1; j < visibleRestaurants.length; j++) {
+          const a = visibleRestaurants[i];
+          const b = visibleRestaurants[j];
+          const { dx, dy, dist } = getScreenDeltaPx(
+            a.coordinates.lat,
+            a.coordinates.lng,
+            b.coordinates.lat,
+            b.coordinates.lng,
+            layoutZoom
+          );
+          if (dist < SPREAD_MIN_DIST_PX) {
+            const push = (SPREAD_MIN_DIST_PX - dist) / 2;
+            const ux = dist > 1 ? dx / dist : 1;
+            const uy = dist > 1 ? dy / dist : 0.4;
+            const offA = singleOffsets.get(a.id) ?? [0, 0];
+            const offB = singleOffsets.get(b.id) ?? [0, 0];
+            singleOffsets.set(a.id, [
+              Math.round(offA[0] + ux * push),
+              Math.round(offA[1] + uy * push),
+            ]);
+            singleOffsets.set(b.id, [
+              Math.round(offB[0] - ux * push),
+              Math.round(offB[1] - uy * push),
+            ]);
+          }
+        }
+      }
+    }
+
+    // Track screen coordinates of rendered items for passive label collision restraint
+    const pinPositions = clusters.map((c) => {
+      const off =
+        c.items.length === 1 ? singleOffsets.get(c.items[0].id) ?? [0, 0] : [0, 0];
+      return {
+        id: c.items[0].id,
+        lat: c.lat,
+        lng: c.lng,
+        ox: off[0],
+        oy: off[1],
+      };
+    });
+
+    for (const group of clusters) {
+      if (group.items.length > 1) {
+        const hasActive = group.items.some((r) => r.id === activeRestaurantId);
+        const hasSevereTrap = group.items.some((r) => r.touristTrapIndex >= 80);
+        const hasPossibleTrap = group.items.some((r) => r.touristTrapIndex >= 60);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative flex flex-col items-center';
+        wrapper.style.zIndex = hasActive ? '30' : '15';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute(
+          'aria-label',
+          `${group.items.length} localuri în această zonă: ${group.items
+            .map((r) => r.name)
+            .join(', ')}. Apasă pentru a mări.`
+        );
+        btn.className =
+          'group min-w-[44px] min-h-[44px] inline-flex items-end justify-center pb-1 bg-transparent cursor-pointer transition-transform duration-150 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A]';
+
+        const bg = hasActive
+          ? isDrink
+            ? '#F2A33A'
+            : '#3A2418'
+          : hasSevereTrap
+          ? '#B3261E'
+          : hasPossibleTrap
+          ? '#E0A526'
+          : isDrink
+          ? '#F4EEE2'
+          : '#FFFFFF';
+        const fg = hasActive
+          ? isDrink
+            ? '#17382C'
+            : '#FFFFFF'
+          : hasSevereTrap
+          ? '#FFFFFF'
+          : isDrink && !hasPossibleTrap
+          ? '#17382C'
+          : '#3A2418';
+        const border = hasActive
+          ? isDrink
+            ? '#17382C'
+            : '#FFFFFF'
+          : hasSevereTrap
+          ? '#3A2418'
+          : isDrink && !hasPossibleTrap
+          ? '#B98A5E'
+          : '#3A2418';
+
+        const trapMark =
+          hasSevereTrap || hasPossibleTrap
+            ? `<span class="inline-flex items-center justify-center w-3.5 h-3.5 text-[9px] font-extrabold leading-none ml-1" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); background:${
+                hasSevereTrap ? '#FFFFFF' : '#3A2418'
+              }; color:${hasSevereTrap ? '#B3261E' : '#E0A526'}; padding-top:2px;">!</span>`
+            : '';
+
+        btn.innerHTML = `
+          <div class="px-2.5 py-1.5 rounded-full shadow-md flex items-center font-display text-[14px] leading-none tabular-nums"
+            style="background:${bg}; color:${fg}; border: 2px solid ${border};">
+            <span>${group.items.length} loc.</span>
+            ${trapMark}
+          </div>
+        `;
+
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          map.flyTo({
+            center: [group.lng, group.lat],
+            zoom: 15.8,
+            duration: 600,
+            essential: true,
+          });
+        });
+
+        wrapper.appendChild(btn);
+
+        const marker = new maplibregl.Marker({
+          element: wrapper,
+          anchor: 'bottom',
+        })
+          .setLngLat([group.lng, group.lat])
+          .addTo(map);
+
+        venueMarkersRef.current.set(`cluster-${group.items[0].id}`, marker);
+        continue;
+      }
+
+      const restaurant = group.items[0];
       const isSelected = restaurant.id === activeRestaurantId;
       const isHovered = restaurant.id === hoveredRestaurantId;
       const tierStyle = getTierStyles(
@@ -782,6 +1088,7 @@ export function MapView({
       );
       const isTrap = restaurant.touristTrapIndex >= 60;
       const isSevereTrap = restaurant.touristTrapIndex >= 80;
+      const offset = singleOffsets.get(restaurant.id) ?? [0, 0];
 
       const wrapper = document.createElement('div');
       wrapper.className = 'relative flex flex-col items-center';
@@ -794,8 +1101,8 @@ export function MapView({
         `${restaurant.name}, ${restaurant.shortNeighborhood ?? restaurant.neighborhood}, scor ${formatScore(restaurant.foodQualityScore)} din 10${isTrap ? `, ${tierStyle.label}` : ''}`
       );
       btn.setAttribute('aria-pressed', String(isSelected));
-      btn.className = `group relative cursor-pointer transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A] ${
-        isSelected ? 'scale-115' : isHovered ? 'scale-105' : 'hover:scale-105'
+      btn.className = `group relative min-w-[44px] min-h-[44px] inline-flex items-end justify-center pb-1 bg-transparent cursor-pointer transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A] ${
+        isSelected ? 'scale-110' : isHovered ? 'scale-105' : 'hover:scale-105'
       }`;
 
       if (isDrink && !isTrap) {
@@ -842,9 +1149,30 @@ export function MapView({
 
       wrapper.appendChild(btn);
 
-      if (isSelected || isHovered || showAllLabels) {
+      // Show label for selected/hovered pin always; for passive pins at zoom >= threshold
+      // restrain label length and skip if it would collide with a pin right below it.
+      let shouldRenderLabel = isSelected || isHovered;
+      if (!shouldRenderLabel && showAllLabels) {
+        const collidesWithPinBelow = pinPositions.some((other) => {
+          if (other.id === restaurant.id) return false;
+          const { dx, dy } = getScreenDeltaPx(
+            other.lat,
+            other.lng,
+            restaurant.coordinates.lat,
+            restaurant.coordinates.lng,
+            layoutZoom
+          );
+          const effDx = dx + (other.ox - offset[0]);
+          const effDy = dy + (other.oy - offset[1]);
+          return Math.abs(effDx) < 86 && effDy > -10 && effDy < 44;
+        });
+        shouldRenderLabel = !collidesWithPinBelow;
+      }
+
+      if (shouldRenderLabel) {
+        const maxLen = isSelected || isHovered ? 22 : 16;
         const label = document.createElement('div');
-        label.className = `pointer-events-none mt-1 px-1.5 py-0.5 rounded-[3px] text-[10px] font-semibold border whitespace-nowrap shadow-sm ${
+        label.className = `pointer-events-none -mt-0.5 px-1.5 py-0.5 rounded-[3px] text-[11px] leading-tight font-semibold border whitespace-nowrap shadow-sm ${
           isSelected
             ? 'bg-[#3A2418] text-white border-[#3A2418]'
             : isDrink
@@ -852,8 +1180,8 @@ export function MapView({
             : 'bg-white text-[#3A2418] border-[#D6CFC5]'
         }`;
         label.textContent =
-          restaurant.name.length > 22
-            ? `${restaurant.name.slice(0, 20)}…`
+          restaurant.name.length > maxLen
+            ? `${restaurant.name.slice(0, maxLen - 2)}…`
             : restaurant.name;
         wrapper.appendChild(label);
       }
@@ -861,6 +1189,7 @@ export function MapView({
       const marker = new maplibregl.Marker({
         element: wrapper,
         anchor: 'bottom',
+        offset,
       })
         .setLngLat([restaurant.coordinates.lng, restaurant.coordinates.lat])
         .addTo(map);
@@ -873,7 +1202,9 @@ export function MapView({
     activeRestaurantId,
     hoveredRestaurantId,
     isDrink,
-    mapZoom >= 14.9,
+    isZoomedOut,
+    layoutZoom,
+    showAllLabels,
   ]);
 
   const handleNextRestaurant = () => {
@@ -904,345 +1235,404 @@ export function MapView({
     >
       {/* Top Map Control Bar */}
       <div
-        className={`shrink-0 border-b px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto md:overflow-visible no-scrollbar ${
+        className={`relative z-30 shrink-0 border-b ${
           isDrink ? 'bg-[#17382C] border-[#285443]' : 'bg-white border-[#E6DFD5]'
         }`}
       >
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-3 min-h-[40px] md:min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors shrink-0 ${
-              isDrink
-                ? 'border-[#2D5947] bg-[#143025] text-[#F4EEE2] hover:border-[#F2A33A]'
-                : 'border-[#D6CFC5] bg-[#FAF8F5] text-[#3A2418] hover:border-[#3A2418]'
-            }`}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>{sidebarOpen ? 'Ascunde lista' : 'Listă și filtre'}</span>
-            <span className="opacity-70 tabular-nums">({visibleRestaurants.length})</span>
-          </button>
-
-          <div
-            className={`h-4 w-px shrink-0 ${
-              isDrink ? 'bg-[#285443]' : 'bg-[#E6DFD5]'
-            }`}
-          />
-
-          {PRIMARY_CAMERA_KEYS.map((key) => {
-            const cam = NEIGHBORHOOD_CAMERAS[key];
-            const isCurrent = activeCam === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => flyToCamera(key)}
-                className={`px-2.5 min-h-[40px] md:min-h-[32px] py-1 rounded-[4px] text-[12px] font-semibold border transition-colors shrink-0 ${
-                  isCurrent
-                    ? isDrink
-                      ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                      : 'bg-[#3A2418] text-white border-[#3A2418]'
-                    : isDrink
-                    ? 'bg-[#17382C] text-[#F4EEE2]/80 border-[#285443] hover:border-[#F2A33A]/50'
-                    : 'bg-white text-[#6E5649] border-[#E6DFD5] hover:text-[#3A2418]'
-                }`}
-              >
-                {cam.shortLabel}
-              </button>
-            );
-          })}
-
-          <select
-            aria-label="Mai multe zone"
-            value={
-              SECONDARY_CAMERA_KEYS.includes(
-                activeCam as (typeof SECONDARY_CAMERA_KEYS)[number]
-              )
-                ? activeCam
-                : ''
-            }
-            onChange={(e) => {
-              if (e.target.value) flyToCamera(e.target.value);
-            }}
-            className={`px-2.5 min-h-[40px] md:min-h-[32px] py-1 rounded-[4px] text-[16px] md:text-[12px] font-semibold border transition-colors shrink-0 ${
-              SECONDARY_CAMERA_KEYS.includes(
-                activeCam as (typeof SECONDARY_CAMERA_KEYS)[number]
-              )
-                ? isDrink
-                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                  : 'bg-[#3A2418] text-white border-[#3A2418]'
-                : isDrink
-                ? 'bg-[#143025] text-[#F4EEE2]/85 border-[#285443] hover:border-[#F2A33A]/50'
-                : 'bg-white text-[#6E5649] border-[#E6DFD5] hover:text-[#3A2418]'
-            }`}
-          >
-            <option
-              value=""
-              disabled
-              className={
+        <div
+          ref={cameraRailRef}
+          onScroll={updateRailFade}
+          className="px-3 pr-9 md:px-6 py-1.5 md:py-2 flex items-center justify-between gap-1.5 sm:gap-3 overflow-x-auto md:overflow-visible no-scrollbar"
+        >
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-3 min-h-[44px] md:min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors shrink-0 ${
                 isDrink
-                  ? 'bg-[#143025] text-[#F4EEE2]'
-                  : 'bg-white text-[#3A2418]'
-              }
+                  ? 'border-[#2D5947] bg-[#143025] text-[#F4EEE2] hover:border-[#F2A33A]'
+                  : 'border-[#D6CFC5] bg-[#FAF8F5] text-[#3A2418] hover:border-[#3A2418]'
+              }`}
             >
-              Mai multe zone…
-            </option>
-            {SECONDARY_CAMERA_KEYS.map((key) => (
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>{sidebarOpen ? 'Ascunde lista' : 'Listă și filtre'}</span>
+              <span className="opacity-75 tabular-nums">({visibleRestaurants.length})</span>
+            </button>
+
+            <div
+              className={`h-4 w-px shrink-0 ${
+                isDrink ? 'bg-[#285443]' : 'bg-[#E6DFD5]'
+              }`}
+            />
+
+            {PRIMARY_CAMERA_KEYS.map((key) => {
+              const cam = NEIGHBORHOOD_CAMERAS[key];
+              const isCurrent = activeCam === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => flyToCamera(key)}
+                  className={`px-2.5 min-h-[44px] md:min-h-[32px] py-1 rounded-[4px] text-[12px] font-semibold border transition-colors shrink-0 ${
+                    isCurrent
+                      ? isDrink
+                        ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                        : 'bg-[#3A2418] text-white border-[#3A2418]'
+                      : isDrink
+                      ? 'bg-[#17382C] text-[#F4EEE2]/85 border-[#285443] hover:border-[#F2A33A]/50'
+                      : 'bg-white text-[#6E5649] border-[#E6DFD5] hover:text-[#3A2418]'
+                  }`}
+                >
+                  {cam.shortLabel}
+                </button>
+              );
+            })}
+
+            <select
+              aria-label="Mai multe zone"
+              value={
+                SECONDARY_CAMERA_KEYS.includes(
+                  activeCam as (typeof SECONDARY_CAMERA_KEYS)[number]
+                )
+                  ? activeCam
+                  : ''
+              }
+              onChange={(e) => {
+                if (e.target.value) flyToCamera(e.target.value);
+              }}
+              className={`px-2.5 min-h-[44px] md:min-h-[32px] py-1 rounded-[4px] text-[16px] md:text-[12px] font-semibold border transition-colors shrink-0 ${
+                SECONDARY_CAMERA_KEYS.includes(
+                  activeCam as (typeof SECONDARY_CAMERA_KEYS)[number]
+                )
+                  ? isDrink
+                    ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                    : 'bg-[#3A2418] text-white border-[#3A2418]'
+                  : isDrink
+                  ? 'bg-[#143025] text-[#F4EEE2]/85 border-[#285443] hover:border-[#F2A33A]/50'
+                  : 'bg-white text-[#6E5649] border-[#E6DFD5] hover:text-[#3A2418]'
+              }`}
+            >
               <option
-                key={key}
-                value={key}
+                value=""
+                disabled
                 className={
                   isDrink
                     ? 'bg-[#143025] text-[#F4EEE2]'
                     : 'bg-white text-[#3A2418]'
                 }
               >
-                {NEIGHBORHOOD_CAMERAS[key].shortLabel}
+                Mai multe zone…
               </option>
-            ))}
-          </select>
+              {SECONDARY_CAMERA_KEYS.map((key) => (
+                <option
+                  key={key}
+                  value={key}
+                  className={
+                    isDrink
+                      ? 'bg-[#143025] text-[#F4EEE2]'
+                      : 'bg-white text-[#3A2418]'
+                  }
+                >
+                  {NEIGHBORHOOD_CAMERAS[key].shortLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowTouristRings((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-3 min-h-[44px] md:min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors whitespace-nowrap ${
+                showTouristRings
+                  ? 'bg-[#E0A526] text-[#3A2418] border-[#E0A526]'
+                  : isDrink
+                  ? 'bg-[#17382C] text-[#F4EEE2]/85 border-[#285443]'
+                  : 'bg-white text-[#6E5649] border-[#E6DFD5]'
+              }`}
+            >
+              {showTouristRings ? (
+                <Eye className="w-3.5 h-3.5 shrink-0" />
+              ) : (
+                <EyeOff className="w-3.5 h-3.5 shrink-0" />
+              )}
+              <span className="sm:hidden">Zone 300 m</span>
+              <span className="hidden sm:inline">Zone turistice (300 m)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowNeighborhoodZones((v) => !v)}
+              className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors ${
+                showNeighborhoodZones
+                  ? isDrink
+                    ? 'bg-[#1E4335] text-[#F4EEE2] border-[#336652]'
+                    : 'bg-[#FAF8F5] text-[#3A2418] border-[#3A2418]'
+                  : isDrink
+                  ? 'border-[#285443] text-[#F4EEE2]/70'
+                  : 'border-[#E6DFD5] text-[#6E5649]'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Cartiere</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowLandmarks((v) => !v)}
+              className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors ${
+                showLandmarks
+                  ? isDrink
+                    ? 'border-[#336652] bg-[#1E4335] text-[#F4EEE2]'
+                    : 'border-[#3A2418] bg-[#FAF8F5] text-[#3A2418]'
+                  : isDrink
+                  ? 'border-[#285443] text-[#F4EEE2]/70'
+                  : 'border-[#E6DFD5] text-[#6E5649] hover:text-[#3A2418]'
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Repere</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setShowTouristRings((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-3 min-h-[40px] md:min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors whitespace-nowrap ${
-              showTouristRings
-                ? 'bg-[#E0A526] text-[#3A2418] border-[#E0A526]'
-                : isDrink
-                ? 'bg-[#17382C] text-[#F4EEE2]/80 border-[#285443]'
-                : 'bg-white text-[#6E5649] border-[#E6DFD5]'
-            }`}
-          >
-            {showTouristRings ? (
-              <Eye className="w-3.5 h-3.5 shrink-0" />
-            ) : (
-              <EyeOff className="w-3.5 h-3.5 shrink-0" />
-            )}
-            <span className="sm:hidden">Zone 300 m</span>
-            <span className="hidden sm:inline">Zone turistice (300 m)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowNeighborhoodZones((v) => !v)}
-            className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors ${
-              showNeighborhoodZones
-                ? isDrink
-                  ? 'bg-[#1E4335] text-[#F4EEE2] border-[#336652]'
-                  : 'bg-[#FAF8F5] text-[#3A2418] border-[#3A2418]'
-                : isDrink
-                ? 'border-[#285443] text-[#F4EEE2]/60'
-                : 'border-[#E6DFD5] text-[#6E5649]'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Cartiere</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowLandmarks((v) => !v)}
-            className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 min-h-[34px] py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors ${
-              showLandmarks
-                ? isDrink
-                  ? 'border-[#336652] bg-[#1E4335] text-[#F4EEE2]'
-                  : 'border-[#3A2418] bg-[#FAF8F5] text-[#3A2418]'
-                : isDrink
-                ? 'border-[#285443] text-[#F4EEE2]/60'
-                : 'border-[#E6DFD5] text-[#6E5649] hover:text-[#3A2418]'
-            }`}
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>Repere</span>
-          </button>
-        </div>
+        {/* Right-edge horizontal scroll fade affordance on mobile */}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none md:hidden absolute inset-y-0 right-0 w-9 transition-opacity duration-150 ${
+            isDrink ? 'bg-[#17382C]' : 'bg-white'
+          } ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}
+          style={{
+            maskImage: 'linear-gradient(to left, black 28%, transparent 100%)',
+            WebkitMaskImage:
+              'linear-gradient(to left, black 28%, transparent 100%)',
+          }}
+        />
       </div>
 
       {/* Main Split Workspace */}
-      <div className="relative flex flex-1 min-h-0 w-full">
+      <div className="relative flex flex-1 min-h-0 w-full overflow-hidden">
         {/* Mobile Backdrop for Bottom Sheet */}
         {sidebarOpen && (
           <button
             type="button"
             aria-label="Închide lista de localuri"
             onClick={() => setSidebarOpen(false)}
-            className="md:hidden absolute inset-0 z-20 bg-black/35"
+            className="md:hidden absolute inset-0 z-30 bg-black/35"
           />
         )}
 
         {/* LEFT PANEL (Desktop Sidebar / Mobile Bottom Sheet) */}
         {sidebarOpen && (
           <aside
-            className={`absolute inset-x-0 bottom-0 h-[78%] max-h-[540px] rounded-t-[12px] border-t z-30 shadow-2xl md:static md:inset-auto md:w-80 lg:w-96 md:h-full md:max-h-none md:rounded-none md:border-t-0 md:border-r md:shadow-none shrink-0 flex flex-col overflow-hidden ${
+            style={
+              isMobileViewport && sheetDragY > 0
+                ? { transform: `translateY(${sheetDragY}px)` }
+                : undefined
+            }
+            className={`absolute inset-x-0 bottom-0 h-[82%] max-h-[600px] rounded-t-[12px] border-t z-40 shadow-2xl md:static md:inset-auto md:w-80 lg:w-96 md:h-full md:max-h-none md:rounded-none md:border-t-0 md:border-r md:shadow-none shrink-0 flex flex-col overflow-hidden ${
+              isSheetDragging ? '' : 'transition-transform duration-200 ease-out'
+            } ${
               isDrink
                 ? 'bg-[#17382C] border-[#2D5947]'
                 : 'bg-white border-[#E6DFD5]'
             }`}
           >
-            <div className="md:hidden flex justify-center pt-2 pb-0.5 shrink-0">
-              <span className="w-10 h-1 rounded-full bg-current opacity-20" />
-            </div>
-
             <div
-              className={`px-3.5 sm:px-4 py-3 border-b space-y-2.5 shrink-0 ${
-                isDrink ? 'border-[#285443]' : 'border-[#E6DFD5] bg-[#FAF8F5]/60'
-              }`}
+              onTouchStart={handleSheetTouchStart}
+              onTouchMove={handleSheetTouchMove}
+              onTouchEnd={handleSheetTouchEnd}
+              onTouchCancel={handleSheetTouchEnd}
+              className="shrink-0"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-bold">
-                  Filtrează după risc de capcană
-                </span>
-                <div className="flex items-center gap-2">
-                  {tierFilter !== 'all' && (
+              <div className="md:hidden flex justify-center pt-1.5 pb-0.5 touch-none cursor-grab">
+                <span className="w-10 h-1 rounded-full bg-current opacity-25" />
+              </div>
+
+              <div
+                className={`px-3 pt-1 pb-2 md:px-4 md:py-3 border-b space-y-1.5 md:space-y-2.5 ${
+                  isDrink
+                    ? 'border-[#285443]'
+                    : 'border-[#E6DFD5] bg-[#FAF8F5]'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 min-h-[44px] md:min-h-0">
+                  <span className="text-[12px] font-bold leading-tight">
+                    Filtrează după risc de capcană
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {tierFilter !== 'all' && (
+                      <button
+                        type="button"
+                        onClick={() => setTierFilter('all')}
+                        className={`text-[12px] font-semibold underline min-h-[44px] md:min-h-[36px] px-1 inline-flex items-center ${
+                          isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+                        }`}
+                      >
+                        Toate ({tierCounts.total})
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => setTierFilter('all')}
-                      className={`text-[12px] font-semibold underline min-h-[36px] inline-flex items-center ${
-                        isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
-                      }`}
+                      onClick={() => setSidebarOpen(false)}
+                      aria-label="Închide lista și filtrele"
+                      className="md:hidden w-11 h-11 -mr-2 flex items-center justify-center rounded-[4px] opacity-85 hover:opacity-100"
                     >
-                      Toate ({tierCounts.total})
+                      <X className="w-4 h-4" />
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setSidebarOpen(false)}
-                    aria-label="Închide lista și filtrele"
-                    className="md:hidden w-10 h-10 -mr-1.5 flex items-center justify-center rounded-[4px] opacity-80 hover:opacity-100"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-1.5">
-                {(
-                  [
-                    {
-                      id: 'local-staple' as const,
-                      label: 'Onest',
-                      count: tierCounts.staple,
-                      range: '0–25%',
-                      activeClass: isDrink
-                        ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                        : 'bg-[#3A2418] text-white border-[#3A2418]',
-                      idleClass: isDrink
-                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
-                        : 'bg-white border-[#D6CFC5] text-[#3A2418]',
-                    },
-                    {
-                      id: 'mixed-fair' as const,
-                      label: 'Mixt',
-                      count: tierCounts.mixed,
-                      range: '26–60%',
-                      activeClass:
-                        'bg-[#E0A526] text-[#3A2418] border-[#3A2418]',
-                      idleClass: isDrink
-                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
-                        : 'bg-[#E0A526]/20 border-[#E0A526] text-[#3A2418]',
-                    },
-                    {
-                      id: 'tourist-trap' as const,
-                      label: '▲ Capcană',
-                      count: tierCounts.trap,
-                      range: '61–100%',
-                      activeClass: 'bg-[#B3261E] text-white border-[#B3261E]',
-                      idleClass: isDrink
-                        ? 'bg-[#143025] border-[#B3261E]/60 text-[#F4EEE2]'
-                        : 'bg-[#B3261E]/12 border-[#B3261E]/40 text-[#B3261E]',
-                    },
-                  ] as const
-                ).map((item) => (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      {
+                        id: 'local-staple' as const,
+                        label: 'Onest',
+                        count: tierCounts.staple,
+                        range: '0–25%',
+                        dotClass: null,
+                        activeClass: isDrink
+                          ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                          : 'bg-[#3A2418] text-white border-[#3A2418]',
+                        idleClass: isDrink
+                          ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                          : 'bg-white border-[#D6CFC5] text-[#3A2418]',
+                      },
+                      {
+                        id: 'mixed-fair' as const,
+                        label: 'Mixt',
+                        count: tierCounts.mixed,
+                        range: '26–60%',
+                        dotClass: 'bg-[#E0A526]',
+                        activeClass: isDrink
+                          ? 'bg-[#E0A526] text-[#17382C] border-[#F4EEE2]'
+                          : 'bg-[#E0A526] text-[#3A2418] border-[#3A2418]',
+                        idleClass: isDrink
+                          ? 'bg-[#143025] border-[#E0A526] text-[#F4EEE2]'
+                          : 'bg-white border-[#E0A526] text-[#3A2418]',
+                      },
+                      {
+                        id: 'tourist-trap' as const,
+                        label: '▲ Capcană',
+                        count: tierCounts.trap,
+                        range: '61–100%',
+                        dotClass: null,
+                        activeClass: 'bg-[#B3261E] text-white border-[#B3261E]',
+                        idleClass: isDrink
+                          ? 'bg-[#143025] border-[#B3261E] text-[#F4EEE2]'
+                          : 'bg-white border-[#B3261E] text-[#B3261E]',
+                      },
+                    ] as const
+                  ).map((item) => {
+                    const isActive = tierFilter === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() =>
+                          setTierFilter((p) => (p === item.id ? 'all' : item.id))
+                        }
+                        className={`min-h-[44px] md:min-h-[48px] px-2 py-1.5 md:p-2 rounded-[4px] border text-left transition-colors ${
+                          isActive ? item.activeClass : item.idleClass
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 text-[11px] font-bold leading-tight">
+                          <span className="inline-flex items-center gap-1 min-w-0 truncate">
+                            {!isActive && item.dotClass && (
+                              <span
+                                aria-hidden="true"
+                                className={`w-2 h-2 rounded-full shrink-0 ${item.dotClass}`}
+                              />
+                            )}
+                            <span className="truncate">{item.label}</span>
+                          </span>
+                          <span className="tabular-nums shrink-0">{item.count}</span>
+                        </div>
+                        <div
+                          className={`text-[10px] mt-0.5 tabular-nums leading-tight ${
+                            isActive
+                              ? 'opacity-95'
+                              : isDrink
+                              ? 'text-[#F4EEE2]/80'
+                              : 'text-[#6E5649]'
+                          }`}
+                        >
+                          {item.range}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Mobile-only Map Layer Toggles */}
+                <div className="flex sm:hidden items-center gap-1.5 flex-wrap">
                   <button
-                    key={item.id}
                     type="button"
-                    onClick={() =>
-                      setTierFilter((p) => (p === item.id ? 'all' : item.id))
-                    }
-                    className={`min-h-[48px] p-2 rounded-[4px] border text-left transition-colors ${
-                      tierFilter === item.id ? item.activeClass : item.idleClass
+                    onClick={() => setShowNeighborhoodZones((v) => !v)}
+                    className={`inline-flex items-center gap-1.5 px-3 min-h-[44px] rounded-[4px] text-[12px] font-semibold border transition-colors ${
+                      showNeighborhoodZones
+                        ? isDrink
+                          ? 'bg-[#1E4335] text-[#F4EEE2] border-[#336652]'
+                          : 'bg-[#FAF8F5] text-[#3A2418] border-[#3A2418]'
+                        : isDrink
+                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]/80'
+                        : 'bg-white border-[#E6DFD5] text-[#6E5649]'
                     }`}
                   >
-                    <div className="flex items-center justify-between text-[11px] font-bold">
-                      <span>{item.label}</span>
-                      <span className="tabular-nums">{item.count}</span>
-                    </div>
-                    <div className="text-[10px] opacity-80 mt-0.5 tabular-nums">
-                      {item.range}
-                    </div>
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Cartiere</span>
                   </button>
-                ))}
-              </div>
-
-              {/* Mobile-only Map Layer Toggles */}
-              <div className="flex sm:hidden items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setShowNeighborhoodZones((v) => !v)}
-                  className={`inline-flex items-center gap-1 px-2.5 min-h-[36px] rounded-[4px] text-[12px] font-semibold border transition-colors ${
-                    showNeighborhoodZones
-                      ? isDrink
-                        ? 'bg-[#1E4335] text-[#F4EEE2] border-[#336652]'
-                        : 'bg-[#FAF8F5] text-[#3A2418] border-[#3A2418]'
-                      : isDrink
-                      ? 'border-[#285443] text-[#F4EEE2]/65'
-                      : 'border-[#E6DFD5] text-[#6E5649]'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Cartiere</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowLandmarks((v) => !v)}
-                  className={`inline-flex items-center gap-1 px-2.5 min-h-[36px] rounded-[4px] text-[12px] font-semibold border transition-colors ${
-                    showLandmarks
-                      ? isDrink
-                        ? 'bg-[#1E4335] text-[#F4EEE2] border-[#336652]'
-                        : 'bg-[#FAF8F5] text-[#3A2418] border-[#3A2418]'
-                      : isDrink
-                      ? 'border-[#285443] text-[#F4EEE2]/65'
-                      : 'border-[#E6DFD5] text-[#6E5649]'
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>Repere</span>
-                </button>
-              </div>
-
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 opacity-60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={sidebarQuery}
-                  onChange={(e) => setSidebarQuery(e.target.value)}
-                  placeholder="Caută pe hartă..."
-                  aria-label="Caută pe hartă"
-                  className={`w-full pl-9 pr-11 py-2 min-h-[44px] md:min-h-[36px] text-[16px] md:text-[13px] rounded-[4px] border ${
-                    isDrink
-                      ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2] placeholder:text-[#F4EEE2]/50'
-                      : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder:text-[#6E5649]'
-                  }`}
-                />
-                {sidebarQuery && (
                   <button
                     type="button"
-                    onClick={() => setSidebarQuery('')}
-                    aria-label="Șterge căutarea"
-                    className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-[4px] opacity-70 hover:opacity-100"
+                    onClick={() => setShowLandmarks((v) => !v)}
+                    className={`inline-flex items-center gap-1.5 px-3 min-h-[44px] rounded-[4px] text-[12px] font-semibold border transition-colors ${
+                      showLandmarks
+                        ? isDrink
+                          ? 'bg-[#1E4335] text-[#F4EEE2] border-[#336652]'
+                          : 'bg-[#FAF8F5] text-[#3A2418] border-[#3A2418]'
+                        : isDrink
+                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]/80'
+                        : 'bg-white border-[#E6DFD5] text-[#6E5649]'
+                    }`}
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>Repere</span>
                   </button>
-                )}
+                </div>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 opacity-60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={sidebarQuery}
+                    onChange={(e) => setSidebarQuery(e.target.value)}
+                    placeholder="Caută pe hartă..."
+                    aria-label="Caută pe hartă"
+                    className={`w-full pl-9 pr-11 py-2 min-h-[44px] md:min-h-[36px] text-[16px] md:text-[13px] rounded-[4px] border ${
+                      isDrink
+                        ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2] placeholder:text-[#F4EEE2]/60'
+                        : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder:text-[#6E5649]'
+                    }`}
+                  />
+                  {sidebarQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSidebarQuery('')}
+                      aria-label="Șterge căutarea"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-[4px] opacity-75 hover:opacity-100"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             <div
-              className={`px-4 py-2.5 border-b flex items-start gap-2 text-[11px] leading-snug ${
+              className={`hidden md:flex px-4 py-2.5 border-b items-start gap-2 text-[11px] leading-snug shrink-0 ${
                 isDrink
-                  ? 'border-[#285443] bg-[#143025] text-[#F4EEE2]/75'
+                  ? 'border-[#285443] bg-[#143025] text-[#F4EEE2]/80'
                   : 'border-[#E6DFD5] bg-[#FAF8F5] text-[#6E5649]'
               }`}
             >
@@ -1274,7 +1664,7 @@ export function MapView({
                       setSidebarQuery('');
                       if (onResetFilters) onResetFilters();
                     }}
-                    className={`px-3 py-1.5 rounded-[4px] text-[12px] font-semibold ${
+                    className={`min-h-[44px] md:min-h-[36px] px-4 py-2 rounded-[4px] text-[12px] font-semibold ${
                       isDrink
                         ? 'bg-[#F2A33A] text-[#17382C]'
                         : 'bg-[#B3261E] text-white'
@@ -1302,14 +1692,14 @@ export function MapView({
                       }}
                       onMouseEnter={() => setHoveredRestaurantId(r.id)}
                       onMouseLeave={() => setHoveredRestaurantId(null)}
-                      className={`w-full text-left px-3.5 sm:px-4 py-3 min-h-[56px] flex items-center justify-between gap-3 transition-colors ${
+                      className={`w-full text-left px-3 sm:px-4 py-2.5 md:py-3 min-h-[52px] md:min-h-[56px] flex items-center justify-between gap-3 transition-colors ${
                         isSelected
                           ? isDrink
                             ? 'bg-[#1E4335] ring-1 ring-inset ring-[#F2A33A]/50'
                             : 'bg-[#FAF8F5] ring-1 ring-inset ring-[#B3261E]/35'
                           : isDrink
                           ? 'hover:bg-[#1A3D30]'
-                          : 'hover:bg-[#FAF8F5]/70'
+                          : 'hover:bg-[#FAF8F5]'
                       }`}
                     >
                       <div className="min-w-0">
@@ -1339,7 +1729,7 @@ export function MapView({
                         </div>
                         <div
                           className={`text-[12px] truncate ${
-                            isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                            isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
                           }`}
                         >
                           {r.shortNeighborhood ?? r.neighborhood} · Localnici{' '}
@@ -1361,18 +1751,18 @@ export function MapView({
 
         {/* RIGHT / REAL MAPLIBRE ENGINE WITH TOP FOOD SKIN */}
         <div
-          className={`relative flex-1 h-full overflow-hidden ${
+          className={`relative z-10 isolate flex-1 h-full overflow-hidden ${
             isDrink ? 'bg-[#143025]' : 'bg-[#F6F2EA]'
           }`}
         >
-          <div ref={mapContainerRef} className="w-full h-full" />
+          <div ref={mapContainerRef} className="relative z-10 isolate w-full h-full" />
 
           {/* Compact Attribution Pill */}
           <div
-            className={`pointer-events-none absolute bottom-1 right-2 z-10 text-[9px] px-1.5 py-0.5 rounded opacity-70 ${
+            className={`pointer-events-none absolute bottom-1 right-2 z-20 text-[12px] leading-tight px-2 py-0.5 rounded border ${
               isDrink
-                ? 'bg-[#143025]/80 text-[#F4EEE2]'
-                : 'bg-[#F6F2EA]/85 text-[#6E5649]'
+                ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
             }`}
           >
             © OpenStreetMap · OpenFreeMap · TOP FOOD skin
@@ -1381,7 +1771,7 @@ export function MapView({
           {/* Floating Legend Pill when sidebar is collapsed */}
           {!sidebarOpen && (
             <div
-              className={`pointer-events-none absolute left-3 md:left-4 z-10 px-2.5 sm:px-3 py-1.5 rounded-[4px] border text-[11px] font-semibold shadow-sm max-w-[calc(100%-4.75rem)] md:max-w-none ${
+              className={`pointer-events-none absolute left-3 md:left-4 z-20 px-2.5 sm:px-3 py-1.5 rounded-[4px] border text-[12px] leading-snug font-semibold shadow-sm max-w-[calc(100%-4.75rem)] md:max-w-none ${
                 activeZone
                   ? 'hidden md:block md:bottom-4'
                   : 'top-3 md:top-auto md:bottom-4'
@@ -1396,7 +1786,7 @@ export function MapView({
           )}
 
           {/* Zoom Controls */}
-          <div className="absolute top-3 right-3 md:top-4 md:right-4 flex flex-col items-end gap-2 z-10">
+          <div className="absolute top-3 right-3 md:top-4 md:right-4 flex flex-col items-end gap-2 z-20">
             <div
               className={`flex flex-col rounded-[4px] border overflow-hidden shadow-sm ${
                 isDrink
@@ -1444,7 +1834,7 @@ export function MapView({
           {/* Active Tourist Zone Info */}
           {activeZone && (
             <div
-              className={`absolute top-3 left-3 right-16 sm:right-auto sm:top-4 sm:left-4 sm:w-80 md:max-w-sm max-h-[45%] md:max-h-none overflow-y-auto md:overflow-visible border rounded-[4px] p-3 sm:p-4 shadow-md z-20 ${
+              className={`absolute top-3 left-3 right-16 sm:right-auto sm:top-4 sm:left-4 sm:w-80 md:max-w-sm max-h-[45%] md:max-h-none overflow-y-auto md:overflow-visible border rounded-[4px] p-3 sm:p-4 shadow-md z-30 ${
                 isDrink
                   ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
                   : 'bg-white border-[#E0A526] text-[#3A2418]'
@@ -1465,14 +1855,14 @@ export function MapView({
                   type="button"
                   onClick={() => setActiveZoneId(null)}
                   aria-label="Închide zona turistică"
-                  className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center -mr-2 -mt-2 sm:-mr-1.5 sm:-mt-1.5 rounded-[4px] opacity-70 hover:opacity-100 shrink-0"
+                  className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center -mr-2 -mt-2 sm:-mr-1.5 sm:-mt-1.5 rounded-[4px] opacity-75 hover:opacity-100 shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <p
                 className={`text-[13px] mt-1.5 sm:mt-2 leading-snug ${
-                  isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                  isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'
                 }`}
               >
                 {activeZone.description}
@@ -1492,7 +1882,7 @@ export function MapView({
                       duration: 650,
                     });
                   }}
-                  className={`font-semibold underline min-h-[40px] sm:min-h-0 inline-flex items-center shrink-0 ${
+                  className={`font-semibold underline min-h-[44px] md:min-h-0 inline-flex items-center shrink-0 ${
                     isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                   }`}
                 >
@@ -1507,7 +1897,7 @@ export function MapView({
             <div
               className={`${
                 sidebarOpen ? 'hidden md:block ' : ''
-              }absolute bottom-3 left-3 right-3 md:bottom-4 md:left-auto md:right-5 md:w-[430px] rounded-[6px] border shadow-lg overflow-hidden z-20 ${
+              }absolute bottom-3 left-3 right-3 md:bottom-4 md:left-auto md:right-5 md:w-[430px] rounded-[6px] border shadow-lg overflow-hidden z-30 ${
                 isDrink
                   ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
                   : 'bg-white text-[#3A2418] border-[#3A2418]'
@@ -1524,7 +1914,7 @@ export function MapView({
                   <button
                     type="button"
                     onClick={handlePrevRestaurant}
-                    className={`inline-flex items-center gap-1 px-2.5 sm:px-2 min-h-[38px] sm:min-h-0 py-1.5 sm:py-1 rounded-[3px] border ${
+                    className={`inline-flex items-center gap-1 px-2.5 sm:px-2 min-h-[44px] md:min-h-0 py-1.5 md:py-1 rounded-[3px] border ${
                       isDrink
                         ? 'border-[#285443] bg-[#143025] text-[#F4EEE2] hover:border-[#F2A33A]'
                         : 'border-[#D6CFC5] bg-white hover:border-[#3A2418]'
@@ -1536,7 +1926,7 @@ export function MapView({
                   <button
                     type="button"
                     onClick={handleNextRestaurant}
-                    className={`inline-flex items-center gap-1 px-2.5 sm:px-2 min-h-[38px] sm:min-h-0 py-1.5 sm:py-1 rounded-[3px] border ${
+                    className={`inline-flex items-center gap-1 px-2.5 sm:px-2 min-h-[44px] md:min-h-0 py-1.5 md:py-1 rounded-[3px] border ${
                       isDrink
                         ? 'border-[#285443] bg-[#143025] text-[#F4EEE2] hover:border-[#F2A33A]'
                         : 'border-[#D6CFC5] bg-white hover:border-[#3A2418]'
@@ -1547,10 +1937,10 @@ export function MapView({
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span
                     className={`tabular-nums ${
-                      isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                      isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'
                     }`}
                   >
                     {visibleRestaurants.findIndex(
@@ -1562,9 +1952,9 @@ export function MapView({
                     type="button"
                     onClick={() => setActiveRestaurantId(null)}
                     aria-label="Închide previzualizarea"
-                    className={`w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center -mr-1.5 rounded-[4px] ${
+                    className={`w-11 h-11 md:w-9 md:h-9 flex items-center justify-center -mr-1.5 rounded-[4px] ${
                       isDrink
-                        ? 'text-[#F4EEE2]/75 hover:text-[#F4EEE2]'
+                        ? 'text-[#F4EEE2]/80 hover:text-[#F4EEE2]'
                         : 'text-[#6E5649] hover:text-[#3A2418]'
                     }`}
                   >
@@ -1581,7 +1971,7 @@ export function MapView({
                     </h3>
                     <p
                       className={`text-[12px] sm:text-[13px] mt-0.5 truncate ${
-                        isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                        isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'
                       }`}
                     >
                       {activeRestaurant.shortCategory ?? activeRestaurant.cuisine},{' '}
@@ -1608,7 +1998,7 @@ export function MapView({
                       size="xs"
                     />
                     <span
-                      className={isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}
+                      className={isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'}
                     >
                       Turiști{' '}
                       <strong className="tabular-nums">

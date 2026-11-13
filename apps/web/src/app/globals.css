@@ -69,17 +69,58 @@
 
   @media (pointer: coarse) {
     input[type="range"] {
-      min-height: 36px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      min-height: 44px;
+      height: 44px;
+      touch-action: pan-x;
+      cursor: pointer;
+    }
+
+    input[type="range"].accent-\[\#F2A33A\] {
+      --range-accent: #F2A33A;
+      --range-track: #2D5947;
+      --range-thumb-border: #17382C;
+    }
+
+    input[type="range"].accent-\[\#B3261E\] {
+      --range-accent: #B3261E;
+      --range-track: #D6CFC5;
+      --range-thumb-border: #FFFFFF;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: var(--range-track, #D6CFC5);
     }
 
     input[type="range"]::-webkit-slider-thumb {
-      width: 24px;
-      height: 24px;
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: var(--range-accent, #B3261E);
+      border: 2px solid var(--range-thumb-border, #FFFFFF);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      margin-top: -10px;
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: var(--range-track, #D6CFC5);
     }
 
     input[type="range"]::-moz-range-thumb {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: var(--range-accent, #B3261E);
+      border: 2px solid var(--range-thumb-border, #FFFFFF);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
     }
   }
 
@@ -478,20 +519,71 @@ html.dark .bg-\[\#ECE6DD\] {
   background-color: #343A46;
 }
 
+html.dark .text-\[\#3A2418\],
+html.dark [class^="text-[#3A2418]/"],
+html.dark [class*=" text-[#3A2418]/"] {
+  color: rgba(244, 238, 226, 0.84);
+}
+
 html.dark .text-\[\#3A2418\] {
   color: #F4EEE2;
 }
 
-html.dark .text-\[\#3A2418\]\/85 {
+html.dark .text-\[\#3A2418\]\/95,
+html.dark .text-\[\#3A2418\]\/90 {
+  color: rgba(244, 238, 226, 0.92);
+}
+
+html.dark .text-\[\#3A2418\]\/85,
+html.dark .text-\[\#3A2418\]\/80 {
   color: rgba(244, 238, 226, 0.88);
 }
 
-html.dark .text-\[\#6E5649\] {
+html.dark .text-\[\#3A2418\]\/75,
+html.dark .text-\[\#3A2418\]\/70,
+html.dark .text-\[\#3A2418\]\/65,
+html.dark .text-\[\#3A2418\]\/60 {
+  color: rgba(244, 238, 226, 0.82);
+}
+
+html.dark .hover\:text-\[\#3A2418\]:hover {
+  color: #F4EEE2;
+}
+
+html.dark .text-\[\#6E5649\],
+html.dark [class^="text-[#6E5649]/"],
+html.dark [class*=" text-[#6E5649]/"] {
   color: #B6BAC4;
 }
 
 html.dark .text-\[\#6E5649\]\/90 {
   color: rgba(182, 186, 196, 0.92);
+}
+
+/* Input & search placeholder contrast (>= 4.5:1 across light, dark, and topdrink) */
+.placeholder-\[\#8C7B70\]::placeholder,
+.placeholder\:text-\[\#A39384\]::placeholder,
+.placeholder\:text-\[\#6E5649\]\/60::placeholder {
+  color: #6E5649;
+  opacity: 1;
+}
+
+.placeholder\:text-\[\#6E8B7A\]::placeholder,
+.placeholder-\[\#F4EEE2\]\/45::placeholder,
+.placeholder\:text-\[\#F4EEE2\]\/40::placeholder,
+.placeholder\:text-\[\#F4EEE2\]\/50::placeholder,
+#food-search-input.bg-\[\#122B22\]::placeholder {
+  color: rgba(244, 238, 226, 0.75);
+  opacity: 1;
+}
+
+html.dark .placeholder-\[\#8C7B70\]::placeholder,
+html.dark .placeholder\:text-\[\#A39384\]::placeholder,
+html.dark .placeholder\:text-\[\#6E5649\]\/60::placeholder,
+html.dark .placeholder\:text-\[\#6E5649\]::placeholder,
+html.dark #food-search-input.bg-white::placeholder {
+  color: #B6BAC4;
+  opacity: 1;
 }
 
 html.dark .text-\[\#F4EEE2\]\/65,
@@ -516,6 +608,19 @@ html.dark .hover\:text-\[\#B3261E\]:hover {
 html.dark .bg-\[\#FEE4E2\].text-\[\#B3261E\],
 html.dark .bg-\[\#FEE4E2\] .text-\[\#B3261E\] {
   color: #9E1F18;
+}
+
+html.dark #review-form-error.review-form-error-food {
+  background-color: #361D1E;
+  border-color: rgba(255, 122, 112, 0.7);
+  color: #FFE5E2;
+}
+
+@media (pointer: coarse) {
+  html.dark input[type="range"].accent-\[\#B3261E\] {
+    --range-track: #4A5364;
+    --range-thumb-border: #22262E;
+  }
 }
 
 html.dark .border-\[\#E6DFD5\],
