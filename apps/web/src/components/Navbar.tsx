@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Bookmark, Moon, Sun, User, X } from 'lucide-react';
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import { Bookmark, LogIn, LogOut, Moon, Sun, User, X } from 'lucide-react';
 import { NavSection, Restaurant, UserAccount, Vertical, formatScore } from '../types';
 import { BrandWordmark, LocalnicBadge } from './BrandPrimitives';
 
@@ -10,12 +12,20 @@ export interface NavbarProps {
   onNavSectionChange: (s: NavSection) => void;
   savedRestaurants: Restaurant[];
   onSelectRestaurant: (r: Restaurant) => void;
-  currentUser: UserAccount;
+  currentUser: UserAccount | null;
   availableUsers: UserAccount[];
   onSelectUser: (userId: string) => void;
+  onOpenLogin: () => void;
+  onLogout: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
 }
+
+const NAV_ITEMS: { id: NavSection; label: string }[] = [
+  { id: 'top', label: 'Top' },
+  { id: 'map', label: 'Hartă' },
+  { id: 'monthly', label: 'Luna asta' },
+];
 
 export const Navbar: React.FC<NavbarProps> = ({
   vertical,
@@ -27,14 +37,49 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   availableUsers,
   onSelectUser,
+  onOpenLogin,
+  onLogout,
   darkMode,
   onToggleDarkMode,
 }) => {
   const isDrink = vertical === 'drink';
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setProfileOpen(false);
+      }
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (
+        profileWrapperRef.current &&
+        !profileWrapperRef.current.contains(e.target as Node)
+      ) {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [profileOpen]);
 
   const handleNavClick = (section: NavSection) => {
     onNavSectionChange(section);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSwitchVertical = () => {
+    onVerticalChange(isDrink ? 'food' : 'drink');
+    onNavSectionChange('top');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -60,13 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             aria-label="Navigație principală"
             className="hidden md:flex items-center gap-6"
           >
-            {(
-              [
-                { id: 'top', label: 'Top' },
-                { id: 'map', label: 'Hartă' },
-                { id: 'monthly', label: 'Luna asta' },
-              ] as const
-            ).map((item) => {
+            {NAV_ITEMS.map((item) => {
               const active = navSection === item.id;
               return (
                 <button
@@ -96,11 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
-              onClick={() => {
-                onVerticalChange(isDrink ? 'food' : 'drink');
-                onNavSectionChange('top');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+              onClick={handleSwitchVertical}
               className={`btn-press text-[14px] font-semibold px-3 py-1.5 rounded-[4px] border ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
@@ -118,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={onToggleDarkMode}
               aria-label={darkMode ? 'Comută la mod luminos' : 'Comută la mod întunecat'}
               title={darkMode ? 'Mod luminos' : 'Mod întunecat'}
-              className={`btn-press w-9 h-9 rounded-full flex items-center justify-center ${
+              className={`btn-press w-11 h-11 rounded-full flex items-center justify-center ${
                 isDrink
                   ? 'text-[#F4EEE2] hover:bg-[#1E4335]'
                   : 'text-[#3A2418] hover:bg-[#FAF8F5]'
@@ -131,12 +166,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            <div className="relative">
+            {currentUser === null ? (
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className={`btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[13px] font-bold ${
+                  isDrink
+                    ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
+                    : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
+                }`}
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Intră în cont</span>
+              </button>
+            ) : (
+            <div ref={profileWrapperRef} className="relative">
               <button
                 type="button"
                 onClick={() => setProfileOpen((prev) => !prev)}
                 aria-label="Profilul tău și localuri salvate"
-                className={`btn-press w-9 h-9 rounded-full flex items-center justify-center relative ${
+                aria-expanded={profileOpen}
+                aria-haspopup="dialog"
+                className={`btn-press w-11 h-11 rounded-full flex items-center justify-center relative ${
                   isDrink
                     ? 'text-[#F4EEE2] hover:bg-[#1E4335]'
                     : 'text-[#3A2418] hover:bg-[#FAF8F5]'
@@ -186,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     type="button"
                     onClick={() => setProfileOpen(false)}
                     aria-label="Închide profil"
-                    className="btn-press opacity-70 hover:opacity-100"
+                    className="btn-press w-9 h-9 flex items-center justify-center -mr-1.5 -mt-1.5 rounded-full opacity-70 hover:opacity-100"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -269,8 +320,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }}
                           className={`w-full text-left px-2.5 py-1.5 rounded-[3px] text-[13px] font-semibold transition-colors ${
                             isDrink
-                              ? 'hover:bg-[#1E4335]'
-                              : 'hover:bg-[#FAF8F5]'
+                              ? 'text-[#F4EEE2] hover:bg-[#1E4335]'
+                              : 'text-[#3A2418] hover:bg-[#FAF8F5]'
                           }`}
                         >
                           {r.name}
@@ -279,9 +330,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   )}
                 </div>
+
+                <div
+                  className={`pt-2.5 border-t ${
+                    isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      onLogout();
+                    }}
+                    className={`btn-press w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-[4px] border text-[12px] font-semibold ${
+                      isDrink
+                        ? 'border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                        : 'border-[#D6CFC5] text-[#6E5649] hover:border-[#B3261E] hover:text-[#B3261E]'
+                    }`}
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Deconectare</span>
+                  </button>
+                </div>
               </div>
             )}
             </div>
+            )}
           </div>
         </div>
       </header>
@@ -296,13 +370,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         }`}
       >
         <div className="grid grid-cols-4 h-13">
-          {(
-            [
-              { id: 'top', label: 'Top' },
-              { id: 'map', label: 'Hartă' },
-              { id: 'monthly', label: 'Luna asta' },
-            ] as const
-          ).map((item) => {
+          {NAV_ITEMS.map((item) => {
             const active = navSection === item.id;
             return (
               <button
@@ -326,11 +394,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             type="button"
-            onClick={() => {
-              onVerticalChange(isDrink ? 'food' : 'drink');
-              onNavSectionChange('top');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onClick={handleSwitchVertical}
             className={`btn-press text-[13px] font-semibold flex items-center justify-center ${
               isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'
             }`}

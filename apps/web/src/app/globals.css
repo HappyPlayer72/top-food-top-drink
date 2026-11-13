@@ -58,8 +58,39 @@
   a:focus-visible,
   input:focus-visible,
   select:focus-visible,
-  textarea:focus-visible {
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex="0"]:focus-visible {
     outline: 2px solid #B3261E;
+    outline-offset: 2px;
+  }
+
+  html:not(.dark) .bg-\[\#17382C\] button:focus-visible,
+  html:not(.dark) .bg-\[\#17382C\] a:focus-visible,
+  html:not(.dark) .bg-\[\#17382C\] input:focus-visible,
+  html:not(.dark) .bg-\[\#17382C\] select:focus-visible,
+  html:not(.dark) .bg-\[\#17382C\] textarea:focus-visible,
+  html:not(.dark) .bg-\[\#17382C\] [role="button"]:focus-visible,
+  html:not(.dark) .bg-\[\#17382C\] [tabindex="0"]:focus-visible {
+    outline: 2px solid #17382C;
+    outline-offset: 2px;
+  }
+
+  html.dark button:focus-visible,
+  html.dark a:focus-visible,
+  html.dark input:focus-visible,
+  html.dark select:focus-visible,
+  html.dark textarea:focus-visible,
+  html.dark [role="button"]:focus-visible,
+  html.dark [tabindex="0"]:focus-visible,
+  html.dark .bg-\[\#17382C\] button:focus-visible,
+  html.dark .bg-\[\#17382C\] a:focus-visible,
+  html.dark .bg-\[\#17382C\] input:focus-visible,
+  html.dark .bg-\[\#17382C\] select:focus-visible,
+  html.dark .bg-\[\#17382C\] textarea:focus-visible,
+  html.dark .bg-\[\#17382C\] [role="button"]:focus-visible,
+  html.dark .bg-\[\#17382C\] [tabindex="0"]:focus-visible {
+    outline: 2px solid #F2A33A;
     outline-offset: 2px;
   }
 }
@@ -265,12 +296,12 @@
 
 @keyframes modalPanelIn {
   from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.97);
+    opacity: 1;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
@@ -347,10 +378,14 @@
   .bar-scale-fill,
   .podium-rise,
   .modal-backdrop-enter,
-  .modal-panel-enter,
   .drawer-sheet-enter,
   .popover-enter {
     animation: backdropFadeIn 120ms ease forwards;
+    transform: none !important;
+  }
+
+  .modal-panel-enter {
+    animation: none;
     transform: none !important;
   }
 
@@ -429,12 +464,12 @@ html:not(.dark) .text-\[\#F4EEE2\]\/70 {
 html:not(.dark) .text-\[\#F4EEE2\]\/65,
 html:not(.dark) .text-\[\#F4EEE2\]\/60,
 html:not(.dark) .text-\[\#F4EEE2\]\/55 {
-  color: rgba(23, 56, 44, 0.6);
+  color: rgba(23, 56, 44, 0.72);
 }
 
 html:not(.dark) .text-\[\#F2A33A\]\/90,
 html:not(.dark) .text-\[\#F2A33A\] {
-  color: #B96B0A;
+  color: #9E5906;
 }
 
 html:not(.dark) .bg-\[\#F2A33A\] .text-\[\#17382C\],
@@ -509,7 +544,7 @@ html.dark .text-\[\#3A2418\] {
 }
 
 html.dark .text-\[\#3A2418\]\/85 {
-  color: rgba(244, 238, 226, 0.86);
+  color: rgba(244, 238, 226, 0.88);
 }
 
 html.dark .text-\[\#6E5649\] {
@@ -517,16 +552,40 @@ html.dark .text-\[\#6E5649\] {
 }
 
 html.dark .text-\[\#6E5649\]\/90 {
-  color: rgba(182, 186, 196, 0.9);
+  color: rgba(182, 186, 196, 0.92);
+}
+
+html.dark .text-\[\#F4EEE2\]\/65,
+html.dark .text-\[\#F4EEE2\]\/60,
+html.dark .text-\[\#F4EEE2\]\/55 {
+  color: rgba(244, 238, 226, 0.72);
+}
+
+html.dark .text-\[\#1F4E8C\] {
+  color: #7DB4FF;
+}
+
+html.dark .border-\[\#1F4E8C\] {
+  border-color: #7DB4FF;
+}
+
+html.dark .text-\[\#B3261E\],
+html.dark .hover\:text-\[\#B3261E\]:hover {
+  color: #FF7A70;
+}
+
+html.dark .bg-\[\#FEE4E2\].text-\[\#B3261E\],
+html.dark .bg-\[\#FEE4E2\] .text-\[\#B3261E\] {
+  color: #9E1F18;
 }
 
 html.dark .border-\[\#E6DFD5\],
 html.dark .border-\[\#D6CFC5\] {
-  border-color: #3D4452;
+  border-color: #4A5364;
 }
 
 html.dark .divide-\[\#E6DFD5\] > :not(:last-child) {
-  border-color: #3D4452;
+  border-color: #4A5364;
 }
 
 html.dark .border-\[\#3A2418\] {

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Bookmark, Check, ChevronLeft, MapPin, ThumbsUp, X } from 'lucide-react';
 import {
@@ -22,9 +24,10 @@ import {
 
 export interface RestaurantDetailModalProps {
   restaurant: Restaurant | null;
-  currentUser: UserAccount;
+  currentUser: UserAccount | null;
   onClose: () => void;
   onAddReview: (restaurantId: string, review: Review) => void;
+  onRequireLogin?: () => void;
   onLocateOnMap?: (restaurant: Restaurant) => void;
   isSaved?: boolean;
   onToggleSave?: (restaurantId: string) => void;
@@ -37,11 +40,13 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   currentUser,
   onClose,
   onAddReview,
+  onRequireLogin,
   onLocateOnMap,
   isSaved = false,
   onToggleSave,
 }) => {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilterTab>('verified-local');
+  const [showScoreFormula, setShowScoreFormula] = useState(false);
   const [showWhyTrap, setShowWhyTrap] = useState(false);
   const [isReviewDrawerOpen, setIsReviewDrawerOpen] = useState(false);
   const [localSaved, setLocalSaved] = useState(false);
@@ -65,6 +70,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       (r) => r.authorRole === 'verified-local' || r.authorRole === 'regular'
     );
     setReviewFilter(hasLocal ? 'verified-local' : 'all');
+    setShowScoreFormula(false);
     setShowWhyTrap(false);
     setIsReviewDrawerOpen(false);
     setHelpfulVotedKeys({});
@@ -170,6 +176,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     e.preventDefault();
     setFormError(null);
 
+    if (!currentUser) {
+      setIsReviewDrawerOpen(false);
+      onRequireLogin?.();
+      return;
+    }
+
     const parsedGrade = parseGradeInput(gradeText);
     if (parsedGrade === null || parsedGrade < 1 || parsedGrade > 10) {
       setFormError('Introdu o notă întreagă între 1 și 10.');
@@ -232,7 +244,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   return (
     <div
       ref={modalOverlayRef}
-      className="fixed inset-0 z-50 overflow-y-auto modal-backdrop-enter"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/55 modal-backdrop-enter"
       role="dialog"
       aria-modal="true"
       aria-label={`Detalii ${restaurant.name}`}
@@ -256,7 +268,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Înapoi la listă"
-                className={`btn-press w-9 h-9 rounded-[4px] flex items-center justify-center shrink-0 ${
+                className={`btn-press w-11 h-11 rounded-[4px] flex items-center justify-center shrink-0 -ml-1.5 ${
                   isDrink
                     ? 'hover:bg-[#1E4335] text-[#F4EEE2]'
                     : 'hover:bg-[#FAF8F5] text-[#3A2418]'
@@ -305,77 +317,122 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           </div>
 
           {/* TITLE + TOWERING SCORE BLOCK (Rule #5: Score is the largest number on screen) */}
-          <section className="flex items-start justify-between gap-5">
-            <div className="min-w-0 space-y-2">
-              <h1 className="font-display text-[36px] sm:text-[46px] leading-[0.95]">
-                {restaurant.name}
-              </h1>
+          <section className="space-y-3">
+            <div className="flex items-start justify-between gap-5">
+              <div className="min-w-0 space-y-2">
+                <h1 className="font-display text-[36px] sm:text-[46px] leading-[0.95]">
+                  {restaurant.name}
+                </h1>
 
-              <p
-                className={`text-[14px] leading-snug ${
-                  isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
-                }`}
-              >
-                {restaurant.shortCategory ?? restaurant.cuisine},{' '}
-                {restaurant.shortNeighborhood ?? restaurant.neighborhood},{' '}
-                {restaurant.priceRangeLabel ?? `~${restaurant.avgMealPriceRon} lei`}.{' '}
-                {restaurant.openUntilLabel ?? restaurant.hours}
-              </p>
+                <p
+                  className={`text-[14px] leading-snug ${
+                    isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                  }`}
+                >
+                  {restaurant.shortCategory ?? restaurant.cuisine},{' '}
+                  {restaurant.shortNeighborhood ?? restaurant.neighborhood},{' '}
+                  {restaurant.priceRangeLabel ?? `~${restaurant.avgMealPriceRon} lei`}.{' '}
+                  {restaurant.openUntilLabel ?? restaurant.hours}
+                </p>
 
-              {(restaurant.isPartner || restaurant.isSponsored) && (
-                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  {restaurant.isPartner && (
-                    <PartnerBadge
-                      label={
-                        isDrink ? 'Partener TOP DRINK' : 'Partener TOP FOOD'
-                      }
-                      dark={isDrink}
+                {(restaurant.isPartner || restaurant.isSponsored) && (
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    {restaurant.isPartner && (
+                      <PartnerBadge
+                        label={
+                          isDrink ? 'Partener TOP DRINK' : 'Partener TOP FOOD'
+                        }
+                        dark={isDrink}
+                      />
+                    )}
+                    {restaurant.isSponsored && (
+                      <span
+                        className={`text-[12px] ${
+                          isDrink ? 'text-[#F4EEE2]/60' : 'text-[#6E5649]'
+                        }`}
+                      >
+                        Sponsorizat. Nu schimbă scorul.
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {isDrink && restaurant.crowdSegments && restaurant.crowdLabel && (
+                  <div className="pt-1">
+                    <CrowdMeter
+                      segments={restaurant.crowdSegments}
+                      label={restaurant.crowdLabel}
                     />
-                  )}
-                  {restaurant.isSponsored && (
-                    <span
-                      className={`text-[12px] ${
-                        isDrink ? 'text-[#F4EEE2]/60' : 'text-[#6E5649]'
-                      }`}
-                    >
-                      Sponsorizat. Nu schimbă scorul.
-                    </span>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
 
-              {isDrink && restaurant.crowdSegments && restaurant.crowdLabel && (
-                <div className="pt-1">
-                  <CrowdMeter
-                    segments={restaurant.crowdSegments}
-                    label={restaurant.crowdLabel}
-                  />
-                </div>
-              )}
+              {/* Right: Score + Single CarouStrip (food) or CoasterScore (drink) */}
+              <div className="shrink-0 flex flex-col items-end">
+                {isDrink ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <CoasterScore score={restaurant.foodQualityScore} size="lg" />
+                    <span className="text-[11px] text-[#F4EEE2]/70">
+                      Scor onest din 10
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowScoreFormula((prev) => !prev)}
+                      aria-expanded={showScoreFormula}
+                      aria-controls="scor-onest-formula"
+                      className="btn-press text-[11px] font-semibold text-[#F2A33A] underline underline-offset-2 hover:opacity-80"
+                    >
+                      {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="min-w-[116px] flex flex-col items-end">
+                    <span className="font-display text-[60px] sm:text-[68px] leading-[0.88] text-[#3A2418] tabular-nums">
+                      {formatScore(restaurant.foodQualityScore)}
+                    </span>
+                    <div className="w-full mt-2 mb-1">
+                      <CarouStrip height={8} />
+                    </div>
+                    <span className="text-[11px] text-[#6E5649]">
+                      Scor onest din 10
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowScoreFormula((prev) => !prev)}
+                      aria-expanded={showScoreFormula}
+                      aria-controls="scor-onest-formula"
+                      className="btn-press mt-0.5 text-[11px] font-semibold text-[#6E5649] hover:text-[#3A2418] underline underline-offset-2"
+                    >
+                      {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Right: Score + Single CarouStrip (food) or CoasterScore (drink) */}
-            <div className="shrink-0 flex flex-col items-end">
-              {isDrink ? (
-                <div className="flex flex-col items-center gap-1.5">
-                  <CoasterScore score={restaurant.foodQualityScore} size="lg" />
-                  <span className="text-[11px] text-[#F4EEE2]/70">
-                    Scor onest din 10
-                  </span>
+            <div
+              id="scor-onest-formula"
+              className="collapse-grid"
+              data-open={showScoreFormula}
+            >
+              <div className="collapse-inner">
+                <div
+                  className={`p-3 rounded-[4px] border text-[12px] leading-relaxed ${
+                    isDrink
+                      ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]/85'
+                      : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                  }`}
+                >
+                  <p>
+                    <strong>Scorul onest</strong> ponderează voturile după credibilitate:{' '}
+                    <strong>2,0× localnic verificat</strong>,{' '}
+                    <strong>1,0× turist</strong> și{' '}
+                    <strong>0,2× influencer</strong> (colaborările plătite nu domină
+                    media). Localurile cu puține review-uri sunt trase ușor spre media
+                    orașului, ca un singur vot extrem să nu deformeze clasamentul.
+                  </p>
                 </div>
-              ) : (
-                <div className="min-w-[116px] flex flex-col items-end">
-                  <span className="font-display text-[60px] sm:text-[68px] leading-[0.88] text-[#3A2418] tabular-nums">
-                    {formatScore(restaurant.foodQualityScore)}
-                  </span>
-                  <div className="w-full mt-2 mb-1">
-                    <CarouStrip height={8} />
-                  </div>
-                  <span className="text-[11px] text-[#6E5649]">
-                    Scor onest din 10
-                  </span>
-                </div>
-              )}
+              </div>
             </div>
           </section>
 
@@ -408,6 +465,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 reasons={restaurant.trapReasons}
                 breakdown={restaurant.trapBreakdown}
                 defaultOpen={false}
+                dark={isDrink}
               />
             ) : (
               <div>
@@ -754,6 +812,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     <img
                       src={restaurant.kitchenStory.photoUrl}
                       alt={restaurant.kitchenStory.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                   ) : null}
@@ -833,14 +893,22 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setIsReviewDrawerOpen(true)}
+              onClick={() => {
+                if (!currentUser) {
+                  onRequireLogin?.();
+                  return;
+                }
+                setIsReviewDrawerOpen(true);
+              }}
               className={`btn-press flex-1 py-3 px-5 rounded-[4px] font-bold text-[15px] hover:opacity-90 ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#B3261E] text-white'
               }`}
             >
-              Scrie un review
+              {currentUser
+                ? 'Scrie un review'
+                : 'Intră în cont ca să scrii un review'}
             </button>
 
             <button
@@ -864,13 +932,16 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
         </div>
 
         {/* INTERACTIVE REVIEW SUBMISSION DRAWER */}
-        {isReviewDrawerOpen && (
+        {isReviewDrawerOpen && currentUser && (
           <div
             className="modal-backdrop-enter fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto"
             onClick={() => setIsReviewDrawerOpen(false)}
           >
             <div
               ref={reviewDrawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="review-drawer-title"
               className={`drawer-sheet-enter w-full sm:max-w-lg rounded-[6px] border p-5 space-y-4 max-h-[90vh] overflow-y-auto ${
                 isDrink
                   ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
@@ -878,15 +949,22 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-[26px] leading-none">
+              <div className="flex items-center justify-between gap-2">
+                <h3
+                  id="review-drawer-title"
+                  className="font-display text-[26px] leading-none"
+                >
                   Scrie un review · {restaurant.name}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setIsReviewDrawerOpen(false)}
                   aria-label="Închide formularul"
-                  className="btn-press p-1 opacity-70 hover:opacity-100"
+                  className={`btn-press w-11 h-11 rounded-[4px] flex items-center justify-center shrink-0 -mr-2 ${
+                    isDrink
+                      ? 'text-[#F4EEE2]/80 hover:text-[#F4EEE2] hover:bg-[#1E4335]'
+                      : 'text-[#3A2418]/80 hover:text-[#3A2418] hover:bg-[#FAF8F5]'
+                  }`}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -968,6 +1046,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         onChange={(e) => handleGradeTextChange(e.target.value)}
                         onBlur={handleGradeBlur}
                         aria-label="Scrie nota între 1 și 10"
+                        aria-invalid={Boolean(formError)}
+                        aria-describedby={formError ? 'review-form-error' : undefined}
                         className={`w-20 px-2.5 py-1 rounded-[4px] border text-right font-display text-[24px] leading-none tabular-nums ${
                           isDrink
                             ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]'
@@ -1100,6 +1180,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     rows={3}
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
+                    aria-invalid={Boolean(formError)}
+                    aria-describedby={formError ? 'review-form-error' : undefined}
                     placeholder="Ce ai comandat, cum a fost porția și prețul?"
                     className={`w-full px-3 py-2 rounded-[4px] border text-[14px] ${
                       isDrink
@@ -1110,7 +1192,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 </div>
 
                 {formError && (
-                  <p className="text-[13px] font-semibold text-[#B3261E] bg-[#FEE4E2] px-3 py-2 rounded-[4px]">
+                  <p
+                    id="review-form-error"
+                    role="alert"
+                    className="text-[13px] font-semibold text-[#B3261E] bg-[#FEE4E2] px-3 py-2 rounded-[4px]"
+                  >
                     {formError}
                   </p>
                 )}
