@@ -1,0 +1,17 @@
+{
+  "name": "Timișoara",
+  "slug": "timisoara",
+  "boundary": null,
+  "touristZones": [
+    { "name": "Piața Unirii", "lat": 45.7579, "lng": 21.2290, "radiusM": 300 },
+    { "name": "Piața Victoriei", "lat": 45.7539, "lng": 21.2254, "radiusM": 300 },
+    { "name": "Piața Libertății", "lat": 45.7559, "lng": 21.2276, "radiusM": 300 },
+    { "name": "Bastion", "lat": 45.7590, "lng": 21.2318, "radiusM": 300 }
+  ],
+  "neighborhoods": [],
+  "localAveragePrices": {
+    "food": {},
+    "drink": { "beer05l": null, "cocktail": null }
+  },
+  "_todo": "Coordonatele zonelor turistice sunt aproximative; de verificat. De completat: poligonul granițelor, cartierele, prețurile medii pe categorii."
+}
