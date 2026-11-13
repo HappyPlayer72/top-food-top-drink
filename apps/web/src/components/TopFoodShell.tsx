@@ -711,6 +711,8 @@ export function TopFoodShell({
       <main className="flex-1">
         {navSection === 'top' && (
           <EditorialListView
+            canAddVenues={backendOnline}
+            onRequireLogin={handleOpenLogin}
             vertical={vertical}
             restaurants={foodRestaurants}
             drinkVenues={drinkVenues}
