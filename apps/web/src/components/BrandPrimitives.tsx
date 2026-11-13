@@ -72,19 +72,69 @@ export const CarouStrip: React.FC<{
 };
 
 /**
- * 3. CoasterMark — Suportul de bere (icon for topdrink wordmark)
+ * 3. CoasterMark — Halba / cana de bere (mug icon for topdrink wordmark)
  */
 export const CoasterMark: React.FC<{ size?: number; className?: string }> = ({
   size = 28,
   className = '',
 }) => (
-  <span
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 32 32"
+    fill="none"
     aria-hidden="true"
-    style={{ width: size, height: size }}
-    className={`inline-flex items-center justify-center rounded-full bg-[#F4EEE2] border-[2.5px] border-[#B98A5E] shrink-0 ${className}`}
+    className={`shrink-0 ${className}`}
   >
-    <span className="w-[74%] h-[74%] rounded-full border border-[#B98A5E]/35" />
-  </span>
+    {/* Mug handle */}
+    <path
+      d="M20.5 13.5H24C25.933 13.5 27.5 15.067 27.5 17V21.5C27.5 23.433 25.933 25 24 25H20.5"
+      stroke="#B98A5E"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Mug body */}
+    <rect
+      x="5"
+      y="10"
+      width="16"
+      height="18"
+      rx="3.5"
+      fill="#F2A33A"
+      stroke="#B98A5E"
+      strokeWidth="2"
+    />
+    {/* Subtle vertical mug flutes */}
+    <line
+      x1="9.5"
+      y1="15.5"
+      x2="9.5"
+      y2="24"
+      stroke="#17382C"
+      strokeOpacity="0.18"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+    <line
+      x1="13.5"
+      y1="15.5"
+      x2="13.5"
+      y2="24"
+      stroke="#17382C"
+      strokeOpacity="0.18"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+    {/* Foam head */}
+    <path
+      d="M5.5 11.5C4.5 11.5 4 10.5 4.3 9.2C4.7 7.3 6.5 6.2 8.3 6.6C9.3 4.8 11.8 4.2 13.7 5.2C15.2 4.3 17.5 4.8 18.4 6.5C20.3 6.2 21.8 7.6 21.8 9.5C21.8 10.7 21.2 11.5 20.2 11.5H18.5V13.2C18.5 13.9 17.9 14.4 17.2 14.4C16.5 14.4 16 13.9 16 13.2V11.5H5.5Z"
+      fill="#F4EEE2"
+      stroke="#B98A5E"
+      strokeWidth="1.6"
+      strokeLinejoin="round"
+    />
+  </svg>
 );
 
 /**

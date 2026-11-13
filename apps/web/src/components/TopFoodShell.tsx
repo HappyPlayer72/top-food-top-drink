@@ -23,6 +23,7 @@ import { Navbar } from './Navbar';
 import { EditorialListView } from './EditorialListView';
 import { MapView } from './MapView';
 import { MonthlyTopView } from './MonthlyTopView';
+import { ScarnaviiView } from './ScarnaviiView';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
 
 const USER_ACCOUNTS: UserAccount[] = [
@@ -76,11 +77,15 @@ function buildUrlForState(
 export interface TopFoodShellProps {
   initialVertical?: Vertical;
   initialSection?: NavSection;
+  initialFoodHeroIndex?: number;
+  initialDrinkHeroIndex?: number;
 }
 
 export function TopFoodShell({
   initialVertical = 'food',
   initialSection = 'top',
+  initialFoodHeroIndex = 0,
+  initialDrinkHeroIndex = 0,
 }: TopFoodShellProps) {
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
   const [navSection, setNavSection] = useState<NavSection>(initialSection);
@@ -518,6 +523,8 @@ export function TopFoodShell({
             }}
             onUpdateCrowdReport={handleUpdateCrowdReport}
             onResetFilters={handleResetFilters}
+            initialFoodHeroIndex={initialFoodHeroIndex}
+            initialDrinkHeroIndex={initialDrinkHeroIndex}
           />
         )}
 
@@ -543,6 +550,16 @@ export function TopFoodShell({
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
+          />
+        )}
+
+        {navSection === 'scarnavii' && (
+          <ScarnaviiView
+            vertical={vertical}
+            onBack={() => {
+              setNavSection('top');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         )}
       </main>

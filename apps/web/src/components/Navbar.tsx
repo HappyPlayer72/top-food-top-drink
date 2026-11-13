@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Bookmark,
+  Dices,
   ListOrdered,
   LogIn,
   LogOut,
@@ -38,6 +39,7 @@ const NAV_ITEMS: { id: NavSection; label: string }[] = [
   { id: 'top', label: 'Top' },
   { id: 'map', label: 'Hartă' },
   { id: 'monthly', label: 'Luna asta' },
+  { id: 'scarnavii', label: 'Scârnăvii' },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -252,6 +254,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     const cls = `w-4 h-4 ${active ? 'stroke-[2.25]' : 'stroke-[1.75]'}`;
     if (id === 'top') return <ListOrdered className={cls} />;
     if (id === 'map') return <MapPin className={cls} />;
+    if (id === 'scarnavii') return <Dices className={cls} />;
     return <Trophy className={cls} />;
   };
 
@@ -429,7 +432,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             : 'bg-white/95 border-[#E6DFD5] text-[#3A2418]'
         } backdrop-blur-sm`}
       >
-        <div className="grid grid-cols-4 h-14">
+        <div className="grid grid-cols-5 h-14">
           {NAV_ITEMS.map((item) => {
             const active = navSection === item.id;
             return (

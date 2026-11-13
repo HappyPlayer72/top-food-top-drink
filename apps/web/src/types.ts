@@ -6,7 +6,13 @@
  */
 
 export type Vertical = 'food' | 'drink';
-export type NavSection = 'top' | 'map' | 'monthly';
+export type NavSection = 'top' | 'map' | 'monthly' | 'scarnavii';
+
+export interface ScarnaviiActivity {
+  id: string;
+  title: string;
+  category?: string;
+}
 
 export type FoodQuickFilter = 'fara-capcane' | 'deschis-acum' | 'sub-50-lei';
 export type DrinkQuickFilter =

@@ -18,6 +18,7 @@ import {
   LocalnicBadge,
   TrapBadge,
 } from './BrandPrimitives';
+import { DRINK_HERO_HEADERS, FOOD_HERO_HEADERS } from '../data/heroHeaders';
 
 function normalizeRo(s: string): string {
   return s
@@ -45,6 +46,8 @@ export interface EditorialListViewProps {
     segments: 1 | 2 | 3 | 4 | 5,
     label: string
   ) => void;
+  initialFoodHeroIndex?: number;
+  initialDrinkHeroIndex?: number;
 }
 
 const FOOD_FILTER_PILLS: { id: FoodQuickFilter; label: string }[] = [
@@ -86,11 +89,20 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   onSelectRestaurant,
   onOpenMonthlyTop,
   onUpdateCrowdReport,
+  initialFoodHeroIndex = 0,
+  initialDrinkHeroIndex = 0,
 }) => {
   const isDrink = vertical === 'drink';
   const [showAllTop, setShowAllTop] = useState(false);
   const [expandedTrapPreview, setExpandedTrapPreview] = useState(false);
   const [showScorOnestInfo, setShowScorOnestInfo] = useState(false);
+
+  const activeFoodHero =
+    FOOD_HERO_HEADERS[initialFoodHeroIndex % FOOD_HERO_HEADERS.length] ??
+    FOOD_HERO_HEADERS[0];
+  const activeDrinkHero =
+    DRINK_HERO_HEADERS[initialDrinkHeroIndex % DRINK_HERO_HEADERS.length] ??
+    DRINK_HERO_HEADERS[0];
 
   // Vibe Check modal state for topdrink
   const [isVibeModalOpen, setIsVibeModalOpen] = useState(false);
@@ -358,7 +370,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
           {/* Hero */}
           <section className="space-y-3.5 sm:space-y-4">
             <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#F4EEE2] max-w-xl">
-              Unde ieșim în seara asta
+              {activeDrinkHero}
             </h1>
 
             <div className="max-w-lg space-y-1.5">
@@ -817,8 +829,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       {/* HERO BLOCK */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 pb-5 sm:pb-6 space-y-3.5 sm:space-y-4">
         <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#3A2418] max-w-xl">
-          Unde mănâncă timișorenii
-          <span className="hidden sm:inline">, nu turiștii</span>
+          {activeFoodHero.main}
+          <span className="hidden sm:inline">{activeFoodHero.tail}</span>
         </h1>
 
         <div className="max-w-lg space-y-1.5">
