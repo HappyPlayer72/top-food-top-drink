@@ -6,12 +6,36 @@
  */
 
 export type Vertical = 'food' | 'drink';
-export type NavSection = 'top' | 'map' | 'monthly' | 'scarnavii';
+export type NavSection = 'top' | 'map' | 'monthly' | 'scarnavii' | 'fidelitate';
 
 export interface ScarnaviiActivity {
   id: string;
   title: string;
   category?: string;
+}
+
+export type LoyaltyIconId =
+  | 'soup'
+  | 'coffee'
+  | 'croissant'
+  | 'pizza'
+  | 'beer'
+  | 'wine'
+  | 'heart'
+  | 'cat';
+
+export interface LoyaltyProgram {
+  id: string;
+  venueName: string;
+  neighborhood: string;
+  rewardTitle: string;
+  stampsRequired: number;
+  iconId: LoyaltyIconId;
+  accentColor: string;
+  stampsCollected: number;
+  redeemedCount: number;
+  qrSeed: string;
+  isCustomVendor?: boolean;
 }
 
 export type FoodQuickFilter = 'fara-capcane' | 'deschis-acum' | 'sub-50-lei';

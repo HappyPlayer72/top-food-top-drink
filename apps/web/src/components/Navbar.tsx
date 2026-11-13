@@ -9,6 +9,7 @@ import {
   LogOut,
   MapPin,
   Moon,
+  QrCode,
   Sun,
   Trophy,
   User,
@@ -40,6 +41,7 @@ const NAV_ITEMS: { id: NavSection; label: string }[] = [
   { id: 'map', label: 'Hartă' },
   { id: 'monthly', label: 'Luna asta' },
   { id: 'scarnavii', label: 'Scârnăvii' },
+  { id: 'fidelitate', label: 'Fidelitate' },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -255,6 +257,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (id === 'top') return <ListOrdered className={cls} />;
     if (id === 'map') return <MapPin className={cls} />;
     if (id === 'scarnavii') return <Dices className={cls} />;
+    if (id === 'fidelitate') return <QrCode className={cls} />;
     return <Trophy className={cls} />;
   };
 
@@ -432,7 +435,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             : 'bg-white/95 border-[#E6DFD5] text-[#3A2418]'
         } backdrop-blur-sm`}
       >
-        <div className="grid grid-cols-5 h-14">
+        <div className="grid grid-cols-6 h-14">
           {NAV_ITEMS.map((item) => {
             const active = navSection === item.id;
             return (

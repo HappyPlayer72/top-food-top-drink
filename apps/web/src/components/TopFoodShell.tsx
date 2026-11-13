@@ -24,6 +24,7 @@ import { EditorialListView } from './EditorialListView';
 import { MapView } from './MapView';
 import { MonthlyTopView } from './MonthlyTopView';
 import { ScarnaviiView } from './ScarnaviiView';
+import { FidelityView } from './FidelityView';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
 
 const USER_ACCOUNTS: UserAccount[] = [
@@ -202,7 +203,16 @@ export function TopFoodShell({
 
       const rawSection = params.get('section');
       const nextSection: NavSection =
-        rawSection === 'map' || rawSection === 'monthly' ? rawSection : 'top';
+        rawSection === 'map' ||
+        rawSection === 'monthly' ||
+        rawSection === 'scarnavii' ||
+        rawSection === 'fidelitate'
+          ? rawSection
+          : pathname.startsWith('/fidelitate')
+          ? 'fidelitate'
+          : pathname.startsWith('/scarnavii')
+          ? 'scarnavii'
+          : initialSection;
 
       const venueParam = params.get('venue');
       const matchedVenue = venueParam
@@ -556,6 +566,18 @@ export function TopFoodShell({
         {navSection === 'scarnavii' && (
           <ScarnaviiView
             vertical={vertical}
+            onBack={() => {
+              setNavSection('top');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {navSection === 'fidelitate' && (
+          <FidelityView
+            vertical={vertical}
+            currentUser={currentUser}
+            onRequireLogin={handleOpenLogin}
             onBack={() => {
               setNavSection('top');
               window.scrollTo({ top: 0, behavior: 'smooth' });
