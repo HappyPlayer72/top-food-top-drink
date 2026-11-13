@@ -2,7 +2,7 @@
 import { and, eq, gte } from "drizzle-orm";
 import { checkins, employees, invalid, notFound, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
 import { rateEmployee } from "@tftd/owner";
-import { processSubmission, submitSocialLink, type SocialAnalysis } from "@tftd/ingestion";
+import { detectPlatform, processSubmission, submitSocialLink, type SocialAnalysis } from "@tftd/ingestion";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
 
@@ -97,12 +97,9 @@ export async function submitSocialLinkNow(
   db: Db,
   input: { venueId: string; url: string; userId: string | null },
 ): Promise<{ status: "processed" | "failed" | "duplicate"; analysis: SocialAnalysis | null }> {
-  let row: Awaited<ReturnType<typeof submitSocialLink>>;
-  try {
-    row = await submitSocialLink(db, input);
-  } catch (e) {
-    throw invalid(e instanceof Error ? e.message : "Link invalid.");
-  }
+  // Doar „platformă nesuportată” e mesaj pentru user; erorile de DB rămân erori interne (fără SQL în UI).
+  if (!detectPlatform(input.url)) throw invalid("Linkul trebuie să fie de pe TikTok, Instagram, Facebook sau YouTube.");
+  let row = await submitSocialLink(db, input);
   if (!row) {
     // Un link care a eșuat (ex. rețea) la același local se poate reîncerca; restul sunt duplicate.
     const [prev] = await db.select().from(socialSubmissions).where(eq(socialSubmissions.url, input.url));

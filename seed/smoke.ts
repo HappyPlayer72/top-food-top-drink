@@ -84,5 +84,7 @@ const retryUrl = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
 await db.insert(socialSubmissions).values({ venueId: sandu.venue.id, platform: "youtube", url: retryUrl, status: "failed" });
 const retried = await submitSocialLinkNow(db, { venueId: sandu.venue.id, url: retryUrl, userId: user.id });
 ok("linkul eșuat se poate retrimite", retried.status === "processed", retried.status);
+const badVenue = await submitSocialLinkNow(db, { venueId: "00000000-0000-0000-0000-000000000000", url: "https://youtu.be/aqz-KE-bpKQ", userId: null }).then(() => null, (e: unknown) => e);
+ok("eroarea de DB nu ajunge la user ca text SQL", !(badVenue instanceof ServiceError) || !/Failed query|insert into/i.test(badVenue.message), String((badVenue as Error | null)?.message).slice(0, 60));
 
 process.exit();
