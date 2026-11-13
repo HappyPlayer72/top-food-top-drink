@@ -6,7 +6,7 @@
     { "name": "Piața Unirii", "lat": 45.7579, "lng": 21.2290, "radiusM": 300 },
     { "name": "Piața Victoriei", "lat": 45.7539, "lng": 21.2254, "radiusM": 300 },
     { "name": "Piața Libertății", "lat": 45.7559, "lng": 21.2276, "radiusM": 300 },
-    { "name": "Bastion", "lat": 45.7590, "lng": 21.2318, "radiusM": 300 }
+    { "name": "Bastion", "lat": 45.7568, "lng": 21.2335, "radiusM": 300 }
   ],
   "neighborhoods": [],
   "localAveragePrices": {
