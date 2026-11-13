@@ -96,15 +96,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         return;
       }
 
-      if (selectedRole === 'verified-local' && !confirmLocalCheckin && !gpsVerified) {
+      if (
+        selectedRole === 'verified-local' &&
+        !confirmLocalCheckin &&
+        !gpsVerified &&
+        !emailSuggestsLocal
+      ) {
         setError(
-          'Confirmă declarația GDPR sau fă un check-in GPS în Timișoara pentru a continua ca localnic.'
+          'Confirmă că locuiești în Timișoara sau confirmă prezența pentru a continua ca localnic.'
         );
         return;
       }
 
       const isDeclaredLocal = selectedRole === 'verified-local';
-      const isVerifiedLocal = isDeclaredLocal && gpsVerified;
+      const isVerifiedLocal =
+        isDeclaredLocal && (gpsVerified || emailSuggestsLocal);
       const newUser: UserAccount = {
         id: `user-${Date.now()}`,
         name: trimmedName,
@@ -113,9 +119,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         neighborhood: isDeclaredLocal ? neighborhood : undefined,
         weightMultiplier: isVerifiedLocal ? 2.0 : 1.0,
         description: isVerifiedLocal
-          ? `Localnic verificat GPS (${neighborhood}) · review-urile tale au pondere 2,0×.`
+          ? gpsVerified
+            ? `Localnic verificat în Timișoara (${neighborhood}) · review-urile tale au pondere 2,0×.`
+            : `Localnic verificat UVT/UPT (${neighborhood}) · review-urile tale au pondere 2,0×.`
           : isDeclaredLocal
-          ? `Localnic neverificat (${neighborhood}) · pondere 1,0× până la check-in GPS în Timișoara.`
+          ? `Localnic neverificat (${neighborhood}) · pondere 1,0× până la confirmarea prezenței în Timișoara.`
           : 'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
       };
       onLoginSuccess(newUser);
@@ -144,13 +152,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     onLoginSuccess(sessionUser);
   };
 
+  const localWillBeVerified = gpsVerified || emailSuggestsLocal;
+
   const inputClasses = isDrink
     ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder:text-[#F4EEE2]/40 focus:border-[#F2A33A]'
     : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder:text-[#6E5649]/60 focus:border-[#3A2418]';
 
   return (
     <div
-      className={`min-h-screen flex flex-col transition-colors ${
+      className={`min-h-screen overflow-x-clip flex flex-col transition-colors ${
         isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
       }`}
     >
@@ -162,13 +172,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             : 'bg-white/95 border-[#E6DFD5]'
         }`}
       >
-        <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="max-w-5xl mx-auto px-2.5 min-[375px]:px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 min-[375px]:gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 min-[375px]:gap-2 sm:gap-3 min-w-0 flex-1 [&>button]:min-h-[44px] [&>button]:max-w-full">
             <BrandWordmark vertical={vertical} onClick={onContinueAsGuest} />
             <button
               type="button"
               onClick={onContinueAsGuest}
-              className={`btn-press inline-flex items-center gap-1.5 min-h-[40px] sm:min-h-[34px] text-[12px] sm:text-[13px] font-semibold px-2.5 sm:px-3 py-1.5 rounded-[4px] border shrink-0 whitespace-nowrap ${
+              className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] text-[12px] sm:text-[13px] font-semibold px-2 min-[375px]:px-2.5 sm:px-3 py-1.5 rounded-[4px] border shrink-0 whitespace-nowrap ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
@@ -179,11 +189,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={() => onVerticalChange(isDrink ? 'food' : 'drink')}
-              className={`btn-press min-h-[40px] sm:min-h-[34px] text-[12px] sm:text-[13px] font-semibold px-2.5 sm:px-3 py-1.5 rounded-[4px] border ${
+              className={`btn-press min-h-[44px] text-[12px] sm:text-[13px] font-semibold px-2 min-[375px]:px-2.5 sm:px-3 py-1.5 rounded-[4px] border whitespace-nowrap ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
@@ -197,7 +207,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               onClick={onToggleDarkMode}
               aria-label={darkMode ? 'Comută la mod luminos' : 'Comută la mod întunecat'}
               title={darkMode ? 'Mod luminos' : 'Mod întunecat'}
-              className={`btn-press w-11 h-11 sm:w-9 sm:h-9 rounded-full flex items-center justify-center ${
+              className={`btn-press w-11 h-11 rounded-full flex items-center justify-center ${
                 isDrink
                   ? 'text-[#F4EEE2] hover:bg-[#1E4335]'
                   : 'text-[#3A2418] hover:bg-[#FAF8F5]'
@@ -273,8 +283,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
                     }`}
                   >
-                    Adresă <code className="font-semibold">@e-uvt.ro</code>,{' '}
-                    <code className="font-semibold">@upt.ro</code> sau cartier
+                    Adresă <span className="font-semibold">@e-uvt.ro</span>,{' '}
+                    <span className="font-semibold">@upt.ro</span> sau cartier
                     confirmat în Timișoara.
                   </p>
                 </div>
@@ -498,7 +508,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     >
                       Email
                     </label>
-                    {emailSuggestsLocal && (
+                    {mode === 'register' && emailSuggestsLocal && (
                       <LocalnicBadge label="Domeniu UVT / UPT (2,0×)" size="xs" />
                     )}
                   </div>
@@ -589,9 +599,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <LocalnicBadge label={gpsVerified ? 'Localnic verificat' : 'Localnic'} size="xs" />
+                          <LocalnicBadge label={localWillBeVerified ? 'Localnic verificat' : 'Localnic'} size="xs" />
                           <span className="font-display text-[17px]">
-                            {gpsVerified ? '2,0×' : '1,0×'}
+                            {localWillBeVerified ? '2,0×' : '1,0×'}
                           </span>
                         </div>
                         <p
@@ -600,8 +610,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                           }`}
                         >
                           {gpsVerified
-                            ? 'Check-in GPS activ în Timișoara'
-                            : '2,0× doar după check-in GPS'}
+                            ? 'Prezență confirmată în Timișoara'
+                            : emailSuggestsLocal
+                            ? 'Verificat automat prin domeniul UVT / UPT'
+                            : '2,0× după confirmare în Timișoara sau email UVT/UPT'}
                         </p>
                       </button>
 
@@ -686,7 +698,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                               className="mt-0.5 h-5 w-5 shrink-0 accent-[#B3261E]"
                             />
                             <span>
-                              Confirm că locuiesc în Timișoara (fără check-in GPS vei primi statut neverificat 1,0×)
+                              Confirm că locuiesc în Timișoara (fără confirmare vei primi statut neverificat 1,0×)
                             </span>
                           </label>
 
@@ -711,12 +723,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                               <MapPin className="w-3.5 h-3.5 shrink-0" />
                               <span>
                                 {gpsVerified
-                                  ? 'Check-in GPS Timișoara confirmat (2,0×)'
-                                  : 'Simulează check-in GPS Timișoara (pentru 2,0×)'}
+                                  ? 'Prezență confirmată în Timișoara (2,0×)'
+                                  : 'Confirmă prezența în Timișoara (pentru 2,0×)'}
                               </span>
                             </span>
                             <span className="font-semibold text-[11px] tabular-nums shrink-0">
-                              {gpsVerified ? '2,0× activ' : '1,0×'}
+                              {gpsVerified ? '2,0× activ' : emailSuggestsLocal ? '2,0× UVT/UPT' : '1,0×'}
                             </span>
                           </button>
                         </div>

@@ -37,6 +37,29 @@ export interface RestaurantDetailModalProps {
 
 type ReviewFilterTab = 'verified-local' | 'tourist' | 'influencer' | 'all';
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) => {
+      if (el.getAttribute('aria-hidden') === 'true') return false;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      if (el.closest('.collapse-grid:not([data-open="true"])')) return false;
+      return true;
+    }
+  );
+}
+
+const SWIPE_DISMISS_THRESHOLD_PX = 72;
+
 export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   restaurant,
   currentUser,
@@ -64,9 +87,19 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [reviewText, setReviewText] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
+  const [drawerDragOffset, setDrawerDragOffset] = useState(0);
+  const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
+  const [drawerEntered, setDrawerEntered] = useState(false);
 
   const modalOverlayRef = useRef<HTMLDivElement | null>(null);
   const reviewDrawerRef = useRef<HTMLDivElement | null>(null);
+  const previousModalFocusRef = useRef<HTMLElement | null>(null);
+  const previousDrawerFocusRef = useRef<HTMLElement | null>(null);
+  const isReviewDrawerOpenRef = useRef(false);
+  const drawerDragStartYRef = useRef<number | null>(null);
+  const drawerDragCurrentYRef = useRef<number>(0);
+
+  isReviewDrawerOpenRef.current = isReviewDrawerOpen;
 
   useEffect(() => {
     if (!restaurant) return;
@@ -101,21 +134,103 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   }, [restaurant, initialReviewOpen, onConsumeInitialReviewOpen]);
 
   useEffect(() => {
-    if (!isReviewDrawerOpen) return;
-    requestAnimationFrame(() => {
-      if (reviewDrawerRef.current) {
-        reviewDrawerRef.current.scrollTop = 0;
+    if (!isReviewDrawerOpen) {
+      drawerDragStartYRef.current = null;
+      drawerDragCurrentYRef.current = 0;
+      setDrawerDragOffset(0);
+      setIsDraggingDrawer(false);
+      setDrawerEntered(false);
+      return;
+    }
+
+    previousDrawerFocusRef.current = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => {
+      const drawer = reviewDrawerRef.current;
+      if (!drawer) return;
+      drawer.scrollTop = 0;
+      const focusables = getFocusableElements(drawer);
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        drawer.focus();
       }
     });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      const prev = previousDrawerFocusRef.current;
+      previousDrawerFocusRef.current = null;
+      if (prev && prev.isConnected && modalOverlayRef.current?.isConnected) {
+        prev.focus();
+      }
+    };
   }, [isReviewDrawerOpen]);
 
-  // Close on Escape & lock background scroll
+  const isModalOpen = Boolean(restaurant);
+
+  // Move focus into RestaurantDetailModal on open & restore on close
+  useEffect(() => {
+    if (!isModalOpen) return;
+    previousModalFocusRef.current = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => {
+      if (isReviewDrawerOpenRef.current) return;
+      const container = modalOverlayRef.current;
+      if (!container) return;
+      const focusables = getFocusableElements(container);
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        container.focus();
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      const prev = previousModalFocusRef.current;
+      previousModalFocusRef.current = null;
+      if (prev && prev.isConnected) {
+        prev.focus();
+      }
+    };
+  }, [isModalOpen]);
+
+  // Close on Escape, trap Tab focus in active aria-modal overlay, & lock background scroll
   useEffect(() => {
     if (!restaurant) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (isReviewDrawerOpen) setIsReviewDrawerOpen(false);
         else onClose();
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        const activeContainer =
+          isReviewDrawerOpen && reviewDrawerRef.current
+            ? reviewDrawerRef.current
+            : modalOverlayRef.current;
+        if (!activeContainer) return;
+
+        const focusables = getFocusableElements(activeContainer);
+        if (focusables.length === 0) {
+          e.preventDefault();
+          activeContainer.focus();
+          return;
+        }
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+
+        if (e.shiftKey) {
+          if (!active || !activeContainer.contains(active) || active === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else if (!active || !activeContainer.contains(active) || active === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -251,15 +366,58 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setHelpfulVotedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const resetDrawerDrag = () => {
+    drawerDragStartYRef.current = null;
+    drawerDragCurrentYRef.current = 0;
+    setIsDraggingDrawer(false);
+    setDrawerDragOffset(0);
+  };
+
+  const handleDrawerTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    drawerDragStartYRef.current = e.touches[0].clientY;
+    drawerDragCurrentYRef.current = 0;
+    setIsDraggingDrawer(true);
+  };
+
+  const handleDrawerTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (drawerDragStartYRef.current === null || e.touches.length !== 1) return;
+    const deltaY = e.touches[0].clientY - drawerDragStartYRef.current;
+    if (deltaY > 0) {
+      drawerDragCurrentYRef.current = deltaY;
+      setDrawerDragOffset(deltaY);
+    } else {
+      drawerDragCurrentYRef.current = 0;
+      setDrawerDragOffset(0);
+    }
+  };
+
+  const handleDrawerTouchEnd = () => {
+    if (drawerDragStartYRef.current === null) return;
+    const finalOffset = drawerDragCurrentYRef.current;
+    resetDrawerDrag();
+    if (finalOffset >= SWIPE_DISMISS_THRESHOLD_PX) {
+      setIsReviewDrawerOpen(false);
+    }
+  };
+
   return (
     <div
       ref={modalOverlayRef}
+      tabIndex={-1}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isReviewDrawerOpen) {
+          onClose();
+        }
+      }}
       className="fixed inset-0 z-50 overflow-y-auto bg-black/55 modal-backdrop-enter"
       role="dialog"
       aria-modal="true"
       aria-label={`Detalii ${restaurant.name}`}
     >
       <div
+        onClick={(e) => e.stopPropagation()}
         className={`modal-panel-enter min-h-full flex flex-col ${
           isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
         }`}
@@ -299,7 +457,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => onLocateOnMap(restaurant)}
-                className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 text-[13px] font-semibold px-3 py-2 sm:py-1.5 rounded-[4px] border shrink-0 ${
+                className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] text-[13px] font-semibold px-3 py-2 sm:py-1.5 rounded-[4px] border shrink-0 ${
                   isDrink
                     ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                     : 'border-[#E6DFD5] text-[#3A2418] hover:border-[#3A2418]'
@@ -390,7 +548,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       onClick={() => setShowScoreFormula((prev) => !prev)}
                       aria-expanded={showScoreFormula}
                       aria-controls="scor-onest-formula"
-                      className="btn-press min-h-[44px] sm:min-h-0 inline-flex items-center -my-2 sm:my-0 text-[11px] font-semibold text-[#F2A33A] underline underline-offset-2 hover:opacity-80"
+                      className="btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold text-[#F2A33A] underline underline-offset-2 hover:opacity-80"
                     >
                       {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
                     </button>
@@ -411,7 +569,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       onClick={() => setShowScoreFormula((prev) => !prev)}
                       aria-expanded={showScoreFormula}
                       aria-controls="scor-onest-formula"
-                      className="btn-press min-h-[44px] sm:min-h-0 inline-flex items-center -my-2 sm:my-0.5 text-[11px] font-semibold text-[#6E5649] hover:text-[#3A2418] underline underline-offset-2"
+                      className="btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold text-[#6E5649] hover:text-[#3A2418] underline underline-offset-2"
                     >
                       {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
                     </button>
@@ -492,7 +650,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     type="button"
                     onClick={() => setShowWhyTrap((prev) => !prev)}
                     aria-expanded={showWhyTrap}
-                    className={`btn-press min-h-[44px] sm:min-h-0 inline-flex items-center px-1 -mr-1 -my-2 sm:my-0 font-semibold underline underline-offset-4 ${
+                    className={`btn-press min-h-[44px] inline-flex items-center px-2 -mr-2 -my-2 font-semibold underline underline-offset-4 ${
                       isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                     }`}
                   >
@@ -636,7 +794,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => handleFilterClick(tab.id)}
-                    className={`btn-press shrink-0 min-h-[44px] sm:min-h-0 px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border whitespace-nowrap ${
+                    className={`btn-press shrink-0 min-h-[44px] px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border whitespace-nowrap ${
                       active
                         ? isDrink
                           ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -655,7 +813,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setReviewFilter('all')}
-                  className={`btn-press shrink-0 min-h-[44px] sm:min-h-0 px-2 text-[12px] font-semibold underline underline-offset-4 ${
+                  className={`btn-press shrink-0 min-h-[44px] px-2 text-[12px] font-semibold underline underline-offset-4 ${
                     isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
                   }`}
                 >
@@ -762,7 +920,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                           type="button"
                           onClick={() => handleToggleHelpful(reviewKey)}
                           aria-pressed={isHelpfulVoted}
-                          className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 rounded-[3px] border text-[12px] font-semibold ${
+                          className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
                             isHelpfulVoted
                               ? isDrink
                                 ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -949,36 +1107,65 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           >
             <div
               ref={reviewDrawerRef}
+              tabIndex={-1}
               role="dialog"
               aria-modal="true"
               aria-labelledby="review-drawer-title"
-              className={`drawer-sheet-enter w-full max-w-full sm:max-w-lg rounded-t-[12px] sm:rounded-[6px] border px-4 pt-3 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-4 max-h-[92dvh] overflow-y-auto ${
+              onAnimationEnd={() => setDrawerEntered(true)}
+              style={
+                drawerDragOffset > 0
+                  ? {
+                      transform: `translateY(${drawerDragOffset}px)`,
+                      transition: isDraggingDrawer
+                        ? 'none'
+                        : 'transform 200ms var(--ease-out)',
+                    }
+                  : !isDraggingDrawer && drawerEntered
+                  ? { transition: 'transform 200ms var(--ease-out)' }
+                  : undefined
+              }
+              className={`${
+                drawerDragOffset === 0 && !drawerEntered ? 'drawer-sheet-enter ' : ''
+              }w-full max-w-full sm:max-w-lg rounded-t-[12px] sm:rounded-[6px] border px-4 pt-3 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-4 max-h-[92dvh] overflow-y-auto ${
                 isDrink
                   ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
                   : 'bg-white border-[#3A2418] text-[#3A2418]'
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="sm:hidden w-10 h-1 rounded-full mx-auto bg-current opacity-20" />
-              <div className="flex items-center justify-between gap-2">
-                <h3
-                  id="review-drawer-title"
-                  className="font-display text-[22px] sm:text-[26px] leading-tight"
-                >
-                  Scrie un review · {restaurant.name}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsReviewDrawerOpen(false)}
-                  aria-label="Închide formularul"
-                  className={`btn-press w-11 h-11 rounded-[4px] flex items-center justify-center shrink-0 -mr-2 ${
-                    isDrink
-                      ? 'text-[#F4EEE2]/80 hover:text-[#F4EEE2] hover:bg-[#1E4335]'
-                      : 'text-[#3A2418]/80 hover:text-[#3A2418] hover:bg-[#FAF8F5]'
-                  }`}
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              <div
+                onTouchStart={handleDrawerTouchStart}
+                onTouchMove={handleDrawerTouchMove}
+                onTouchEnd={handleDrawerTouchEnd}
+                onTouchCancel={resetDrawerDrag}
+                className="touch-none space-y-2.5 -mx-4 px-4 -mt-3 pt-3 sm:mx-0 sm:px-0 sm:mt-0 sm:pt-0 cursor-grab active:cursor-grabbing sm:cursor-default"
+              >
+                <div
+                  aria-hidden="true"
+                  className="sm:hidden w-10 h-1.5 rounded-full mx-auto bg-current opacity-30"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <h3
+                    id="review-drawer-title"
+                    className={`font-display text-[22px] sm:text-[26px] leading-tight ${
+                      isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
+                    }`}
+                  >
+                    Scrie un review · {restaurant.name}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setIsReviewDrawerOpen(false)}
+                    aria-label="Închide formularul"
+                    className={`btn-press w-11 h-11 rounded-[4px] flex items-center justify-center shrink-0 -mr-2 ${
+                      isDrink
+                        ? 'text-[#F4EEE2] hover:text-[#F2A33A] hover:bg-[#1E4335]'
+                        : 'text-[#3A2418] hover:text-[#B3261E] hover:bg-[#FAF8F5]'
+                    }`}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleReviewSubmit} className="space-y-4">
@@ -1078,26 +1265,28 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  <input
-                    id="rev-score-range"
-                    aria-label="Slider notă din 10"
-                    type="range"
-                    min={1}
-                    max={10}
-                    step={1}
-                    value={scoreInput}
-                    onChange={(e) => {
-                      const val = Math.round(Number(e.target.value));
-                      setScoreInput(val);
-                      setGradeText(String(val));
-                    }}
-                    className={`w-full ${
-                      isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'
-                    }`}
-                  />
+                  <div className="min-h-[44px] flex items-center">
+                    <input
+                      id="rev-score-range"
+                      aria-label="Slider notă din 10"
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={scoreInput}
+                      onChange={(e) => {
+                        const val = Math.round(Number(e.target.value));
+                        setScoreInput(val);
+                        setGradeText(String(val));
+                      }}
+                      className={`w-full min-h-[44px] touch-pan-x cursor-pointer ${
+                        isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'
+                      }`}
+                    />
+                  </div>
                   <div
                     className={`flex justify-between text-[11px] ${
-                      isDrink ? 'text-[#F4EEE2]/55' : 'text-[#6E5649]'
+                      isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
                     }`}
                   >
                     <span>1</span>
@@ -1112,7 +1301,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     type="button"
                     onClick={() => setMarkAsTrap((prev) => !prev)}
                     aria-pressed={markAsTrap}
-                    className={`btn-press w-full px-3.5 py-2.5 rounded-[4px] border flex items-center justify-between gap-3 text-left ${
+                    className={`btn-press w-full min-h-[44px] px-3.5 py-2.5 rounded-[4px] border flex items-center justify-between gap-3 text-left ${
                       markAsTrap
                         ? 'bg-[#B3261E] border-[#B3261E] text-white'
                         : isDrink
@@ -1200,8 +1389,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     placeholder="Ce ai comandat, cum a fost porția și prețul?"
                     className={`w-full px-3 py-2 rounded-[4px] border text-[16px] sm:text-[14px] ${
                       isDrink
-                        ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]'
-                        : 'bg-white border-[#3A2418] text-[#3A2418]'
+                        ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder:text-[#F4EEE2]/75'
+                        : 'bg-white border-[#3A2418] text-[#3A2418] placeholder:text-[#6E5649]'
                     }`}
                   />
                 </div>
@@ -1210,7 +1399,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   <p
                     id="review-form-error"
                     role="alert"
-                    className="text-[13px] font-semibold text-[#B3261E] bg-[#FEE4E2] px-3 py-2 rounded-[4px]"
+                    className={`text-[13px] font-semibold px-3 py-2 rounded-[4px] border ${
+                      isDrink
+                        ? 'bg-[#341A19] border-[#FF7A70]/75 text-[#FFE5E2]'
+                        : 'review-form-error-food text-[#9E1F18] bg-[#FEE4E2] border-[#B3261E]/25'
+                    }`}
                   >
                     {formError}
                   </p>

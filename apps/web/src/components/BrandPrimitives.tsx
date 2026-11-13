@@ -174,7 +174,7 @@ export const BrandWordmark: React.FC<{
     <button
       type="button"
       onClick={onClick}
-      className="btn-press inline-flex items-center gap-2 sm:gap-2.5 text-left rounded-[4px] group min-w-0"
+      className="btn-press inline-flex items-center gap-2 sm:gap-2.5 text-left rounded-[4px] group min-w-0 min-h-[44px] py-1.5 px-1 -mx-1"
     >
       {isDrink ? (
         <CoasterMark
@@ -523,7 +523,7 @@ export const AvertizareaCard: React.FC<{
         <button
           type="button"
           onClick={onSelectVenue}
-          className={`font-display text-[26px] leading-tight text-left block transition-colors ${
+          className={`font-display text-[26px] leading-tight text-left inline-flex items-center min-h-[44px] py-1 transition-colors ${
             dark
               ? 'text-[#F4EEE2] hover:text-[#F2A33A]'
               : 'text-[#3A2418] hover:text-[#B3261E]'
@@ -556,7 +556,7 @@ export const AvertizareaCard: React.FC<{
           type="button"
           onClick={() => setShowFormula((prev) => !prev)}
           aria-expanded={showFormula}
-          className={`btn-press min-h-[44px] sm:min-h-0 inline-flex items-center text-[13px] font-semibold underline underline-offset-4 hover:opacity-80 ${
+          className={`btn-press min-h-[44px] -my-2 inline-flex items-center text-[13px] font-semibold underline underline-offset-4 hover:opacity-80 ${
             dark ? 'text-[#F2A33A]' : 'text-[#B3261E]'
           }`}
         >
