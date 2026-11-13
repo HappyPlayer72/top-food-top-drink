@@ -2,7 +2,8 @@
  * Test de fum pe DB-ul cu seed: cheamă funcțiile din @tftd/api ca o pagină reală.
  *   npm run seed -- --reset && npx tsx --env-file-if-exists=.env seed/smoke.ts
  */
-import { accounts, cityPage, createDb, leaderboardPage, owner, submitVibe, venuePage, weekendEvents, writeReview } from "@tftd/api";
+import { accounts, cityPage, createDb, leaderboardPage, owner, ServiceError, submitSocialLinkNow, submitVibe, venuePage, weekendEvents, writeReview } from "@tftd/api";
+import { socialSubmissions } from "@tftd/db";
 
 const db = createDb();
 const ok = (label: string, cond: boolean, detail = "") => {
@@ -52,5 +53,36 @@ ok("owner fără parolă nu se poate loga", ownerUser === null);
 await owner.replyToReview(db, (await db.query.users.findFirst({ where: (u, { eq }) => eq(u.username, "sandu.proprietar") }))!.id, review.id, "Mulțumim, te mai așteptăm!");
 const after = await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "ciorba-lui-sandu", reviews: "all" });
 ok("răspunsul owner-ului apare sub review", after.reviews.find((r) => r.id === review.id)?.replies.length === 1);
+
+// Dashboard-ul owner-ului: citirile de care are nevoie /owner
+const sanduOwnerId = await owner.userIdByUsername(db, "sandu.proprietar");
+ok("userIdByUsername", !!sanduOwnerId && (await owner.userIdByUsername(db, "nu-exista-deloc")) === null);
+const mine = await owner.managedVenues(db, sanduOwnerId!);
+ok("owner: localele mele", mine.some((v) => v.slug === "ciorba-lui-sandu" && v.role === "owner"), mine.map((v) => `${v.slug}:${v.role}`).join(", "));
+await owner.inviteEmployee(db, sanduOwnerId!, sandu.venue.id, { firstName: "Test", role: "ospătar", userId: user.id });
+const team = await owner.employeesForOwner(db, sanduOwnerId!, sandu.venue.id);
+ok("owner: echipa include invitația neacceptată", team.length === 4 && team.some((e) => e.userId === user.id && !e.accepted), team.map((e) => `${e.firstName}:${e.accepted}`).join(", "));
+const invites = await owner.pendingInvites(db, user.id);
+ok("angajat: vede invitația", invites.some((i) => i.venueName === "Ciorba lui Sandu" && i.role === "ospătar"), JSON.stringify(invites));
+const tomorrow = new Date(Date.now() + 86_400_000);
+const scheduled = await owner.createPost(db, sanduOwnerId!, sandu.venue.id, { type: "offer", title: "Ofertă de mâine", body: "Ciorbă la jumătate de preț.", publishAt: tomorrow });
+const ownerPosts = await owner.postsForOwner(db, sanduOwnerId!, sandu.venue.id);
+const publicBlog = (await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "ciorba-lui-sandu" })).blog;
+ok("postarea programată: la owner da, public nu", ownerPosts.find((p) => p.id === scheduled.id)?.scheduled === true && !publicBlog.some((p) => p.id === scheduled.id));
+const denied = await owner.employeesForOwner(db, user.id, sandu.venue.id).then(() => null, (e: unknown) => e);
+ok("alt user nu vede echipa altui local", denied instanceof ServiceError && denied.code === "forbidden");
+
+// Un angajat scos de owner nu se poate readăuga singur acceptând invitația veche
+const invited = team.find((e) => e.userId === user.id)!;
+await owner.removeEmployee(db, sanduOwnerId!, invited.id);
+const reAccept = await owner.respondToInvite(db, user.id, invited.id, true).then(() => null, (e: unknown) => e);
+const teamAfter = await owner.employeesForOwner(db, sanduOwnerId!, sandu.venue.id);
+ok("angajatul scos nu se poate readăuga singur", reAccept instanceof ServiceError && !teamAfter.some((e) => e.id === invited.id));
+
+// Un link care a eșuat o dată (ex. rețea) se poate trimite din nou
+const retryUrl = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
+await db.insert(socialSubmissions).values({ venueId: sandu.venue.id, platform: "youtube", url: retryUrl, status: "failed" });
+const retried = await submitSocialLinkNow(db, { venueId: sandu.venue.id, url: retryUrl, userId: user.id });
+ok("linkul eșuat se poate retrimite", retried.status === "processed", retried.status);
 
 process.exit();
