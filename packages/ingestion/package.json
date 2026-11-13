@@ -1,0 +1,14 @@
+{
+  "name": "@tftd/ingestion",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@tftd/db": "*",
+    "@tftd/matching": "*",
+    "@tftd/review-analysis": "*",
+    "drizzle-orm": "^0.44.0"
+  }
+}
