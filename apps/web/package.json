@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tftd/api": "*",
     "lucide-react": "^1.16.0",
     "next": "^15.3.0",
     "react": "^19.0.0",
