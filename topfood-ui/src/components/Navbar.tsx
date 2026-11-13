@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bookmark, Moon, Sun, User, X } from 'lucide-react';
+import { Bookmark, LogIn, LogOut, Moon, Sun, User, X } from 'lucide-react';
 import { NavSection, Restaurant, UserAccount, Vertical, formatScore } from '../types';
 import { BrandWordmark, LocalnicBadge } from './BrandPrimitives';
 
@@ -10,9 +10,11 @@ export interface NavbarProps {
   onNavSectionChange: (s: NavSection) => void;
   savedRestaurants: Restaurant[];
   onSelectRestaurant: (r: Restaurant) => void;
-  currentUser: UserAccount;
+  currentUser: UserAccount | null;
   availableUsers: UserAccount[];
   onSelectUser: (userId: string) => void;
+  onOpenLogin: () => void;
+  onLogout: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
 }
@@ -27,6 +29,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   availableUsers,
   onSelectUser,
+  onOpenLogin,
+  onLogout,
   darkMode,
   onToggleDarkMode,
 }) => {
@@ -131,6 +135,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
+            {currentUser === null ? (
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className={`btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[13px] font-bold ${
+                  isDrink
+                    ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
+                    : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
+                }`}
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Intră în cont</span>
+              </button>
+            ) : (
             <div className="relative">
               <button
                 type="button"
@@ -279,9 +297,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   )}
                 </div>
+
+                <div
+                  className={`pt-2.5 border-t ${
+                    isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      onLogout();
+                    }}
+                    className={`btn-press w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-[4px] border text-[12px] font-semibold ${
+                      isDrink
+                        ? 'border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                        : 'border-[#D6CFC5] text-[#6E5649] hover:border-[#B3261E] hover:text-[#B3261E]'
+                    }`}
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Deconectare</span>
+                  </button>
+                </div>
               </div>
             )}
             </div>
+            )}
           </div>
         </div>
       </header>

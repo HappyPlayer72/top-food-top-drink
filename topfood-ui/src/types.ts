@@ -34,6 +34,7 @@ export type AuthorRole = 'verified-local' | 'tourist' | 'influencer' | 'regular'
 export interface UserAccount {
   id: string;
   name: string;
+  email?: string;
   role: 'verified-local' | 'tourist';
   neighborhood?: string;
   weightMultiplier: number;

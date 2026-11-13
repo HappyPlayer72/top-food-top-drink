@@ -13,6 +13,7 @@ const USER_ACCOUNTS: UserAccount[] = [
   {
     id: 'andreea-m',
     name: 'Andreea M.',
+    email: 'andreea@e-uvt.ro',
     role: 'verified-local',
     neighborhood: 'Iosefin',
     weightMultiplier: 2.0,
@@ -21,6 +22,7 @@ const USER_ACCOUNTS: UserAccount[] = [
   {
     id: 'luca-t',
     name: 'Luca T.',
+    email: 'luca@visit.ro',
     role: 'tourist',
     weightMultiplier: 1.0,
     description:
@@ -34,6 +36,7 @@ import {
   WEEKEND_EVENTS,
   recalculateRestaurantWithReview,
 } from './data/restaurants';
+import { LoginScreen } from './components/LoginScreen';
 import { Navbar } from './components/Navbar';
 import { EditorialListView } from './components/EditorialListView';
 import { MapView } from './components/MapView';
@@ -60,7 +63,9 @@ export function App() {
     string | null
   >(null);
   const [savedIds, setSavedIds] = useState<string[]>(['ciorba-lui-sandu']);
-  const [currentUserId, setCurrentUserId] = useState<string>(USER_ACCOUNTS[0].id);
+  const [accounts, setAccounts] = useState<UserAccount[]>(USER_ACCOUNTS);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showLoginScreen, setShowLoginScreen] = useState<boolean>(true);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     try {
       return localStorage.getItem('topfood-dark-mode') === 'true';
@@ -79,9 +84,40 @@ export function App() {
   }, [darkMode]);
 
   const currentUser = useMemo(
-    () => USER_ACCOUNTS.find((u) => u.id === currentUserId) ?? USER_ACCOUNTS[0],
-    [currentUserId]
+    () =>
+      currentUserId
+        ? accounts.find((u) => u.id === currentUserId) ?? null
+        : null,
+    [accounts, currentUserId]
   );
+
+  const handleLoginSuccess = (user: UserAccount) => {
+    setAccounts((prev) =>
+      prev.some((acc) => acc.id === user.id) ? prev : [...prev, user]
+    );
+    setCurrentUserId(user.id);
+    setShowLoginScreen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleContinueAsGuest = () => {
+    setCurrentUserId(null);
+    setShowLoginScreen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenLogin = () => {
+    setSelectedRestaurantId(null);
+    setShowLoginScreen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogout = () => {
+    setCurrentUserId(null);
+    setSelectedRestaurantId(null);
+    setShowLoginScreen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleToggleFoodFilter = (f: FoodQuickFilter) => {
     setFoodFilters((prev) =>
@@ -164,6 +200,20 @@ export function App() {
 
   const isDrink = vertical === 'drink';
 
+  if (showLoginScreen) {
+    return (
+      <LoginScreen
+        vertical={vertical}
+        onVerticalChange={setVertical}
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode((prev) => !prev)}
+        demoUsers={USER_ACCOUNTS}
+        onLoginSuccess={handleLoginSuccess}
+        onContinueAsGuest={handleContinueAsGuest}
+      />
+    );
+  }
+
   return (
     <div
       id="top"
@@ -185,8 +235,10 @@ export function App() {
         savedRestaurants={savedRestaurants}
         onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
         currentUser={currentUser}
-        availableUsers={USER_ACCOUNTS}
+        availableUsers={accounts}
         onSelectUser={setCurrentUserId}
+        onOpenLogin={handleOpenLogin}
+        onLogout={handleLogout}
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode((prev) => !prev)}
       />
@@ -244,6 +296,7 @@ export function App() {
         currentUser={currentUser}
         onClose={() => setSelectedRestaurantId(null)}
         onAddReview={handleAddReview}
+        onRequireLogin={handleOpenLogin}
         onLocateOnMap={handleSwitchToMap}
         isSaved={
           selectedRestaurant ? savedIds.includes(selectedRestaurant.id) : false

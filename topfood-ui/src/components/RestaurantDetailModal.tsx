@@ -22,9 +22,10 @@ import {
 
 export interface RestaurantDetailModalProps {
   restaurant: Restaurant | null;
-  currentUser: UserAccount;
+  currentUser: UserAccount | null;
   onClose: () => void;
   onAddReview: (restaurantId: string, review: Review) => void;
+  onRequireLogin?: () => void;
   onLocateOnMap?: (restaurant: Restaurant) => void;
   isSaved?: boolean;
   onToggleSave?: (restaurantId: string) => void;
@@ -37,6 +38,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   currentUser,
   onClose,
   onAddReview,
+  onRequireLogin,
   onLocateOnMap,
   isSaved = false,
   onToggleSave,
@@ -169,6 +171,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (!currentUser) {
+      setIsReviewDrawerOpen(false);
+      onRequireLogin?.();
+      return;
+    }
 
     const parsedGrade = parseGradeInput(gradeText);
     if (parsedGrade === null || parsedGrade < 1 || parsedGrade > 10) {
@@ -833,14 +841,22 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setIsReviewDrawerOpen(true)}
+              onClick={() => {
+                if (!currentUser) {
+                  onRequireLogin?.();
+                  return;
+                }
+                setIsReviewDrawerOpen(true);
+              }}
               className={`btn-press flex-1 py-3 px-5 rounded-[4px] font-bold text-[15px] hover:opacity-90 ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#B3261E] text-white'
               }`}
             >
-              Scrie un review
+              {currentUser
+                ? 'Scrie un review'
+                : 'Intră în cont ca să scrii un review'}
             </button>
 
             <button
@@ -864,7 +880,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
         </div>
 
         {/* INTERACTIVE REVIEW SUBMISSION DRAWER */}
-        {isReviewDrawerOpen && (
+        {isReviewDrawerOpen && currentUser && (
           <div
             className="modal-backdrop-enter fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto"
             onClick={() => setIsReviewDrawerOpen(false)}
