@@ -478,5 +478,5 @@ export type LeaderboardEntry = {
 export type LeaderboardAwards = {
   revelation?: { venueId: string; from: number; to: number };
   employee?: { employeeId: string; venueId: string; mentions: number };
-  local?: { userId: string; reviews: number; helpfulVotes: number };
+  local?: { userId: string; reviews: number };
 };
