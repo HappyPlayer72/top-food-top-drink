@@ -4,6 +4,7 @@ import { cityPage, owner } from '@tftd/api';
 import { AuthForm } from '@/components/owner/AuthForm';
 import { ClaimForm } from '@/components/owner/ClaimForm';
 import { Panel } from '@/components/owner/ui';
+import { buttonClass } from '@/components/owner/ui-classes';
 import { getDb } from '@/lib/server/db';
 import { getUserId } from '@/lib/server/session';
 import { respondToInviteAction } from './actions';
@@ -28,17 +29,17 @@ export default async function OwnerHome() {
 
   return (
     <div className="flex flex-col gap-10">
-      <h1 className="font-display text-[44px] leading-none">Panoul proprietarului</h1>
+      <h1 className="font-display text-[44px] leading-none text-o-fg">Panoul proprietarului</h1>
 
       <Panel id="localele-tale" title="Localele tale">
         {mine.length ? (
-          <ul className="flex flex-col divide-y divide-hairline border-y border-hairline">
+          <ul className="flex flex-col divide-y divide-o-line border-y border-o-line">
             {mine.map((v) => (
               <li key={v.id}>
-                <Link href={`/owner/${v.id}`} className="flex min-h-14 items-center justify-between gap-3 rounded-[4px] px-2 hover:bg-sponsored-food">
+                <Link href={`/owner/${v.id}`} className="flex min-h-14 items-center justify-between gap-3 rounded-[4px] px-2 transition-colors hover:bg-o-fg/[0.06]">
                   <span>
                     <span className="block text-[17px] font-semibold">{v.name}</span>
-                    <span className="text-[13px] text-muted-cafea">
+                    <span className="text-[13px] text-o-muted">
                       {v.role === 'owner' ? 'Proprietar' : 'Manager'} · {v.vertical === 'food' ? 'topfood' : 'topdrink'}
                     </span>
                   </span>
@@ -48,7 +49,7 @@ export default async function OwnerHome() {
             ))}
           </ul>
         ) : (
-          <p className="text-[15px] text-muted-cafea">Încă nu administrezi niciun local. Revendică-l mai jos.</p>
+          <p className="max-w-prose border-l-4 border-o-line pl-4 text-[15px] leading-relaxed text-o-muted">Încă nu administrezi niciun local. Revendică-l mai jos.</p>
         )}
       </Panel>
 
@@ -56,18 +57,18 @@ export default async function OwnerHome() {
         <Panel id="invitatii" title="Invitații în echipă">
           <ul className="flex flex-col gap-3">
             {invites.map((i) => (
-              <li key={i.employeeId} className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] border border-hairline p-3">
+              <li key={i.employeeId} className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] border border-o-line p-4">
                 <span className="text-[15px]">
                   <strong>{i.venueName}</strong> te-a adăugat ca <strong>{i.role}</strong>. Numele tău apare public doar dacă accepți.
                 </span>
                 <span className="flex gap-2">
                   <form action={respondToInviteAction.bind(null, i.employeeId, true)}>
-                    <button type="submit" aria-label={`Acceptă invitația de la ${i.venueName}`} className="min-h-11 rounded-[4px] bg-carou px-4 font-semibold text-white hover:bg-[#9E1F18]">
+                    <button type="submit" aria-label={`Acceptă invitația de la ${i.venueName}`} className={buttonClass()}>
                       Acceptă
                     </button>
                   </form>
                   <form action={respondToInviteAction.bind(null, i.employeeId, false)}>
-                    <button type="submit" aria-label={`Refuză invitația de la ${i.venueName}`} className="min-h-11 rounded-[4px] border border-hairline px-4 font-semibold hover:border-cafea">
+                    <button type="submit" aria-label={`Refuză invitația de la ${i.venueName}`} className={buttonClass('quiet')}>
                       Refuză
                     </button>
                   </form>

@@ -3,7 +3,8 @@
 import { useActionState, useState } from 'react';
 import { loginAction, registerAction } from '@/app/owner/auth-actions';
 import { EMPTY } from '@/lib/form';
-import { Field, FormMessage, SubmitButton, inputClass } from './ui';
+import { Field, FormMessage, SubmitButton } from './ui';
+import { inputClass } from './ui-classes';
 
 export function AuthForm() {
   const [tab, setTab] = useState<'login' | 'register'>('login');
@@ -11,16 +12,16 @@ export function AuthForm() {
   const [registerState, register] = useActionState(registerAction, EMPTY);
 
   const tabClass = (active: boolean) =>
-    `min-h-11 flex-1 rounded-[4px] px-3 text-[15px] font-semibold ${active ? 'bg-cafea text-white' : 'text-cafea hover:bg-sponsored-food'}`;
+    `min-h-11 flex-1 rounded-[4px] px-3 text-[15px] font-semibold ${active ? 'bg-o-active text-o-active-fg' : 'text-o-fg hover:bg-o-fg/[0.07]'}`;
 
   return (
     <div className="mx-auto w-full max-w-md">
-      <h1 className="font-display text-[40px] leading-none text-cafea">Pentru proprietari</h1>
-      <p className="mt-2 text-[15px] text-muted-cafea">
+      <h1 className="font-display text-[40px] leading-none text-o-fg">Pentru proprietari</h1>
+      <p className="mt-2 text-[15px] text-o-muted">
         Răspunde la review-uri, scrie pe blogul localului și vezi ce zic localnicii. Banii nu cumpără scor sau loc în top.
       </p>
 
-      <div role="group" aria-label="Cont" className="mt-6 flex gap-1 rounded-[4px] border border-hairline p-1">
+      <div role="group" aria-label="Cont" className="mt-6 flex gap-1 rounded-[4px] border border-o-line p-1">
         <button type="button" aria-pressed={tab === 'login'} className={tabClass(tab === 'login')} onClick={() => setTab('login')}>
           Intră în cont
         </button>

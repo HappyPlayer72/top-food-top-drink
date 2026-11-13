@@ -3,7 +3,8 @@
 import { useActionState } from 'react';
 import { confirmClaimAction, startClaimAction } from '@/app/owner/actions';
 import type { ClaimState } from '@/lib/form';
-import { Field, FormMessage, SubmitButton, inputClass } from './ui';
+import { Field, FormMessage, SubmitButton } from './ui';
+import { inputClass } from './ui-classes';
 
 type Option = { id: string; name: string; group: string };
 

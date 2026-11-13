@@ -22,6 +22,30 @@
   --color-muted-cafea: #6E5649;
 }
 
+/* Tokenii zonei /owner (valorile sunt la `.owner-shell`, mai jos): aceeași identitate ca pe paginile publice. */
+@theme inline {
+  --color-o-bg: var(--o-bg);
+  --color-o-fg: var(--o-fg);
+  --color-o-muted: var(--o-muted);
+  --color-o-line: var(--o-line);
+  --color-o-quiet: var(--o-quiet);
+  --color-o-field: var(--o-field);
+  --color-o-field-line: var(--o-field-line);
+  --color-o-accent: var(--o-accent);
+  --color-o-accent-fg: var(--o-accent-fg);
+  --color-o-accent-hover: var(--o-accent-hover);
+  --color-o-active: var(--o-active);
+  --color-o-active-fg: var(--o-active-fg);
+  --color-o-outline: var(--o-outline);
+  --color-o-danger: var(--o-danger);
+  --color-o-card: var(--o-card);
+  --color-o-surface: var(--o-surface);
+  --color-o-star: var(--o-star);
+  --color-o-star-off: var(--o-star-off);
+  --color-o-avatar: var(--o-avatar);
+  --color-o-avatar-fg: var(--o-avatar-fg);
+}
+
 :root {
   --color-carou: #B3261E;
   --color-cafea: #3A2418;
@@ -45,6 +69,8 @@
     background-color: #FFFFFF;
     color: #3A2418;
     scroll-behavior: smooth;
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -52,6 +78,74 @@
     font-variation-settings: "wdth" 100;
     line-height: 1.5;
     margin: 0;
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  select,
+  input,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  @media (pointer: coarse) {
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      min-height: 44px;
+      height: 44px;
+      touch-action: pan-x;
+      cursor: pointer;
+    }
+
+    input[type="range"].accent-\[\#F2A33A\] {
+      --range-accent: #F2A33A;
+      --range-track: #2D5947;
+      --range-thumb-border: #17382C;
+    }
+
+    input[type="range"].accent-\[\#B3261E\] {
+      --range-accent: #B3261E;
+      --range-track: #D6CFC5;
+      --range-thumb-border: #FFFFFF;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: var(--range-track, #D6CFC5);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: var(--range-accent, #B3261E);
+      border: 2px solid var(--range-thumb-border, #FFFFFF);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      margin-top: -10px;
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: var(--range-track, #D6CFC5);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: var(--range-accent, #B3261E);
+      border: 2px solid var(--range-thumb-border, #FFFFFF);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    }
   }
 
   button:focus-visible,
@@ -65,14 +159,14 @@
     outline-offset: 2px;
   }
 
-  html:not(.dark) .bg-\[\#17382C\] button:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] a:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] input:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] select:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] textarea:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] [role="button"]:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] [tabindex="0"]:focus-visible {
-    outline: 2px solid #17382C;
+  .bg-\[\#17382C\] button:focus-visible,
+  .bg-\[\#17382C\] a:focus-visible,
+  .bg-\[\#17382C\] input:focus-visible,
+  .bg-\[\#17382C\] select:focus-visible,
+  .bg-\[\#17382C\] textarea:focus-visible,
+  .bg-\[\#17382C\] [role="button"]:focus-visible,
+  .bg-\[\#17382C\] [tabindex="0"]:focus-visible {
+    outline: 2px solid #F2A33A;
     outline-offset: 2px;
   }
 
@@ -332,7 +426,7 @@
 }
 
 .modal-panel-enter {
-  animation: modalPanelIn 250ms var(--ease-out) forwards;
+  animation: modalPanelIn 250ms var(--ease-out);
 }
 
 .drawer-sheet-enter {
@@ -413,96 +507,6 @@
 }
 
 /* ============================================================================
-   Light Mode for topdrink (html:not(.dark) — Warm Spumă + Sticlă #17382C ink)
-   ============================================================================ */
-html:not(.dark) .bg-\[\#17382C\] {
-  background-color: #F6F3EB;
-}
-
-html:not(.dark) .bg-\[\#17382C\]\/95 {
-  background-color: rgba(246, 243, 235, 0.94);
-}
-
-html:not(.dark) .bg-\[\#143025\],
-html:not(.dark) .bg-\[\#122B22\] {
-  background-color: #FFFFFF;
-}
-
-html:not(.dark) .bg-\[\#1E4335\] {
-  background-color: #EBE6DA;
-}
-
-html:not(.dark) .from-\[\#143025\] {
-  --tw-gradient-from: rgba(255, 255, 255, 0.72);
-  --tw-gradient-stops: var(--tw-gradient-from), rgba(255, 255, 255, 0.15), transparent;
-}
-
-html:not(.dark) .text-\[\#F4EEE2\] {
-  color: #17382C;
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/90 {
-  color: rgba(23, 56, 44, 0.9);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/85 {
-  color: rgba(23, 56, 44, 0.85);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/80 {
-  color: rgba(23, 56, 44, 0.8);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/75 {
-  color: rgba(23, 56, 44, 0.72);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/70 {
-  color: rgba(23, 56, 44, 0.68);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/65,
-html:not(.dark) .text-\[\#F4EEE2\]\/60,
-html:not(.dark) .text-\[\#F4EEE2\]\/55 {
-  color: rgba(23, 56, 44, 0.72);
-}
-
-html:not(.dark) .text-\[\#F2A33A\]\/90,
-html:not(.dark) .text-\[\#F2A33A\] {
-  color: #9E5906;
-}
-
-html:not(.dark) .bg-\[\#F2A33A\] .text-\[\#17382C\],
-html:not(.dark) .bg-\[\#F2A33A\].text-\[\#17382C\] {
-  color: #17382C;
-}
-
-html:not(.dark) .border-\[\#285443\],
-html:not(.dark) .border-\[\#2D5947\],
-html:not(.dark) .border-\[\#295645\] {
-  border-color: #D4DDD7;
-}
-
-html:not(.dark) .divide-\[\#285443\] > :not(:last-child) {
-  border-color: #D4DDD7;
-}
-
-html:not(.dark) .bg-\[\#285443\] {
-  background-color: #D9E1DC;
-}
-
-html:not(.dark) .hover\:bg-\[\#1C4234\]:hover,
-html:not(.dark) .hover\:bg-\[\#1E4335\]:hover {
-  background-color: #ECE7DB;
-}
-
-html:not(.dark) .hover\:border-\[\#F2A33A\]:hover,
-html:not(.dark) .hover\:border-\[\#F2A33A\]\/60:hover,
-html:not(.dark) .hover\:border-\[\#F2A33A\]\/70:hover {
-  border-color: #17382C;
-}
-
-/* ============================================================================
    Dark Mode (Evening Slate #22262E for topfood, Sticlă #17382C for topdrink)
    ============================================================================ */
 html.dark {
@@ -539,20 +543,71 @@ html.dark .bg-\[\#ECE6DD\] {
   background-color: #343A46;
 }
 
+html.dark .text-\[\#3A2418\],
+html.dark [class^="text-[#3A2418]/"],
+html.dark [class*=" text-[#3A2418]/"] {
+  color: rgba(244, 238, 226, 0.84);
+}
+
 html.dark .text-\[\#3A2418\] {
   color: #F4EEE2;
 }
 
-html.dark .text-\[\#3A2418\]\/85 {
+html.dark .text-\[\#3A2418\]\/95,
+html.dark .text-\[\#3A2418\]\/90 {
+  color: rgba(244, 238, 226, 0.92);
+}
+
+html.dark .text-\[\#3A2418\]\/85,
+html.dark .text-\[\#3A2418\]\/80 {
   color: rgba(244, 238, 226, 0.88);
 }
 
-html.dark .text-\[\#6E5649\] {
+html.dark .text-\[\#3A2418\]\/75,
+html.dark .text-\[\#3A2418\]\/70,
+html.dark .text-\[\#3A2418\]\/65,
+html.dark .text-\[\#3A2418\]\/60 {
+  color: rgba(244, 238, 226, 0.82);
+}
+
+html.dark .hover\:text-\[\#3A2418\]:hover {
+  color: #F4EEE2;
+}
+
+html.dark .text-\[\#6E5649\],
+html.dark [class^="text-[#6E5649]/"],
+html.dark [class*=" text-[#6E5649]/"] {
   color: #B6BAC4;
 }
 
 html.dark .text-\[\#6E5649\]\/90 {
   color: rgba(182, 186, 196, 0.92);
+}
+
+/* Input & search placeholder contrast (>= 4.5:1 across light, dark, and topdrink) */
+.placeholder-\[\#8C7B70\]::placeholder,
+.placeholder\:text-\[\#A39384\]::placeholder,
+.placeholder\:text-\[\#6E5649\]\/60::placeholder {
+  color: #6E5649;
+  opacity: 1;
+}
+
+.placeholder\:text-\[\#6E8B7A\]::placeholder,
+.placeholder-\[\#F4EEE2\]\/45::placeholder,
+.placeholder\:text-\[\#F4EEE2\]\/40::placeholder,
+.placeholder\:text-\[\#F4EEE2\]\/50::placeholder,
+#food-search-input.bg-\[\#122B22\]::placeholder {
+  color: rgba(244, 238, 226, 0.75);
+  opacity: 1;
+}
+
+html.dark .placeholder-\[\#8C7B70\]::placeholder,
+html.dark .placeholder\:text-\[\#A39384\]::placeholder,
+html.dark .placeholder\:text-\[\#6E5649\]\/60::placeholder,
+html.dark .placeholder\:text-\[\#6E5649\]::placeholder,
+html.dark #food-search-input.bg-white::placeholder {
+  color: #B6BAC4;
+  opacity: 1;
 }
 
 html.dark .text-\[\#F4EEE2\]\/65,
@@ -577,6 +632,19 @@ html.dark .hover\:text-\[\#B3261E\]:hover {
 html.dark .bg-\[\#FEE4E2\].text-\[\#B3261E\],
 html.dark .bg-\[\#FEE4E2\] .text-\[\#B3261E\] {
   color: #9E1F18;
+}
+
+html.dark #review-form-error.review-form-error-food {
+  background-color: #361D1E;
+  border-color: rgba(255, 122, 112, 0.7);
+  color: #FFE5E2;
+}
+
+@media (pointer: coarse) {
+  html.dark input[type="range"].accent-\[\#B3261E\] {
+    --range-track: #4A5364;
+    --range-thumb-border: #22262E;
+  }
 }
 
 html.dark .border-\[\#E6DFD5\],
@@ -620,4 +688,106 @@ html.dark .bg-\[\#E0A526\].text-\[\#3A2418\] {
 
 html.dark .bg-\[\#F2A33A\] {
   color: #17382C;
+}
+
+/* ============================================================================
+   /owner: aceeași identitate ca pe paginile publice.
+   Food: alb, carduri #FAF8F5, Carou (și Evening Slate când site-ul e în mod întunecat).
+   Drink: Sticlă mereu întunecat, carduri #143025, Chihlimbar.
+   Dashboard-ul pune `data-vertical`, iar :has() recolorează tot shell-ul, inclusiv antetul.
+   ============================================================================ */
+.owner-shell {
+  --o-bg: #FFFFFF;
+  --o-fg: #3A2418;
+  --o-muted: #6E5649;
+  --o-line: #E6DFD5;
+  --o-card: #FAF8F5;
+  --o-surface: #F2EFE9;
+  /* gri modest: răspunsurile localului și tot ce e plătit (regula 3) */
+  --o-quiet: #F2EFE9;
+  --o-field: #FFFFFF;
+  --o-field-line: #8F7F72;
+  --o-accent: #B3261E;
+  --o-accent-fg: #FFFFFF;
+  --o-accent-hover: #9E1F18;
+  --o-active: #3A2418;
+  --o-active-fg: #FFFFFF;
+  --o-outline: #3A2418;
+  --o-danger: #B3261E;
+  --o-focus: #B3261E;
+  --o-star: #B3261E;
+  --o-star-off: #E6DFD5;
+  --o-avatar: #3A2418;
+  --o-avatar-fg: #FFFFFF;
+  background-color: var(--o-bg);
+  color: var(--o-fg);
+  color-scheme: light;
+}
+
+html.dark .owner-shell {
+  --o-bg: #22262E;
+  --o-fg: #F4EEE2;
+  --o-muted: #B6BAC4;
+  --o-line: #4A5364;
+  --o-card: #2B303A;
+  --o-surface: #313743;
+  --o-quiet: #313743;
+  --o-field: #22262E;
+  --o-field-line: #6C7484;
+  --o-active: #F4EEE2;
+  --o-active-fg: #22262E;
+  --o-outline: #F4EEE2;
+  --o-danger: #FFB4AC;
+  --o-focus: #F2A33A;
+  --o-star: #E5534B;
+  --o-star-off: #4A5364;
+  --o-avatar: #F4EEE2;
+  --o-avatar-fg: #22262E;
+  color-scheme: dark;
+}
+
+.owner-shell:has([data-vertical="drink"]),
+html.dark .owner-shell:has([data-vertical="drink"]) {
+  --o-bg: #17382C;
+  --o-fg: #F4EEE2;
+  --o-muted: #C9C1AE;
+  --o-line: #285443;
+  --o-card: #143025;
+  --o-surface: #1A3D30;
+  --o-quiet: #1E4335;
+  --o-field: #122B22;
+  --o-field-line: #5A8472;
+  --o-accent: #F2A33A;
+  --o-accent-fg: #17382C;
+  --o-accent-hover: #F6B65C;
+  --o-active: #F2A33A;
+  --o-active-fg: #17382C;
+  --o-outline: #F2A33A;
+  --o-danger: #FFB4AC;
+  --o-focus: #F2A33A;
+  --o-star: #F2A33A;
+  --o-star-off: rgba(244, 238, 226, 0.2);
+  --o-avatar: #F4EEE2;
+  --o-avatar-fg: #17382C;
+  color-scheme: dark;
+}
+
+.owner-shell :is(a, button, input, select, textarea, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--o-focus);
+  outline-offset: 2px;
+}
+
+/* Logo-ul și linkul „Vezi topul” urmează verticala localului deschis. */
+.owner-drink-only { display: none; }
+.owner-shell:has([data-vertical="drink"]) .owner-food-only { display: none; }
+.owner-shell:has([data-vertical="drink"]) .owner-drink-only { display: inline-flex; }
+
+/* <summary> folosit ca buton: fără triunghiul implicit al browserului. */
+.owner-summary { list-style: none; }
+.owner-summary::-webkit-details-marker { display: none; }
+details[open] > .owner-summary .owner-chevron { transform: rotate(180deg); }
+.owner-chevron { transition: transform 180ms var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-chevron { transition: none; }
 }

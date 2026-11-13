@@ -1,11 +1,13 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Check, Star, UserPlus, UsersRound } from 'lucide-react';
 import type { owner } from '@tftd/api';
-import { EmployeeEcusonCard } from '@/components/BrandPrimitives';
 import { inviteEmployeeAction, removeEmployeeAction } from '@/app/owner/[venueId]/actions-team';
 import { EMPTY } from '@/lib/form';
-import { Field, FormMessage, SubmitButton, inputClass } from './ui';
+import { cate } from '@/lib/ro';
+import { Avatar, EmptyState, Field, FormMessage, StatStrip, Stars, SubHeading, SubmitButton, Tag } from './ui';
+import { fieldGrid, frameClass, inputClass, stagger } from './ui-classes';
 
 export type TeamMember = Awaited<ReturnType<typeof owner.employeesForOwner>>[number];
 export type TeamRating = Awaited<ReturnType<typeof owner.employeeRatingsForOwner>>[number];
@@ -13,41 +15,59 @@ export type TeamRating = Awaited<ReturnType<typeof owner.employeeRatingsForOwner
 /** Media vine ca string numeric din SQL; „—” când nu există note. */
 const avg = (x: string | null) => (x == null ? '—' : Number(x).toFixed(1).replace('.', ','));
 
-export function TeamPanel({ venueId, team, ratings }: { venueId: string; team: TeamMember[]; ratings: TeamRating[] }) {
+export function TeamPanel({ venueId, team, ratings }: { venueId: string; team: TeamMember[]; ratings: TeamRating[]; vertical: 'food' | 'drink' }) {
   const [inviteState, invite] = useActionState(inviteEmployeeAction.bind(null, venueId), EMPTY);
+  const rated = ratings.filter((r) => Number(r.ratings) > 0);
 
   return (
-    <div className="flex flex-col gap-8">
-      <section aria-labelledby="echipa-lista" className="flex flex-col gap-3">
-        <h3 id="echipa-lista" className="text-[18px] font-semibold text-cafea">
+    <div className="flex flex-col gap-10">
+      <StatStrip
+        items={[
+          { value: team.filter((m) => m.accepted).length, label: 'Membri activi' },
+          { value: team.filter((m) => !m.accepted).length, label: 'Invitații în așteptare' },
+          { value: rated.reduce((sum, r) => sum + Number(r.ratings), 0), label: 'Note primite' },
+        ]}
+      />
+
+      <section aria-labelledby="echipa-lista">
+        <SubHeading id="echipa-lista" note="Numele unui om apare public doar după ce acceptă invitația.">
           Membri
-        </h3>
+        </SubHeading>
         {team.length ? (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {team.map((m) => (
-              <MemberItem key={m.id} venueId={venueId} member={m} />
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {team.map((m, i) => (
+              <MemberItem key={m.id} venueId={venueId} member={m} index={i} />
             ))}
           </ul>
         ) : (
-          <p className="text-[15px] text-muted-cafea">Încă nu ai adăugat pe nimeni.</p>
+          <EmptyState title="Încă nu ai adăugat pe nimeni" icon={<UsersRound size={26} />}>
+            Invită ospătarii, barmanii și bucătarii mai jos. Clienții îi pot nota, iar tu vezi notele.
+          </EmptyState>
         )}
       </section>
 
-      <section aria-labelledby="echipa-adauga" className="flex flex-col gap-3">
-        <h3 id="echipa-adauga" className="text-[18px] font-semibold text-cafea">
-          Adaugă un om în echipă
-        </h3>
-        <form action={invite} className="flex max-w-xl flex-col gap-3">
-          <Field label="Prenume">
-            <input name="firstName" required maxLength={60} autoComplete="off" className={inputClass} />
-          </Field>
-          <Field label="Rol">
-            <input name="role" required maxLength={60} autoComplete="off" placeholder="ex. ospătar, barman, bucătar" className={inputClass} />
-          </Field>
-          <Field
-            label="Nume de utilizator"
-            hint="Contul lui de pe topfood. Primește o invitație și apare public doar dacă acceptă."
-          >
+      <section aria-labelledby="echipa-adauga">
+        <form action={invite} className={`${frameClass} flex max-w-xl flex-col gap-4 bg-o-card`}>
+          <div className="flex items-center gap-3">
+            <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-o-avatar text-o-avatar-fg">
+              <UserPlus size={20} />
+            </span>
+            <div>
+              <h3 id="echipa-adauga" className="font-display text-[28px] leading-none">
+                Adaugă un om în echipă
+              </h3>
+              <p className="mt-1 text-[13px] text-o-muted">Primește o invitație și apare public doar dacă acceptă.</p>
+            </div>
+          </div>
+          <div className={fieldGrid}>
+            <Field label="Prenume">
+              <input name="firstName" required maxLength={60} autoComplete="off" className={inputClass} />
+            </Field>
+            <Field label="Rol">
+              <input name="role" required maxLength={60} autoComplete="off" placeholder="ex. ospătar, barman, bucătar…" className={inputClass} />
+            </Field>
+          </div>
+          <Field label="Nume de utilizator" hint="Contul lui de pe topfood.">
             <input name="username" required maxLength={60} autoComplete="off" autoCapitalize="none" spellCheck={false} className={inputClass} />
           </Field>
           <FormMessage state={inviteState} />
@@ -57,30 +77,49 @@ export function TeamPanel({ venueId, team, ratings }: { venueId: string; team: T
         </form>
       </section>
 
-      <section aria-labelledby="echipa-note" className="flex flex-col gap-3">
-        <h3 id="echipa-note" className="text-[18px] font-semibold text-cafea">
-          Notele echipei (doar tu le vezi)
-        </h3>
-        <RatingsTable ratings={ratings} />
+      <section aria-labelledby="echipa-note">
+        <SubHeading id="echipa-note" note="Doar tu le vezi, inclusiv notele mici. Medii de la 1 la 5.">
+          Notele echipei
+        </SubHeading>
+        {rated.length ? (
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {rated.map((r, i) => (
+              <RatingCard key={r.employeeId} rating={r} index={i} />
+            ))}
+          </ul>
+        ) : (
+          <EmptyState title="Încă nu sunt note de la clienți" icon={<Star size={26} />}>
+            Clienții notează angajații după vizită. Mediile pe amabilitate și rapiditate apar aici.
+          </EmptyState>
+        )}
       </section>
     </div>
   );
 }
 
-function MemberItem({ venueId, member: m }: { venueId: string; member: TeamMember }) {
+function MemberItem({ venueId, member: m, index }: { venueId: string; member: TeamMember; index: number }) {
   return (
-    <li className="flex flex-col gap-2">
-      <EmployeeEcusonCard name={m.firstName} role={m.role} />
-      <p className={`text-center text-[14px] ${m.accepted ? 'text-cafea' : 'text-muted-cafea'}`}>
-        {m.accepted ? 'Activ' : 'Invitat, așteaptă acceptul'}
-      </p>
+    <li style={stagger(index)} className="stagger-fade-in flex flex-col items-center rounded-[4px] border border-o-line bg-o-card px-5 pb-5 pt-3 text-center">
+      {/* fanta ecusonului de pe uniformă */}
+      <span aria-hidden="true" className={`mb-4 h-1.5 w-8 rounded-full ${m.accepted ? 'bg-o-fg' : 'bg-o-line'}`} />
+      <Avatar name={m.firstName} outline={!m.accepted} />
+      <p className="font-display mt-3 break-words text-[30px] leading-none">{m.firstName}</p>
+      <p className="mt-1.5 text-[14px] text-o-muted">{m.role}</p>
+      <div className="mt-4">
+        {m.accepted ? (
+          <Tag icon={<Check size={14} aria-hidden="true" />}>Activ</Tag>
+        ) : (
+          <Tag tone="quiet">Invitat, așteaptă acceptul</Tag>
+        )}
+      </div>
       <form
+        className="mt-5 w-full"
         action={removeEmployeeAction.bind(null, venueId, m.id)}
         onSubmit={(e) => {
           if (!window.confirm(`Scoți ${m.firstName} din echipă? Datele lui publice dispar.`)) e.preventDefault();
         }}
       >
-        <SubmitButton variant="quiet" pendingLabel="Se scoate…">
+        <SubmitButton variant="quiet" pendingLabel="Se scoate…" className="w-full">
           Scoate din echipă
         </SubmitButton>
       </form>
@@ -88,32 +127,25 @@ function MemberItem({ venueId, member: m }: { venueId: string; member: TeamMembe
   );
 }
 
-function RatingsTable({ ratings }: { ratings: TeamRating[] }) {
-  if (ratings.every((r) => Number(r.ratings) === 0)) {
-    return <p className="text-[15px] text-muted-cafea">Încă nu sunt note de la clienți.</p>;
-  }
+function RatingCard({ rating: r, index }: { rating: TeamRating; index: number }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-96 border-collapse text-left text-[15px] tabular-nums">
-        <thead>
-          <tr className="border-b border-hairline text-[14px] text-muted-cafea">
-            <th scope="col" className="py-2 pr-3 font-semibold">Nume</th>
-            <th scope="col" className="py-2 pr-3 text-right font-semibold">Note</th>
-            <th scope="col" className="py-2 pr-3 text-right font-semibold">Amabilitate</th>
-            <th scope="col" className="py-2 text-right font-semibold">Rapiditate</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ratings.map((r) => (
-            <tr key={r.employeeId} className="border-b border-hairline">
-              <th scope="row" className="py-2 pr-3 font-semibold text-cafea">{r.firstName}</th>
-              <td className="py-2 pr-3 text-right">{r.ratings}</td>
-              <td className="py-2 pr-3 text-right">{avg(r.friendliness)}</td>
-              <td className="py-2 text-right">{avg(r.speed)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <li style={stagger(index)} className="stagger-fade-in rounded-[4px] border border-o-line bg-o-card p-5 sm:p-6">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="font-display break-words text-[30px] leading-none">{r.firstName}</span>
+        <span className="text-[13px] text-o-muted">{cate(Number(r.ratings), 'notă', 'note')}</span>
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-4 border-t border-o-line pt-5">
+        {[
+          ['Amabilitate', r.friendliness],
+          ['Rapiditate', r.speed],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <p className="text-[13px] text-o-muted">{label}</p>
+            <p className="font-display mt-1 text-[52px] leading-[0.9] tabular-nums">{avg(value)}</p>
+            <div className="mt-2">{value != null ? <Stars value={Number(value)} max={5} size={15} /> : null}</div>
+          </div>
+        ))}
+      </div>
+    </li>
   );
 }

@@ -72,19 +72,69 @@ export const CarouStrip: React.FC<{
 };
 
 /**
- * 3. CoasterMark — Suportul de bere (icon for topdrink wordmark)
+ * 3. CoasterMark — Halba / cana de bere (mug icon for topdrink wordmark)
  */
 export const CoasterMark: React.FC<{ size?: number; className?: string }> = ({
   size = 28,
   className = '',
 }) => (
-  <span
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 32 32"
+    fill="none"
     aria-hidden="true"
-    style={{ width: size, height: size }}
-    className={`inline-flex items-center justify-center rounded-full bg-[#F4EEE2] border-[2.5px] border-[#B98A5E] shrink-0 ${className}`}
+    className={`shrink-0 ${className}`}
   >
-    <span className="w-[74%] h-[74%] rounded-full border border-[#B98A5E]/35" />
-  </span>
+    {/* Mug handle */}
+    <path
+      d="M20.5 13.5H24C25.933 13.5 27.5 15.067 27.5 17V21.5C27.5 23.433 25.933 25 24 25H20.5"
+      stroke="#B98A5E"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Mug body */}
+    <rect
+      x="5"
+      y="10"
+      width="16"
+      height="18"
+      rx="3.5"
+      fill="#F2A33A"
+      stroke="#B98A5E"
+      strokeWidth="2"
+    />
+    {/* Subtle vertical mug flutes */}
+    <line
+      x1="9.5"
+      y1="15.5"
+      x2="9.5"
+      y2="24"
+      stroke="#17382C"
+      strokeOpacity="0.18"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+    <line
+      x1="13.5"
+      y1="15.5"
+      x2="13.5"
+      y2="24"
+      stroke="#17382C"
+      strokeOpacity="0.18"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+    {/* Foam head */}
+    <path
+      d="M5.5 11.5C4.5 11.5 4 10.5 4.3 9.2C4.7 7.3 6.5 6.2 8.3 6.6C9.3 4.8 11.8 4.2 13.7 5.2C15.2 4.3 17.5 4.8 18.4 6.5C20.3 6.2 21.8 7.6 21.8 9.5C21.8 10.7 21.2 11.5 20.2 11.5H18.5V13.2C18.5 13.9 17.9 14.4 17.2 14.4C16.5 14.4 16 13.9 16 13.2V11.5H5.5Z"
+      fill="#F4EEE2"
+      stroke="#B98A5E"
+      strokeWidth="1.6"
+      strokeLinejoin="round"
+    />
+  </svg>
 );
 
 /**
@@ -95,7 +145,10 @@ export const CoasterScore: React.FC<{
   size?: 'md' | 'lg';
   className?: string;
 }> = ({ score, size = 'md', className = '' }) => {
-  const dims = size === 'lg' ? 'w-20 h-20 text-[34px]' : 'w-14 h-14 text-[26px]';
+  const dims =
+    size === 'lg'
+      ? 'w-16 h-16 text-[28px] sm:w-20 sm:h-20 sm:text-[34px]'
+      : 'w-12 h-12 text-[22px] sm:w-14 sm:h-14 sm:text-[26px]';
   return (
     <div
       className={`coaster-badge inline-flex items-center justify-center shrink-0 select-none ${dims} ${className}`}
@@ -121,16 +174,24 @@ export const BrandWordmark: React.FC<{
     <button
       type="button"
       onClick={onClick}
-      className="btn-press inline-flex items-center gap-2.5 text-left rounded-[4px] group"
+      className="btn-press inline-flex items-center gap-2 sm:gap-2.5 text-left rounded-[4px] group min-w-0 min-h-[44px] py-1.5 px-1 -mx-1"
     >
       {isDrink ? (
-        <CoasterMark size={compact ? 24 : 28} />
+        <CoasterMark
+          size={compact ? 24 : 28}
+          className={compact ? '' : 'max-[374px]:w-6 max-[374px]:h-6'}
+        />
       ) : (
-        <CarouMark size={compact ? 24 : 28} />
+        <CarouMark
+          size={compact ? 24 : 28}
+          className={compact ? '' : 'max-[374px]:w-6 max-[374px]:h-6'}
+        />
       )}
       <span
-        className={`inline-flex items-baseline leading-none ${
-          compact ? 'text-[22px]' : 'text-[25px] sm:text-[28px]'
+        className={`inline-flex items-baseline leading-none truncate ${
+          compact
+            ? 'text-[19px] min-[375px]:text-[22px]'
+            : 'text-[20px] min-[375px]:text-[24px] sm:text-[28px]'
         } ${isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'}`}
       >
         <span className="font-display">
@@ -462,7 +523,7 @@ export const AvertizareaCard: React.FC<{
         <button
           type="button"
           onClick={onSelectVenue}
-          className={`font-display text-[26px] leading-tight text-left block transition-colors ${
+          className={`font-display text-[26px] leading-tight text-left inline-flex items-center min-h-[44px] py-1 transition-colors ${
             dark
               ? 'text-[#F4EEE2] hover:text-[#F2A33A]'
               : 'text-[#3A2418] hover:text-[#B3261E]'
@@ -495,7 +556,7 @@ export const AvertizareaCard: React.FC<{
           type="button"
           onClick={() => setShowFormula((prev) => !prev)}
           aria-expanded={showFormula}
-          className={`btn-press text-[13px] font-semibold underline underline-offset-4 hover:opacity-80 ${
+          className={`btn-press min-h-[44px] -my-2 inline-flex items-center text-[13px] font-semibold underline underline-offset-4 hover:opacity-80 ${
             dark ? 'text-[#F2A33A]' : 'text-[#B3261E]'
           }`}
         >

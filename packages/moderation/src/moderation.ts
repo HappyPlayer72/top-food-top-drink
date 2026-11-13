@@ -2,9 +2,10 @@
  * Modulul J: coada de admin — review-uri raportate, revendicări cu CUI, potriviri nesigure, contestații Tourist Trap.
  * Doar adminul poate ascunde un review (regula 2).
  */
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { approveClaim } from "@tftd/accounts";
-import { forbidden, invalid, matchCandidates, notFound, ownerClaims, reports, reviews, users, venueSources, type Db } from "@tftd/db";
+import { forbidden, invalid, matchCandidates, notFound, ownerClaims, reports, reviews, users, venues, venueSources, type Db } from "@tftd/db";
 
 export async function assertAdmin(db: Db, userId: string) {
   const [u] = await db.select({ roles: users.roles }).from(users).where(eq(users.id, userId));
@@ -14,12 +15,34 @@ export async function assertAdmin(db: Db, userId: string) {
 /** Tot ce așteaptă o decizie, cele mai vechi primele. */
 export async function queue(db: Db, adminId: string) {
   await assertAdmin(db, adminId);
+  const reviewVenue = alias(venues, "review_venue");
+  const appealVenue = alias(venues, "appeal_venue");
+  const reviewAuthor = alias(users, "review_author");
   const [openReports, pendingMatches, pendingClaims] = await Promise.all([
-    db.select().from(reports).where(eq(reports.status, "open")).orderBy(asc(reports.createdAt)),
-    db.select().from(matchCandidates).where(eq(matchCandidates.status, "pending")).orderBy(asc(matchCandidates.createdAt)),
-    db.select().from(ownerClaims).where(and(eq(ownerClaims.status, "pending"), eq(ownerClaims.method, "cui"))).orderBy(asc(ownerClaims.createdAt)),
+    db.select({
+      report: reports,
+      review: { rating: reviews.rating, text: reviews.text, postedAt: reviews.postedAt, source: reviews.source, externalAuthor: reviews.externalAuthor },
+      reviewVenue: { name: reviewVenue.name, address: reviewVenue.address },
+      author: { username: reviewAuthor.username, displayName: reviewAuthor.displayName },
+      venue: { name: appealVenue.name, address: appealVenue.address, touristTrapIndex: appealVenue.touristTrapIndex, scoreExplanation: appealVenue.scoreExplanation },
+    }).from(reports)
+      .leftJoin(reviews, and(eq(reports.targetType, "review"), sql`${reviews.id}::text = ${reports.targetId}`))
+      .leftJoin(reviewVenue, eq(reviewVenue.id, reviews.venueId))
+      .leftJoin(reviewAuthor, eq(reviewAuthor.id, reviews.authorId))
+      .leftJoin(appealVenue, and(eq(reports.targetType, "trap_appeal"), sql`${appealVenue.id}::text = ${reports.targetId}`))
+      .where(eq(reports.status, "open")).orderBy(asc(reports.createdAt)),
+    db.select({ match: matchCandidates, venue: { name: venues.name, address: venues.address } })
+      .from(matchCandidates).innerJoin(venues, eq(venues.id, matchCandidates.venueId))
+      .where(eq(matchCandidates.status, "pending")).orderBy(asc(matchCandidates.createdAt)),
+    db.select({ claim: ownerClaims, venue: { name: venues.name, address: venues.address }, user: { username: users.username, displayName: users.displayName } })
+      .from(ownerClaims).innerJoin(venues, eq(venues.id, ownerClaims.venueId)).innerJoin(users, eq(users.id, ownerClaims.userId))
+      .where(and(eq(ownerClaims.status, "pending"), eq(ownerClaims.method, "cui"))).orderBy(asc(ownerClaims.createdAt)),
   ]);
-  return { reports: openReports, matches: pendingMatches, claims: pendingClaims };
+  return {
+    reports: openReports.map(({ report, review, reviewVenue, author, venue }) => ({ ...report, review: review ? { ...review, venue: reviewVenue, author } : null, venue })),
+    matches: pendingMatches.map(({ match, venue }) => ({ ...match, venue })),
+    claims: pendingClaims.map(({ claim, venue, user }) => ({ ...claim, venue, user })),
+  };
 }
 
 /**
