@@ -93,6 +93,7 @@ async function main() {
     .values({ username: "luca.t", displayName: "Luca T.", email: "luca@visit.ro", passwordHash: demoHash, roles: ["user"] })
     .returning({ id: users.id });
   userIds.set("luca", luca!.id);
+  await db.insert(users).values({ username: "admin", displayName: "Admin topfood", email: "admin@topfood.ro", passwordHash: demoHash, roles: ["user", "admin"] });
   await db.update(users).set({ passwordHash: demoHash }).where(sql`${users.id} = ${userIds.get("owner-sandu")!}`);
 
   await db.insert(userSocialLinks).values({
