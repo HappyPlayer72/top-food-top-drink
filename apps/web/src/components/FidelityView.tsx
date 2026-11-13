@@ -20,12 +20,15 @@ import {
   X,
 } from 'lucide-react';
 import type { LoyaltyIconId, LoyaltyProgram, UserAccount, Vertical } from '../types';
+import { createFidelityCard, fidelityWallet, stampFidelity } from '@/app/actions/loyalty';
 
 interface FidelityViewProps {
   vertical: Vertical;
   currentUser: UserAccount | null;
   onBack: () => void;
   onRequireLogin?: () => void;
+  /** true = cardurile vin din baza de date (ștampile reale, max una pe zi); altfel localStorage */
+  useBackend?: boolean;
 }
 
 const STORAGE_KEY = 'topfood-fidelity-programs';
@@ -212,6 +215,7 @@ export function FidelityView({
   currentUser,
   onBack,
   onRequireLogin,
+  useBackend = false,
 }: FidelityViewProps) {
   const isDrink = vertical === 'drink';
   const [activeTab, setActiveTab] = useState<'cards' | 'vendor'>('cards');
@@ -229,7 +233,24 @@ export function FidelityView({
   const [accentColor, setAccentColor] = useState<string>(isDrink ? '#17382C' : '#B3261E');
   const [formError, setFormError] = useState<string | null>(null);
 
+  /** Reîncarcă portofelul din backend; false = backend indisponibil (rămânem pe localStorage). */
+  const refreshFromBackend = async (): Promise<boolean> => {
+    const res = await fidelityWallet();
+    if (res.ok) {
+      setPrograms(res.programs);
+      return true;
+    }
+    if (!res.offline) setToastMessage(res.error);
+    return false;
+  };
+
   useEffect(() => {
+    if (useBackend) {
+      void refreshFromBackend().then((ok) => {
+        if (ok) setHydrated(true);
+      });
+      return;
+    }
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -246,7 +267,7 @@ export function FidelityView({
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || useBackend) return;
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(programs));
     } catch {
@@ -261,7 +282,22 @@ export function FidelityView({
     }, 3200);
   };
 
+  /** Ștampilă / premiu pe backend (același apel: cardul plin + scanare = premiul). */
+  const stampOnBackend = async (id: string) => {
+    if (!currentUser) {
+      onRequireLogin?.();
+      return;
+    }
+    const res = await stampFidelity(id);
+    showToast(res.ok ? res.message : res.error);
+    await refreshFromBackend();
+  };
+
   const handleScanStamp = (id: string) => {
+    if (useBackend) {
+      void stampOnBackend(id);
+      return;
+    }
     setPrograms((prev) =>
       prev.map((prog) => {
         if (prog.id !== id) return prog;
@@ -278,6 +314,10 @@ export function FidelityView({
   };
 
   const handleRedeem = (id: string) => {
+    if (useBackend) {
+      void stampOnBackend(id);
+      return;
+    }
     setPrograms((prev) =>
       prev.map((prog) => {
         if (prog.id !== id || prog.stampsCollected < prog.stampsRequired) return prog;
@@ -307,6 +347,26 @@ export function FidelityView({
     }
 
     setFormError(null);
+    if (useBackend) {
+      if (!currentUser) {
+        onRequireLogin?.();
+        return;
+      }
+      void createFidelityCard({ name: cleanName, rewardTitle: cleanReward, stampsRequired, icon: selectedIcon, accentColor }).then(
+        async (res) => {
+          if (!res.ok) {
+            setFormError(res.error);
+            return;
+          }
+          await refreshFromBackend();
+          setVenueName('');
+          setRewardTitle('');
+          setActiveTab('cards');
+          showToast(res.message);
+        },
+      );
+      return;
+    }
     const slug = cleanName
       .toUpperCase()
       .replace(/[^A-Z0-9]+/g, '-')

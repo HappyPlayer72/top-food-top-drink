@@ -764,6 +764,7 @@ export function TopFoodShell({
 
         {navSection === 'fidelitate' && (
           <FidelityView
+            useBackend={backendOnline}
             vertical={vertical}
             currentUser={currentUser}
             onRequireLogin={handleOpenLogin}
