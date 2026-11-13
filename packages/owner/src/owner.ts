@@ -4,7 +4,7 @@
  */
 import { and, avg, count, desc, eq, gte, sql } from "drizzle-orm";
 import {
-  employeeRatings, employees, forbidden, invalid, notFound, posts, reports, reviewReplies, reviews, venueManagers, venues, type Db,
+  employeeRatings, employees, forbidden, invalid, notFound, posts, reports, reviewReplies, reviews, users, venueManagers, venues, type Db,
 } from "@tftd/db";
 
 export async function assertManager(db: Db, userId: string, venueId: string) {
@@ -93,7 +93,8 @@ export async function inviteEmployee(db: Db, userId: string, venueId: string, in
 /** Angajatul apare public doar după ce acceptă (GDPR). */
 export async function respondToInvite(db: Db, employeeUserId: string, employeeId: string, accept: boolean) {
   const [e] = await db.select().from(employees).where(eq(employees.id, employeeId));
-  if (!e || e.userId !== employeeUserId) throw notFound("Invitația");
+  // Doar o invitație încă în așteptare: cine a fost scos sau a refuzat nu se poate readăuga singur.
+  if (!e || e.userId !== employeeUserId || e.accepted || !e.active) throw notFound("Invitația");
   await db.update(employees).set({ accepted: accept, active: accept }).where(eq(employees.id, employeeId));
 }
 
@@ -191,4 +192,48 @@ export async function venueStats(db: Db, userId: string, venueId: string, now = 
     aspects,
     trapAppeals: recentReports,
   };
+}
+
+// ---------- Citiri pentru dashboard-ul /owner ----------
+
+/** Localele pe care userul le administrează (owner sau manager). */
+export async function managedVenues(db: Db, userId: string) {
+  return db
+    .select({ id: venues.id, slug: venues.slug, name: venues.name, vertical: venues.vertical, citySlug: venues.citySlug, role: venueManagers.role })
+    .from(venueManagers)
+    .innerJoin(venues, eq(venues.id, venueManagers.venueId))
+    .where(eq(venueManagers.userId, userId))
+    .orderBy(venues.name);
+}
+
+/** Toate postările localului, inclusiv cele programate (publicul le vede doar după publishAt). */
+export async function postsForOwner(db: Db, userId: string, venueId: string, now = new Date()) {
+  await assertManager(db, userId, venueId);
+  const rows = await db.select().from(posts).where(eq(posts.venueId, venueId)).orderBy(desc(posts.publishAt));
+  return rows.map((p) => ({ ...p, scheduled: p.publishAt > now }));
+}
+
+/** Echipa văzută de owner: activi + invitații încă neacceptate (cei refuzați sau scoși au active = false). */
+export async function employeesForOwner(db: Db, userId: string, venueId: string) {
+  await assertManager(db, userId, venueId);
+  return db
+    .select({ id: employees.id, firstName: employees.firstName, role: employees.role, photoUrl: employees.photoUrl, accepted: employees.accepted, active: employees.active, userId: employees.userId })
+    .from(employees)
+    .where(and(eq(employees.venueId, venueId), eq(employees.active, true)))
+    .orderBy(employees.createdAt);
+}
+
+/** Invitațiile primite de un user ca angajat, încă fără răspuns. */
+export async function pendingInvites(db: Db, userId: string) {
+  return db
+    .select({ employeeId: employees.id, venueName: venues.name, role: employees.role })
+    .from(employees)
+    .innerJoin(venues, eq(venues.id, employees.venueId))
+    .where(and(eq(employees.userId, userId), eq(employees.accepted, false), eq(employees.active, true)));
+}
+
+/** Pentru invitarea unui angajat după numele de utilizator. */
+export async function userIdByUsername(db: Db, username: string): Promise<string | null> {
+  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.username, username.trim().toLowerCase()));
+  return u?.id ?? null;
 }
