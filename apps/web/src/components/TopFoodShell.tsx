@@ -117,8 +117,12 @@ export function TopFoodShell({
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [storageHydrated, setStorageHydrated] = useState<boolean>(false);
+  const [showHamsterEasterEgg, setShowHamsterEasterEgg] =
+    useState<boolean>(false);
 
   const urlReadyRef = useRef<boolean>(false);
+  const hamsterKeyBufferRef = useRef<string>('');
+  const hamsterSearchTriggeredRef = useRef<boolean>(false);
   const scrollPositionsRef = useRef<Partial<Record<NavSection, number>>>({});
   const preLoginScrollYRef = useRef<number>(0);
   const pendingScrollYRef = useRef<number | null>(null);
@@ -515,6 +519,61 @@ export function TopFoodShell({
 
   const isDrink = vertical === 'drink';
 
+  useEffect(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (
+      normalized === 'hamster' &&
+      navSection === 'top' &&
+      !showLoginScreen &&
+      selectedRestaurantId === null
+    ) {
+      if (!hamsterSearchTriggeredRef.current) {
+        hamsterSearchTriggeredRef.current = true;
+        setShowHamsterEasterEgg(true);
+      }
+    } else {
+      hamsterSearchTriggeredRef.current = false;
+    }
+  }, [searchQuery, navSection, showLoginScreen, selectedRestaurantId]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showHamsterEasterEgg) {
+        setShowHamsterEasterEgg(false);
+        return;
+      }
+
+      if (
+        navSection !== 'top' ||
+        showLoginScreen ||
+        selectedRestaurantId !== null ||
+        showHamsterEasterEgg
+      ) {
+        return;
+      }
+
+      if (
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey
+      ) {
+        hamsterKeyBufferRef.current = (
+          hamsterKeyBufferRef.current + event.key.toLowerCase()
+        ).slice(-7);
+        if (hamsterKeyBufferRef.current === 'hamster') {
+          hamsterKeyBufferRef.current = '';
+          setShowHamsterEasterEgg(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navSection, showLoginScreen, selectedRestaurantId, showHamsterEasterEgg]);
+
+  const handleCloseHamsterEasterEgg = () => setShowHamsterEasterEgg(false);
+
   if (showLoginScreen) {
     return (
       <LoginScreen
@@ -636,6 +695,35 @@ export function TopFoodShell({
         }
         onToggleSave={handleToggleSave}
       />
+
+      {showHamsterEasterEgg && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Hamster"
+          onClick={handleCloseHamsterEasterEgg}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fadeIn"
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="relative w-full max-w-sm rounded-xl overflow-hidden bg-[#181412] border border-white/15 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={handleCloseHamsterEasterEgg}
+              aria-label="Închide"
+              className="btn-press absolute top-2.5 right-2.5 z-10 w-11 h-11 rounded-full bg-black/60 text-white hover:bg-black/80 flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src="/easter-hamster.jpg"
+              alt="Hamster"
+              className="block w-full h-auto max-h-[80dvh] object-contain"
+            />
+          </div>
+        </div>
+      )}
 
       {statusMessage && (
         <div
