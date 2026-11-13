@@ -1,0 +1,19 @@
+{
+  "name": "@tftd/api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@tftd/accounts": "*",
+    "@tftd/db": "*",
+    "@tftd/ingestion": "*",
+    "@tftd/moderation": "*",
+    "@tftd/monetization": "*",
+    "@tftd/owner": "*",
+    "@tftd/review-analysis": "*",
+    "@tftd/scoring": "*",
+    "drizzle-orm": "^0.44.0"
+  }
+}
