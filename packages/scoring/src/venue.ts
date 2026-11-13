@@ -1,5 +1,5 @@
 import { splitScores, type SplitScores } from "./honest.ts";
-import { touristTrapIndex, type TrapResult } from "./trap.ts";
+import { touristTrapIndex, type TrapInput, type TrapResult } from "./trap.ts";
 import type { ScoringReview } from "./weights.ts";
 
 export type VenueReview = ScoringReview & {
@@ -23,6 +23,7 @@ export type VenueScores = SplitScores & {
     enoughData: boolean;
     trapLevel: TrapResult["level"];
     trapReasons: TrapResult["reasons"];
+    trapInputs: TrapInput;
   };
 };
 
@@ -35,14 +36,15 @@ export function scoreVenue(reviews: VenueReview[], ctx: VenueContext, now: Date 
   const tracked = reviews.filter((r) => r.authorReturned !== null);
   const oneTime = tracked.filter((r) => r.authorReturned === false).length;
 
-  const trap = touristTrapIndex({
+  const trapInputs = {
     localsScore: split.locals.enoughData ? split.locals.score : null,
     touristsScore: split.tourists.enoughData ? split.tourists.score : null,
     distanceToTouristZoneM: ctx.distanceToTouristZoneM,
     priceRatio: ctx.priceRatio,
     foreignLanguageShare: withLanguage.length ? foreign / withLanguage.length : 0,
     oneTimeVisitorShare: tracked.length ? oneTime / tracked.length : 0,
-  });
+  };
+  const trap = touristTrapIndex(trapInputs);
 
   return {
     ...split,
@@ -54,6 +56,8 @@ export function scoreVenue(reviews: VenueReview[], ctx: VenueContext, now: Date 
       enoughData: split.overall.enoughData,
       trapLevel: trap.level,
       trapReasons: trap.reasons,
+      /** Valorile brute ale semnalelor, și când nu dau puncte (pentru „De ce?” detaliat). */
+      trapInputs,
     },
   };
 }

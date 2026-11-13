@@ -555,6 +555,14 @@ export type ScoreExplanation = {
   enoughData: boolean;
   trapLevel: "none" | "possible" | "trap";
   trapReasons: { signal: string; value: number; points: number; text: string }[];
+  trapInputs?: {
+    localsScore: number | null;
+    touristsScore: number | null;
+    distanceToTouristZoneM: number | null;
+    priceRatio: number | null;
+    foreignLanguageShare: number;
+    oneTimeVisitorShare: number;
+  };
 };
 
 export type LeaderboardEntry = {
