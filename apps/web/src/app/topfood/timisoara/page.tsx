@@ -1,12 +1,21 @@
-import type { Metadata } from 'next';
 import { TopFoodShell } from '@/components/TopFoodShell';
+import { DRINK_HERO_HEADERS, FOOD_HERO_HEADERS } from '@/data/heroHeaders';
 
-export const metadata: Metadata = {
-  title: 'topfood/timișoara — Unde mănâncă timișorenii, nu turiștii',
-  description:
-    'Clasamentul onest al restaurantelor din Timișoara, bazat pe votul localnicilor și detectorul de capcane turistice.',
-};
+export const dynamic = 'force-dynamic';
 
 export default function TopFoodTimisoaraPage() {
-  return <TopFoodShell initialVertical="food" />;
+  const initialFoodHeroIndex = Math.floor(
+    Math.random() * FOOD_HERO_HEADERS.length
+  );
+  const initialDrinkHeroIndex = Math.floor(
+    Math.random() * DRINK_HERO_HEADERS.length
+  );
+
+  return (
+    <TopFoodShell
+      initialVertical="food"
+      initialFoodHeroIndex={initialFoodHeroIndex}
+      initialDrinkHeroIndex={initialDrinkHeroIndex}
+    />
+  );
 }
