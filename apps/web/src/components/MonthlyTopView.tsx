@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronLeft, Trophy } from 'lucide-react';
-import { Restaurant, Vertical, formatScore } from '../types';
+import { Restaurant, TopReviewer, Vertical, formatScore } from '../types';
 import { TOP_LOCAL_REVIEWERS } from '../data/restaurants';
 import { InfluencerBadge, LocalnicBadge } from './BrandPrimitives';
 
@@ -11,6 +11,8 @@ export interface MonthlyTopViewProps {
   restaurants: Restaurant[];
   onBack: () => void;
   onSelectRestaurant: (restaurant: Restaurant) => void;
+  /** Din backend; lipsă = lista statică */
+  topReviewers?: TopReviewer[];
 }
 
 type MonthlyTab = 'localuri' | 'recenzenti' | 'angajati';
@@ -20,6 +22,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   restaurants,
   onBack,
   onSelectRestaurant,
+  topReviewers = TOP_LOCAL_REVIEWERS,
 }) => {
   const isDrink = vertical === 'drink';
   const [selectedMonth, setSelectedMonth] = useState<'2026-11' | '2026-10'>('2026-11');
@@ -510,8 +513,8 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
 
             <div className="space-y-2.5">
               {(showAllReviewers
-                ? TOP_LOCAL_REVIEWERS
-                : TOP_LOCAL_REVIEWERS.slice(0, 3)
+                ? topReviewers
+                : topReviewers.slice(0, 3)
               ).map((reviewer, idx) => (
                 <div
                   key={reviewer.id}

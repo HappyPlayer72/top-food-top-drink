@@ -10,9 +10,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
 import {
-  checkins, cities, createDb, employees, localVerifications, partnerships, posts, reviews, touristZones, userSocialLinks, users,
-  venueManagers, venues, vibeChecks,
+  checkins, cities, createDb, employees, localVerifications, loyaltyPrograms, menuItems, partnerships, posts, reviewVotes, reviews, touristZones,
+  userSocialLinks, users, venueManagers, venues, vibeChecks, type OpeningHours,
 } from "@tftd/db";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
@@ -126,6 +127,33 @@ async function main() {
     { venueId: venueIds.get("depoul-de-tramvaie")!, authorId: ownerId, type: "event", title: "Noaptea de vinil", body: "De la 23:00. 30 lei.", eventAt: saturday },
   ]);
 
+  // ---------- Program, meniu, prezentare ----------
+  const foodHours: OpeningHours = { mon: [["11:00", "22:00"]], tue: [["11:00", "22:00"]], wed: [["11:00", "22:00"]], thu: [["11:00", "22:00"]], fri: [["11:00", "23:00"]], sat: [["12:00", "23:00"]], sun: [["12:00", "20:00"]] };
+  const barHours: OpeningHours = { tue: [["17:00", "00:00"]], wed: [["17:00", "00:00"]], thu: [["17:00", "02:00"]], fri: [["17:00", "04:00"]], sat: [["18:00", "04:00"]] };
+  for (const v of SEED_VENUES) {
+    await db.update(venues).set({ openingHours: v.vertical === "food" ? foodHours : barHours }).where(sql`${venues.id} = ${venueIds.get(v.slug)!}`);
+  }
+  await db.update(venues).set({
+    editorialHeadline: "Ciorba de burtă pentru care vin localnicii din tot Iosefinul",
+    editorialWriteup: [
+      "Local de cartier deschis de Sandu acum opt ani. Meniul e scurt și se schimbă după piață.",
+      "Ciorba de burtă se face doar marțea și vinerea, de la zero. La prânz e plin, sună înainte.",
+    ],
+    occasionTags: ["prânz rapid", "cu familia", "buget mic"],
+  }).where(sql`${venues.id} = ${sandu}`);
+  await db.insert(menuItems).values([
+    { venueId: sandu, name: "Ciorbă de burtă", priceLei: 24, description: "Doar marțea și vinerea", mustOrder: true, position: 0 },
+    { venueId: sandu, name: "Sarmale cu mămăligă", priceLei: 32, mustOrder: true, position: 1 },
+    { venueId: sandu, name: "Papanași", priceLei: 18, position: 2 },
+  ]);
+  await db.update(venues).set({ drinkTags: ["muzica-live"] }).where(sql`${venues.slug} in ('jazz-in-pivnita', 'pivnita-cu-bolta')`);
+
+  // ---------- Fidelitate ----------
+  await db.insert(loyaltyPrograms).values([
+    { venueId: sandu, createdBy: ownerId, rewardTitle: "O ciorbă din partea casei", stampsRequired: 6, icon: "soup", accentColor: "#0B7A53", stampSecret: randomBytes(32).toString("base64url") },
+    { venueId: venueIds.get("pivnita-cu-bolta")!, createdBy: ownerId, rewardTitle: "A cincea bere e gratis", stampsRequired: 5, icon: "beer", accentColor: "#F2A33A", stampSecret: randomBytes(32).toString("base64url") },
+  ]);
+
   // ---------- Review-uri și check-in-uri ----------
   await db.insert(reviews).values(
     data.reviews.map((r) => ({
@@ -148,6 +176,14 @@ async function main() {
     .insert(checkins)
     .values(data.checkins.map((c) => ({ userId: userIds.get(c.userKey)!, citySlug: CITY, venueId: c.venueSlug ? venueIds.get(c.venueSlug)! : null, day: c.day })))
     .onConflictDoNothing();
+
+  // ---------- Voturi „util”: localnicii votează review-urile lungi ale altor localnici ----------
+  const nativeReviews = await db.select({ id: reviews.id, authorId: reviews.authorId, text: reviews.text }).from(reviews).where(sql`${reviews.authorId} is not null`);
+  const voters = [...userIds.entries()].filter(([k]) => k.startsWith("u")).map(([, id]) => id);
+  const votes = nativeReviews
+    .filter((r) => (r.text?.length ?? 0) > 60)
+    .flatMap((r, i) => voters.slice(i % 7, (i % 7) + (i % 5) + 1).filter((v) => v !== r.authorId).map((userId) => ({ reviewId: r.id, userId })));
+  if (votes.length) await db.insert(reviewVotes).values(votes).onConflictDoNothing();
 
   // ---------- Sponsorizat (NU influențează scorul) și vibe check ----------
   await db.insert(partnerships).values([

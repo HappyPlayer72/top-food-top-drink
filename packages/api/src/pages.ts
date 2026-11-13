@@ -4,10 +4,12 @@
  */
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import {
-  cities, employees, leaderboardSnapshots, notFound, posts, reviewReplies, reviews, socialSubmissions, userSocialLinks, users, venueSources,
+  cities, employees, leaderboardSnapshots, menuItems, notFound, posts, reviewReplies, reviews, socialSubmissions, userSocialLinks, users, venueSources,
   venues, vibeChecks, type Db,
 } from "@tftd/db";
+import { venueProgram } from "@tftd/loyalty";
 import { activePartnership, sponsoredSlots } from "@tftd/monetization";
+import { formatHours, openStatus } from "./hours.ts";
 import { PRIOR_WEIGHT, POSSIBLE_TRAP, TRAP } from "@tftd/scoring";
 
 export type Vertical = "food" | "drink";
@@ -27,6 +29,10 @@ const card = {
   touristsScore: venues.touristsScore,
   touristTrapIndex: venues.touristTrapIndex,
   explanation: venues.scoreExplanation,
+  aspectScores: venues.aspectScores,
+  photo: sql<string | null>`${venues.photos}[1]`,
+  openingHours: venues.openingHours,
+  drinkTags: venues.drinkTags,
 };
 
 /** Pagina orașului: topfood/{oras}, topdrink/{oras}, plus /categorie/{cat}. */
@@ -66,7 +72,11 @@ export async function cityPage(
     city: { slug: city.slug, name: city.name, neighborhoods: city.neighborhoods },
     vertical: q.vertical,
     reviewCount: n,
-    top: top.map((v, i) => ({ rank: i + 1, ...v, trapLevel: trapLevel(v.touristTrapIndex) })),
+    top: top.map((v, i) => {
+      const { openingHours, ...rest } = v;
+      const open = openStatus(openingHours, now);
+      return { rank: i + 1, ...rest, trapLevel: trapLevel(v.touristTrapIndex), openNow: open.openNow, openLabel: open.label };
+    }),
     sponsored: await sponsoredSlots(db, q.citySlug, q.vertical, now, q.category),
     traps: traps.map((t) => ({ ...t, level: trapLevel(t.index), reasons: t.explanation?.trapReasons ?? [] })),
   };
@@ -99,8 +109,10 @@ export async function venuePage(
       isPaid: reviews.isPaid,
       verifiedVisit: reviews.verifiedVisit,
       externalAuthor: reviews.externalAuthor,
-      author: { username: users.username, displayName: users.displayName, neighborhood: users.localNeighborhood, roles: users.roles, avatarUrl: users.avatarUrl },
+      author: { username: users.username, displayName: users.displayName, neighborhood: users.localNeighborhood, roles: users.roles, avatarUrl: users.avatarUrl, followers: users.followers },
       servedBy: employees.firstName,
+      weight: reviews.weight,
+      helpfulCount: sql<number>`(select count(*)::int from review_votes rv where rv.review_id = ${reviews.id})`,
     })
     .from(reviews)
     .leftJoin(users, eq(users.id, reviews.authorId))
@@ -162,6 +174,12 @@ export async function venuePage(
     .select({ source: venueSources.source, rating: venueSources.rawRating, reviewCount: venueSources.rawReviewCount, url: venueSources.url })
     .from(venueSources)
     .where(eq(venueSources.venueId, venue.id));
+  const menu = await db
+    .select({ name: menuItems.name, priceLei: menuItems.priceLei, description: menuItems.description, mustOrder: menuItems.mustOrder })
+    .from(menuItems)
+    .where(eq(menuItems.venueId, venue.id))
+    .orderBy(asc(menuItems.position));
+  const open = openStatus(venue.openingHours, now);
 
   return {
     venue: {
@@ -175,11 +193,23 @@ export async function venuePage(
       phone: venue.phone,
       website: venue.website,
       openingHours: venue.openingHours,
+      hoursText: formatHours(venue.openingHours),
+      openNow: open.openNow,
+      openLabel: open.label,
       priceMinLei: venue.priceMinLei,
       priceMaxLei: venue.priceMaxLei,
       drinkPrices: venue.drinkPrices,
       location: { lat: venue.location.y, lng: venue.location.x },
+      photos: venue.photos,
+      headline: venue.editorialHeadline,
+      writeup: venue.editorialWriteup,
+      occasionTags: venue.occasionTags,
+      drinkTags: venue.drinkTags,
+      status: venue.status,
     },
+    menu,
+    aspectScores: venue.aspectScores ?? {},
+    loyalty: await venueProgram(db, venue.id),
     scores: {
       honest: venue.honestScore,
       locals: venue.localsScore,

@@ -5,7 +5,7 @@
 import { and, count, countDistinct, eq, inArray, isNotNull } from "drizzle-orm";
 import { checkins, cities, reviews, touristZones, users, venues, type Db } from "@tftd/db";
 import { cityMean } from "./honest.ts";
-import { distanceToNearestZone, priceRatio, scoreVenue, type VenueReview } from "./venue.ts";
+import { aggregateAspects, distanceToNearestZone, priceRatio, scoreVenue, type VenueReview } from "./venue.ts";
 import { reviewWeight } from "./weights.ts";
 
 export async function recalculateCity(db: Db, citySlug: string, vertical: "food" | "drink", now = new Date()) {
@@ -36,6 +36,7 @@ export async function recalculateCity(db: Db, citySlug: string, vertical: "food"
       postedAt: reviews.postedAt,
       language: reviews.language,
       visitWeekendNight: reviews.visitWeekendNight,
+      aspects: reviews.aspects,
       localCitySlug: users.localCitySlug,
       localUntil: users.localUntil,
     })
@@ -110,6 +111,7 @@ export async function recalculateCity(db: Db, citySlug: string, vertical: "food"
           totalWeight: result.overall.totalWeight,
           touristTrapIndex: result.trap.index,
           scoreExplanation: result.explanation,
+          aspectScores: aggregateAspects(own.map((x) => ({ weight: reviewWeight(x.s, now), aspects: x.row.aspects }))),
           scoreUpdatedAt: now,
         })
         .where(eq(venues.id, v.id));

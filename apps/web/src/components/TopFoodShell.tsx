@@ -8,6 +8,8 @@ import {
   NavSection,
   Restaurant,
   Review,
+  TopReviewer,
+  WeekendEvent,
   UserAccount,
   Vertical,
 } from '../types';
@@ -80,6 +82,11 @@ export interface TopFoodShellProps {
   initialSection?: NavSection;
   initialFoodHeroIndex?: number;
   initialDrinkHeroIndex?: number;
+  /** Date din backend (src/lib/backend/load.ts); lipsă = datele statice din src/data */
+  foodRestaurants?: Restaurant[];
+  drinkVenues?: Restaurant[];
+  weekendEvents?: WeekendEvent[];
+  topReviewers?: TopReviewer[];
 }
 
 export function TopFoodShell({
@@ -87,14 +94,18 @@ export function TopFoodShell({
   initialSection = 'top',
   initialFoodHeroIndex = 0,
   initialDrinkHeroIndex = 0,
+  foodRestaurants: initialFood = INITIAL_RESTAURANTS,
+  drinkVenues: initialDrink = DRINK_VENUES,
+  weekendEvents = WEEKEND_EVENTS,
+  topReviewers,
 }: TopFoodShellProps) {
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
   const [navSection, setNavSection] = useState<NavSection>(initialSection);
 
   const [foodRestaurants, setFoodRestaurants] =
-    useState<Restaurant[]>(INITIAL_RESTAURANTS);
+    useState<Restaurant[]>(initialFood);
   const [drinkVenues, setDrinkVenues] =
-    useState<Restaurant[]>(DRINK_VENUES);
+    useState<Restaurant[]>(initialDrink);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [foodFilters, setFoodFilters] = useState<FoodQuickFilter[]>([]);
@@ -216,7 +227,7 @@ export function TopFoodShell({
 
       const venueParam = params.get('venue');
       const matchedVenue = venueParam
-        ? INITIAL_RESTAURANTS.concat(DRINK_VENUES).find(
+        ? initialFood.concat(initialDrink).find(
             (r) => r.slug === venueParam || r.id === venueParam
           ) ?? null
         : null;
@@ -519,7 +530,7 @@ export function TopFoodShell({
             vertical={vertical}
             restaurants={foodRestaurants}
             drinkVenues={drinkVenues}
-            weekendEvents={WEEKEND_EVENTS}
+            weekendEvents={weekendEvents}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             foodFilters={foodFilters}
@@ -555,6 +566,7 @@ export function TopFoodShell({
           <MonthlyTopView
             vertical={vertical}
             restaurants={activeVerticalVenues}
+            topReviewers={topReviewers}
             onBack={() => {
               setNavSection('top');
               window.scrollTo({ top: 0, behavior: 'smooth' });

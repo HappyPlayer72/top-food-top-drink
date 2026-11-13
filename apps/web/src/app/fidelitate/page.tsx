@@ -1,9 +1,12 @@
 import { TopFoodShell } from '@/components/TopFoodShell';
+import { loadShellData } from '@/lib/backend/load';
 import { DRINK_HERO_HEADERS, FOOD_HERO_HEADERS } from '@/data/heroHeaders';
 
 export const dynamic = 'force-dynamic';
 
-export default function FidelitatePage() {
+export default async function FidelitatePage() {
+  // Datele din backend; null = baza nu e disponibilă, se folosesc datele statice
+  const data = await loadShellData();
   const initialFoodHeroIndex = Math.floor(
     Math.random() * FOOD_HERO_HEADERS.length
   );
@@ -17,6 +20,7 @@ export default function FidelitatePage() {
       initialSection="fidelitate"
       initialFoodHeroIndex={initialFoodHeroIndex}
       initialDrinkHeroIndex={initialDrinkHeroIndex}
+      {...(data ?? {})}
     />
   );
 }

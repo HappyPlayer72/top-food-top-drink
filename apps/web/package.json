@@ -13,7 +13,10 @@
     "maplibre-gl": "^6.18.0",
     "next": "^15.3.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@tftd/api": "*",
+    "@tftd/db": "*",
+    "drizzle-orm": "^0.44.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",

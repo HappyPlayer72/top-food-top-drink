@@ -4,7 +4,7 @@
  */
 import { and, asc, eq } from "drizzle-orm";
 import { approveClaim } from "@tftd/accounts";
-import { forbidden, invalid, matchCandidates, notFound, ownerClaims, reports, reviews, users, venueSources, type Db } from "@tftd/db";
+import { forbidden, invalid, matchCandidates, notFound, ownerClaims, reports, reviews, users, venueSources, venues, type Db } from "@tftd/db";
 
 export async function assertAdmin(db: Db, userId: string) {
   const [u] = await db.select({ roles: users.roles }).from(users).where(eq(users.id, userId));
@@ -33,6 +33,13 @@ export async function resolveReport(db: Db, adminId: string, reportId: string, d
   if (r.status !== "open") throw invalid("Raportul a fost deja rezolvat.");
   if (r.targetType === "review" && decision === "hide") {
     await db.update(reviews).set({ status: "hidden" }).where(eq(reviews.id, r.targetId));
+  }
+  // Local adăugat de mână de un user: `accept` îl publică, `reject` îl închide
+  if (r.targetType === "venue" && (decision === "accept" || decision === "reject")) {
+    await db
+      .update(venues)
+      .set({ status: decision === "accept" ? "active" : "closed" })
+      .where(and(eq(venues.id, r.targetId), eq(venues.status, "pending")));
   }
   await db
     .update(reports)
