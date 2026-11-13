@@ -10,3 +10,4 @@ build/
 .vercel/
 __pycache__/
 .venv/
+CLAUDE.local.md
