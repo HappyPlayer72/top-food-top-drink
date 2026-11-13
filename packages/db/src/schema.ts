@@ -233,6 +233,8 @@ export const ownerClaims = pgTable("owner_claims", {
   cui: text(),
   /** Hash-ul codului trimis prin SMS/apel; niciodată codul în clar. */
   codeHash: text(),
+  /** Încercări de confirmare; după 5 cererea e respinsă (anti-ghicire a codului). */
+  attempts: integer().notNull().default(0),
   decidedBy: uuid().references(() => users.id),
   decidedAt: timestamp({ withTimezone: true }),
   createdAt: createdAt(),
