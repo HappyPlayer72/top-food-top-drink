@@ -1,0 +1,18 @@
+{
+  "name": "@tftd/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "job": "tsx src/main.ts run"
+  },
+  "dependencies": {
+    "@tftd/db": "*",
+    "@tftd/ingestion": "*",
+    "@tftd/leaderboard": "*",
+    "@tftd/review-analysis": "*",
+    "@tftd/scoring": "*",
+    "croner": "^9.1.0",
+    "drizzle-orm": "^0.44.0"
+  }
+}
