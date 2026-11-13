@@ -3,7 +3,8 @@
  * Dacă baza de date nu e configurată sau nu răspunde, întoarce null și site-ul folosește
  * datele statice din src/data — așa merge și fără Docker.
  */
-import { cityPage, createDb, leaderboardPage, topReviewers, venuePage, weekendEvents, type Db } from '@tftd/api';
+import { cityPage, leaderboardPage, topReviewers, venuePage, weekendEvents, type Db } from '@tftd/api';
+import { getDb } from '../server/db';
 import { cities } from '@tftd/db';
 import { eq } from 'drizzle-orm';
 import { DRINK_VENUES, INITIAL_RESTAURANTS } from '../../data/restaurants';
@@ -12,11 +13,9 @@ import { monthlyBySlug, toRestaurant, toTopReviewer, toWeekendEvent } from './to
 
 const CITY = 'timisoara';
 
-// O singură conexiune per proces (și una singură în dev, la hot reload)
-const g = globalThis as unknown as { __tftdDb?: Db };
+// Aceeași conexiune ca restul serverului (lib/server/db.ts); fără DATABASE_URL → date statice
 function db(): Db | null {
-  if (!process.env.DATABASE_URL) return null;
-  return (g.__tftdDb ??= createDb());
+  return process.env.DATABASE_URL ? getDb() : null;
 }
 
 const STATIC = new Map(INITIAL_RESTAURANTS.concat(DRINK_VENUES).map((r) => [r.slug, r]));
