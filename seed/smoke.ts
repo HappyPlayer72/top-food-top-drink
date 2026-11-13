@@ -72,6 +72,55 @@ ok("postarea programată: la owner da, public nu", ownerPosts.find((p) => p.id =
 const denied = await owner.employeesForOwner(db, user.id, sandu.venue.id).then(() => null, (e: unknown) => e);
 ok("alt user nu vede echipa altui local", denied instanceof ServiceError && denied.code === "forbidden");
 
+// Raportarea review-urilor: doar managerul localului, o singură dată cât raportul e deschis, fără să ascundă review-ul
+const fails = (p: Promise<unknown>) => p.then(() => null, (e: unknown) => e);
+const reportDenied = await fails(owner.reportReview(db, user.id, review.id, "Review fals, scris de un concurent."));
+ok("raportare: un user care nu e manager primește forbidden", reportDenied instanceof ServiceError && reportDenied.code === "forbidden", String((reportDenied as Error | null)?.message));
+await owner.reportReview(db, sanduOwnerId!, review.id, "Review fals, scris de un concurent.");
+const reportTwice = await fails(owner.reportReview(db, sanduOwnerId!, review.id, "Încă o dată, același motiv."));
+ok(
+  "raportare: managerul raportează o dată, a doua oară conflict",
+  reportTwice instanceof ServiceError && reportTwice.code === "conflict" && reportTwice.message === "Ai raportat deja acest review. Decide un admin.",
+  String((reportTwice as Error | null)?.message),
+);
+const reported = await db.query.reviews.findFirst({ where: (r, { eq }) => eq(r.id, review.id) });
+ok("raportarea nu ascunde review-ul (regula 2)", reported?.status === "published", reported?.status);
+
+// Revendicare: limită de încercări, limită de cereri, un singur owner per local
+const claimUser = async (name: string) => accounts.register(db, { username: `${name}${suffix}`, displayName: name, password: "parola-lunga-1", email: `${name}${suffix}@exemplu.ro` });
+const isOwnerOf = async (userId: string, venueId: string) =>
+  !!(await db.query.venueManagers.findFirst({ where: (m, { and, eq }) => and(eq(m.userId, userId), eq(m.venueId, venueId), eq(m.role, "owner")) }));
+const claimerA = await claimUser("claima");
+const claim1 = await accounts.startClaim(db, claimerA.id, depou.venue.id, "phone_code");
+const wrong = claim1.code === "000000" ? "000001" : "000000";
+const wrongErrors: unknown[] = [];
+for (let i = 0; i < 5; i++) wrongErrors.push(await fails(accounts.confirmClaim(db, claimerA.id, claim1.claimId, { code: wrong })));
+const last = wrongErrors[4];
+ok("revendicare: 5 coduri greșite → mesaj de prea multe încercări", last instanceof ServiceError && last.message === "Prea multe încercări greșite. Cere un cod nou peste 24 de ore.", String((last as Error | null)?.message));
+const rejectedClaim = await db.query.ownerClaims.findFirst({ where: (c, { eq }) => eq(c.id, claim1.claimId) });
+ok("revendicare: cererea e respinsă după 5 încercări", rejectedClaim?.status === "rejected" && rejectedClaim.attempts === 5, `${rejectedClaim?.status}, ${rejectedClaim?.attempts} încercări`);
+const sixth = await fails(accounts.confirmClaim(db, claimerA.id, claim1.claimId, { code: claim1.code! }));
+ok("revendicare: a 6-a încercare, chiar cu codul corect, nu reușește", sixth instanceof ServiceError && !(await isOwnerOf(claimerA.id, depou.venue.id)), String((sixth as Error | null)?.message));
+await accounts.startClaim(db, claimerA.id, depou.venue.id, "phone_code");
+await accounts.startClaim(db, claimerA.id, depou.venue.id, "phone_code");
+const fourth = await fails(accounts.startClaim(db, claimerA.id, depou.venue.id, "phone_code"));
+ok("revendicare: a 4-a cerere în 24 de ore e refuzată", fourth instanceof ServiceError && fourth.code === "invalid", String((fourth as Error | null)?.message));
+
+const claimerB = await claimUser("claimb");
+const claimerC = await claimUser("claimc");
+const claimB = await accounts.startClaim(db, claimerB.id, bega.venue.id, "phone_code");
+const claimC = await accounts.startClaim(db, claimerC.id, bega.venue.id, "phone_code");
+await accounts.confirmClaim(db, claimerB.id, claimB.claimId, { code: claimB.code! });
+const second = await fails(accounts.confirmClaim(db, claimerC.id, claimC.claimId, { code: claimC.code! }));
+ok("revendicare: primul devine owner", await isOwnerOf(claimerB.id, bega.venue.id));
+ok(
+  "revendicare: al doilea primește forbidden și nu devine owner",
+  second instanceof ServiceError && second.code === "forbidden" && !(await isOwnerOf(claimerC.id, bega.venue.id)),
+  String((second as Error | null)?.message),
+);
+const secondClaim = await db.query.ownerClaims.findFirst({ where: (c, { eq }) => eq(c.id, claimC.claimId) });
+ok("revendicare: cererea celui de-al doilea e respinsă", secondClaim?.status === "rejected", secondClaim?.status);
+
 // Un angajat scos de owner nu se poate readăuga singur acceptând invitația veche
 const invited = team.find((e) => e.userId === user.id)!;
 await owner.removeEmployee(db, sanduOwnerId!, invited.id);
