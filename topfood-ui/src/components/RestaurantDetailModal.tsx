@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Bookmark, Check, ChevronLeft, MapPin, ThumbsUp, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Bookmark, Check, ChevronLeft, MapPin, ThumbsUp, X } from 'lucide-react';
 import {
   AuthorRole,
   Restaurant,
   Review,
+  UserAccount,
   formatScore,
 } from '../types';
 import {
@@ -16,10 +17,12 @@ import {
   LocalVsTouristBars,
   LocalnicBadge,
   PartnerBadge,
+  TrapBadge,
 } from './BrandPrimitives';
 
 export interface RestaurantDetailModalProps {
   restaurant: Restaurant | null;
+  currentUser: UserAccount;
   onClose: () => void;
   onAddReview: (restaurantId: string, review: Review) => void;
   onLocateOnMap?: (restaurant: Restaurant) => void;
@@ -29,36 +32,9 @@ export interface RestaurantDetailModalProps {
 
 type ReviewFilterTab = 'verified-local' | 'tourist' | 'influencer' | 'all';
 
-type ReviewerRoleChoice = 'verified-local' | 'tourist' | 'influencer';
-
-const ROLE_OPTIONS: {
-  key: ReviewerRoleChoice;
-  label: string;
-  weight: number;
-  note: string;
-}[] = [
-  {
-    key: 'verified-local',
-    label: 'Localnic verificat (2,0×)',
-    weight: 2.0,
-    note: 'Rezident în Timișoara. Votul tău cântărește dublu.',
-  },
-  {
-    key: 'tourist',
-    label: 'Turist / Vizitator (1,0×)',
-    weight: 1.0,
-    note: 'Contribuie separat la Scorul Turiștilor.',
-  },
-  {
-    key: 'influencer',
-    label: 'Influencer, colaborare plătită (0,2×)',
-    weight: 0.2,
-    note: 'Colaborare declarată transparent; impact minim în scor.',
-  },
-];
-
 export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   restaurant,
+  currentUser,
   onClose,
   onAddReview,
   onLocateOnMap,
@@ -71,15 +47,17 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [localSaved, setLocalSaved] = useState(false);
   const [helpfulVotedKeys, setHelpfulVotedKeys] = useState<Record<string, boolean>>({});
 
-  // Review form state
-  const [authorName, setAuthorName] = useState('');
-  const [authorNeighborhood, setAuthorNeighborhood] = useState('Iosefin');
-  const [roleChoice, setRoleChoice] = useState<ReviewerRoleChoice>('verified-local');
+  // Review form state (identity derived from currentUser)
   const [scoreInput, setScoreInput] = useState<number>(9);
+  const [gradeText, setGradeText] = useState<string>('9');
+  const [markAsTrap, setMarkAsTrap] = useState<boolean>(false);
   const [praisedEmployee, setPraisedEmployee] = useState<string>('');
   const [reviewText, setReviewText] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
+
+  const modalOverlayRef = useRef<HTMLDivElement | null>(null);
+  const reviewDrawerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!restaurant) return;
@@ -90,13 +68,30 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setShowWhyTrap(false);
     setIsReviewDrawerOpen(false);
     setHelpfulVotedKeys({});
-    setAuthorName('');
     setPraisedEmployee('');
     setReviewText('');
-    setScoreInput(Math.round(restaurant.foodQualityScore));
+    const initialGrade = Math.min(
+      10,
+      Math.max(1, Math.round(restaurant.foodQualityScore))
+    );
+    setScoreInput(initialGrade);
+    setGradeText(String(initialGrade));
+    setMarkAsTrap(false);
     setFormError(null);
     setSubmittedNotice(null);
+    if (modalOverlayRef.current) {
+      modalOverlayRef.current.scrollTop = 0;
+    }
   }, [restaurant?.id]);
+
+  useEffect(() => {
+    if (!isReviewDrawerOpen) return;
+    requestAnimationFrame(() => {
+      if (reviewDrawerRef.current) {
+        reviewDrawerRef.current.scrollTop = 0;
+      }
+    });
+  }, [isReviewDrawerOpen]);
 
   // Close on Escape & lock background scroll
   useEffect(() => {
@@ -147,36 +142,63 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     else setLocalSaved((prev) => !prev);
   };
 
+  const parseGradeInput = (raw: string): number | null => {
+    const normalized = raw.trim().replace(',', '.');
+    if (!normalized) return null;
+    const num = Number(normalized);
+    if (!Number.isFinite(num)) return null;
+    return Math.round(num);
+  };
+
+  const handleGradeTextChange = (raw: string) => {
+    setGradeText(raw);
+    const parsed = parseGradeInput(raw);
+    if (parsed !== null && parsed >= 1 && parsed <= 10) {
+      setScoreInput(parsed);
+    }
+  };
+
+  const handleGradeBlur = () => {
+    const parsed = parseGradeInput(gradeText);
+    const clamped =
+      parsed === null ? scoreInput : Math.min(10, Math.max(1, parsed));
+    setScoreInput(clamped);
+    setGradeText(String(clamped));
+  };
+
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    const name = authorName.trim();
-    const text = reviewText.trim();
-    if (!name) {
-      setFormError('Scrie numele sau inițialele tale (ex. Andrei P.).');
+    const parsedGrade = parseGradeInput(gradeText);
+    if (parsedGrade === null || parsedGrade < 1 || parsedGrade > 10) {
+      setFormError('Introdu o notă întreagă între 1 și 10.');
       return;
     }
+    const finalGrade = parsedGrade;
+
+    const text = reviewText.trim();
     if (text.length < 10) {
       setFormError('Scrie cel puțin câteva cuvinte concrete despre experiență.');
       return;
     }
 
-    const roleMeta =
-      ROLE_OPTIONS.find((r) => r.key === roleChoice) ?? ROLE_OPTIONS[0];
-
     const newReview: Review = {
       id: `rev-${Date.now()}`,
-      authorName: name,
-      authorRole: roleChoice as AuthorRole,
+      authorName: currentUser.name,
+      authorRole: currentUser.role as AuthorRole,
       authorNeighborhood:
-        roleChoice === 'verified-local' ? authorNeighborhood : undefined,
-      followerCountText: roleChoice === 'influencer' ? '12k' : undefined,
-      weightMultiplier: roleMeta.weight,
-      isVerifiedVisit: roleChoice !== 'tourist',
-      isPaidCollab: roleChoice === 'influencer',
-      foodScore: scoreInput,
-      trapEstimatePct: restaurant.touristTrapIndex,
+        currentUser.role === 'verified-local'
+          ? currentUser.neighborhood
+          : undefined,
+      weightMultiplier: currentUser.weightMultiplier,
+      isVerifiedVisit: currentUser.role === 'verified-local',
+      isPaidCollab: false,
+      foodScore: finalGrade,
+      trapEstimatePct: markAsTrap
+        ? 95
+        : Math.min(restaurant.touristTrapIndex, 18),
+      markedAsTouristTrap: markAsTrap,
       date: 'Chiar acum',
       text,
       language: 'RO',
@@ -185,13 +207,17 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     };
 
     onAddReview(restaurant.id, newReview);
-    setReviewFilter(roleChoice === 'verified-local' ? 'verified-local' : roleChoice);
+    setReviewFilter(currentUser.role);
     setIsReviewDrawerOpen(false);
-    setAuthorName('');
     setReviewText('');
     setPraisedEmployee('');
+    setMarkAsTrap(false);
     setSubmittedNotice(
-      `Review publicat cu pondere ${formatScore(roleMeta.weight)}×. Scorul s-a actualizat.`
+      `Review publicat ca ${currentUser.name} (${formatScore(
+        currentUser.weightMultiplier
+      )}×)${
+        markAsTrap ? ' cu semnalare de capcană turistică' : ''
+      }. Scorul s-a actualizat.`
     );
   };
 
@@ -205,6 +231,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
   return (
     <div
+      ref={modalOverlayRef}
       className="fixed inset-0 z-50 overflow-y-auto modal-backdrop-enter"
       role="dialog"
       aria-modal="true"
@@ -634,6 +661,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                               Turist
                             </span>
                           )}
+                          {rev.markedAsTouristTrap && (
+                            <TrapBadge
+                              variant="severe"
+                              label="Semnalat capcană"
+                            />
+                          )}
                         </div>
 
                         <span className="font-display text-[28px] leading-none tabular-nums shrink-0">
@@ -833,11 +866,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
         {/* INTERACTIVE REVIEW SUBMISSION DRAWER */}
         {isReviewDrawerOpen && (
           <div
-            className="modal-backdrop-enter fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            className="modal-backdrop-enter fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto"
             onClick={() => setIsReviewDrawerOpen(false)}
           >
             <div
-              className={`drawer-sheet-enter w-full sm:max-w-lg rounded-t-[8px] sm:rounded-[6px] border p-5 space-y-4 max-h-[90vh] overflow-y-auto ${
+              ref={reviewDrawerRef}
+              className={`drawer-sheet-enter w-full sm:max-w-lg rounded-[6px] border p-5 space-y-4 max-h-[90vh] overflow-y-auto ${
                 isDrink
                   ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
                   : 'bg-white border-[#3A2418] text-[#3A2418]'
@@ -859,117 +893,175 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               </div>
 
               <form onSubmit={handleReviewSubmit} className="space-y-4">
+                {/* Account-derived author identity ("Cine scrie?") — no influencer option */}
                 <div className="space-y-1.5">
-                  <label className="text-[13px] font-semibold block">
+                  <span className="text-[13px] font-semibold block">
                     Cine scrie?
-                  </label>
-                  <div className="space-y-1.5">
-                    {ROLE_OPTIONS.map((opt) => {
-                      const active = roleChoice === opt.key;
-                      return (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          onClick={() => setRoleChoice(opt.key)}
-                          className={`btn-press w-full px-3 py-2 rounded-[4px] border text-left ${
-                            active
-                              ? isDrink
-                                ? 'border-[#F2A33A] bg-[#1E4335]'
-                                : 'border-[#3A2418] bg-[#FAF8F5]'
-                              : isDrink
-                              ? 'border-[#285443] bg-[#143025]'
-                              : 'border-[#E6DFD5] bg-white'
-                          }`}
-                        >
-                          <div className="text-[13px] font-semibold">
-                            {opt.label}
-                          </div>
-                          <div
-                            className={`text-[11px] ${
-                              isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                  </span>
+                  <div
+                    className={`px-3.5 py-2.5 rounded-[4px] border flex items-center justify-between gap-3 ${
+                      isDrink
+                        ? 'border-[#285443] bg-[#143025]'
+                        : 'border-[#E6DFD5] bg-[#FAF8F5]'
+                    }`}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-[14px]">
+                          {currentUser.name}
+                        </span>
+                        {currentUser.role === 'verified-local' ? (
+                          <LocalnicBadge
+                            label={`Localnic din ${
+                              currentUser.neighborhood ?? 'Timișoara'
+                            }`}
+                            size="xs"
+                          />
+                        ) : (
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[11px] font-semibold ${
+                              isDrink
+                                ? 'border-[#2D5947] text-[#F4EEE2]/80 bg-[#122B22]'
+                                : 'border-[#D6CFC5] text-[#6E5649] bg-white'
                             }`}
                           >
-                            {opt.note}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="rev-author-name"
-                      className="text-[13px] font-semibold block"
-                    >
-                      Numele tău
-                    </label>
-                    <input
-                      id="rev-author-name"
-                      type="text"
-                      value={authorName}
-                      onChange={(e) => setAuthorName(e.target.value)}
-                      placeholder="ex. Andrei P."
-                      className={`w-full px-3 py-2 rounded-[4px] border text-[14px] ${
-                        isDrink
-                          ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]'
-                          : 'bg-white border-[#3A2418] text-[#3A2418]'
-                      }`}
-                    />
-                  </div>
-
-                  {roleChoice === 'verified-local' && (
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="rev-neighborhood"
-                        className="text-[13px] font-semibold block"
-                      >
-                        Cartierul tău
-                      </label>
-                      <select
-                        id="rev-neighborhood"
-                        value={authorNeighborhood}
-                        onChange={(e) => setAuthorNeighborhood(e.target.value)}
-                        className={`w-full px-3 py-2 rounded-[4px] border text-[14px] ${
-                          isDrink
-                            ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]'
-                            : 'bg-white border-[#3A2418] text-[#3A2418]'
+                            Turist / Vizitator
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        className={`text-[11px] ${
+                          isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
                         }`}
                       >
-                        <option value="Iosefin">Iosefin</option>
-                        <option value="Fabric">Fabric</option>
-                        <option value="Elisabetin">Elisabetin</option>
-                        <option value="Cetate">Cetate</option>
-                        <option value="Complex">Complex</option>
-                        <option value="Circumvalațiunii">Circumvalațiunii</option>
-                      </select>
+                        Stabilit din contul tău activ (fără opțiune manuală).
+                      </p>
                     </div>
-                  )}
+                    <span
+                      className={`font-display text-[20px] leading-none shrink-0 tabular-nums ${
+                        isDrink ? 'text-[#F2A33A]' : 'text-[#3A2418]'
+                      }`}
+                    >
+                      {formatScore(currentUser.weightMultiplier)}×
+                    </span>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-baseline justify-between">
+                {/* Grade Input: Both Typed Numeric Field + Slider */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
                     <label
-                      htmlFor="rev-score-range"
+                      htmlFor="rev-score-input"
                       className="text-[13px] font-semibold"
                     >
                       Nota ta din 10
                     </label>
-                    <span className="font-display text-[28px] leading-none tabular-nums">
-                      {formatScore(scoreInput)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        id="rev-score-input"
+                        type="number"
+                        min={1}
+                        max={10}
+                        step={1}
+                        inputMode="numeric"
+                        value={gradeText}
+                        onChange={(e) => handleGradeTextChange(e.target.value)}
+                        onBlur={handleGradeBlur}
+                        aria-label="Scrie nota între 1 și 10"
+                        className={`w-20 px-2.5 py-1 rounded-[4px] border text-right font-display text-[24px] leading-none tabular-nums ${
+                          isDrink
+                            ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]'
+                            : 'bg-white border-[#3A2418] text-[#3A2418]'
+                        }`}
+                      />
+                      <span
+                        className={`text-[13px] font-semibold ${
+                          isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                        }`}
+                      >
+                        / 10
+                      </span>
+                    </div>
                   </div>
                   <input
                     id="rev-score-range"
+                    aria-label="Slider notă din 10"
                     type="range"
                     min={1}
                     max={10}
-                    step={0.5}
+                    step={1}
                     value={scoreInput}
-                    onChange={(e) => setScoreInput(Number(e.target.value))}
-                    className="w-full accent-[#B3261E]"
+                    onChange={(e) => {
+                      const val = Math.round(Number(e.target.value));
+                      setScoreInput(val);
+                      setGradeText(String(val));
+                    }}
+                    className={`w-full ${
+                      isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'
+                    }`}
                   />
+                  <div
+                    className={`flex justify-between text-[11px] ${
+                      isDrink ? 'text-[#F4EEE2]/55' : 'text-[#6E5649]'
+                    }`}
+                  >
+                    <span>1</span>
+                    <span>Numere întregi (1–10), slider sau tastare</span>
+                    <span>10</span>
+                  </div>
+                </div>
+
+                {/* Tourist Trap Flag Button */}
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMarkAsTrap((prev) => !prev)}
+                    aria-pressed={markAsTrap}
+                    className={`btn-press w-full px-3.5 py-2.5 rounded-[4px] border flex items-center justify-between gap-3 text-left ${
+                      markAsTrap
+                        ? 'bg-[#B3261E] border-[#B3261E] text-white'
+                        : isDrink
+                        ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] hover:border-[#B3261E]'
+                        : 'bg-[#FAF8F5] border-[#D6CFC5] text-[#3A2418] hover:border-[#B3261E]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <AlertTriangle
+                        className={`w-4 h-4 shrink-0 ${
+                          markAsTrap ? 'text-white' : 'text-[#B3261E]'
+                        }`}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-bold leading-tight">
+                          {markAsTrap
+                            ? 'Marcat ca capcană turistică'
+                            : 'Marchează ca capcană turistică'}
+                        </div>
+                        <div
+                          className={`text-[11px] leading-snug mt-0.5 ${
+                            markAsTrap
+                              ? 'text-white/90'
+                              : isDrink
+                              ? 'text-[#F4EEE2]/65'
+                              : 'text-[#6E5649]'
+                          }`}
+                        >
+                          Prețuri umflate pentru turiști sau calitate slabă față de medie.
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[11px] font-bold px-2 py-0.5 rounded-[3px] shrink-0 ${
+                        markAsTrap
+                          ? 'bg-white text-[#B3261E]'
+                          : isDrink
+                          ? 'bg-[#1E4335] text-[#F4EEE2]/80'
+                          : 'bg-white border border-[#D6CFC5] text-[#6E5649]'
+                      }`}
+                    >
+                      {markAsTrap ? 'Activ' : 'Opțional'}
+                    </span>
+                  </button>
                 </div>
 
                 {restaurant.team && restaurant.team.length > 0 && (

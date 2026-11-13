@@ -376,3 +376,99 @@
     }
   }
 }
+
+/* ============================================================================
+   Dark Mode (Warm Espresso #1A120E for topfood, preserves all 8 PDF tokens)
+   ============================================================================ */
+html.dark {
+  background-color: #1A120E;
+  color: #F4EEE2;
+  color-scheme: dark;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #4A382D;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6E5649;
+}
+
+html.dark .bg-white {
+  background-color: #1A120E;
+}
+
+html.dark .bg-white\/95 {
+  background-color: rgba(26, 18, 14, 0.94);
+}
+
+html.dark .bg-\[\#FAF8F5\] {
+  background-color: #241914;
+}
+
+html.dark .bg-\[\#F2EFE9\] {
+  background-color: #2A1E18;
+}
+
+html.dark .bg-\[\#ECE6DD\] {
+  background-color: #2E221B;
+}
+
+html.dark .text-\[\#3A2418\] {
+  color: #F4EEE2;
+}
+
+html.dark .text-\[\#3A2418\]\/85 {
+  color: rgba(244, 238, 226, 0.85);
+}
+
+html.dark .text-\[\#6E5649\] {
+  color: #C2B3A6;
+}
+
+html.dark .text-\[\#6E5649\]\/90 {
+  color: rgba(194, 179, 166, 0.9);
+}
+
+html.dark .border-\[\#E6DFD5\],
+html.dark .border-\[\#D6CFC5\] {
+  border-color: #3E2E24;
+}
+
+html.dark .divide-\[\#E6DFD5\] > :not(:last-child) {
+  border-color: #3E2E24;
+}
+
+html.dark .border-\[\#3A2418\] {
+  border-color: #6E5649;
+}
+
+html.dark .hover\:bg-\[\#FAF8F5\]:hover {
+  background-color: #241914;
+}
+
+html.dark .hover\:bg-\[\#EAE5DC\]:hover {
+  background-color: #33251E;
+}
+
+html.dark .hover\:border-\[\#3A2418\]:hover {
+  border-color: #F4EEE2;
+}
+
+/* Active Cafea pills & buttons invert cleanly in Dark Mode */
+html.dark .bg-\[\#3A2418\] {
+  background-color: #F4EEE2;
+  color: #1A120E;
+  border-color: #F4EEE2;
+}
+
+/* Preserve dark ink on Muștar & Chihlimbar badges */
+html.dark .badge-posibila-capcana,
+html.dark .bg-\[\#E0A526\],
+html.dark .bg-\[\#E0A526\].text-\[\#3A2418\] {
+  color: #3A2418;
+}
+
+html.dark .bg-\[\#F2A33A\] {
+  color: #17382C;
+}

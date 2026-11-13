@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Bookmark, User, X } from 'lucide-react';
-import { NavSection, Restaurant, Vertical } from '../types';
+import { Bookmark, Moon, Sun, User, X } from 'lucide-react';
+import { NavSection, Restaurant, UserAccount, Vertical, formatScore } from '../types';
 import { BrandWordmark, LocalnicBadge } from './BrandPrimitives';
 
 export interface NavbarProps {
@@ -10,6 +10,11 @@ export interface NavbarProps {
   onNavSectionChange: (s: NavSection) => void;
   savedRestaurants: Restaurant[];
   onSelectRestaurant: (r: Restaurant) => void;
+  currentUser: UserAccount;
+  availableUsers: UserAccount[];
+  onSelectUser: (userId: string) => void;
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -19,6 +24,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavSectionChange,
   savedRestaurants,
   onSelectRestaurant,
+  currentUser,
+  availableUsers,
+  onSelectUser,
+  darkMode,
+  onToggleDarkMode,
 }) => {
   const isDrink = vertical === 'drink';
   const [profileOpen, setProfileOpen] = useState(false);
@@ -101,27 +111,46 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </nav>
 
-          {/* Profile / Saved Spots Icon */}
-          <div className="relative">
+          {/* Right Controls: Dark Mode + Profile / Saved Spots Icon */}
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setProfileOpen((prev) => !prev)}
-              aria-label="Profilul tău și localuri salvate"
-              className={`btn-press w-9 h-9 rounded-full flex items-center justify-center relative ${
+              onClick={onToggleDarkMode}
+              aria-label={darkMode ? 'Comută la mod luminos' : 'Comută la mod întunecat'}
+              title={darkMode ? 'Mod luminos' : 'Mod întunecat'}
+              className={`btn-press w-9 h-9 rounded-full flex items-center justify-center ${
                 isDrink
                   ? 'text-[#F4EEE2] hover:bg-[#1E4335]'
                   : 'text-[#3A2418] hover:bg-[#FAF8F5]'
               }`}
             >
-              <User className="w-5 h-5" />
-              {savedRestaurants.length > 0 && (
-                <span
-                  className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
-                    isDrink ? 'bg-[#F2A33A]' : 'bg-[#B3261E]'
-                  }`}
-                />
+              {darkMode ? (
+                <Sun className="w-4 h-4 text-[#E0A526]" />
+              ) : (
+                <Moon className="w-4 h-4" />
               )}
             </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileOpen((prev) => !prev)}
+                aria-label="Profilul tău și localuri salvate"
+                className={`btn-press w-9 h-9 rounded-full flex items-center justify-center relative ${
+                  isDrink
+                    ? 'text-[#F4EEE2] hover:bg-[#1E4335]'
+                    : 'text-[#3A2418] hover:bg-[#FAF8F5]'
+                }`}
+              >
+                <User className="w-5 h-5" />
+                {savedRestaurants.length > 0 && (
+                  <span
+                    className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
+                      isDrink ? 'bg-[#F2A33A]' : 'bg-[#B3261E]'
+                    }`}
+                  />
+                )}
+              </button>
 
             {profileOpen && (
               <div
@@ -133,14 +162,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
-                    <div className="font-bold text-[15px]">Andreea M.</div>
-                    <LocalnicBadge label="Localnic din Iosefin" size="xs" />
+                    <div className="font-bold text-[15px]">
+                      {currentUser.name}
+                    </div>
+                    {currentUser.role === 'verified-local' ? (
+                      <LocalnicBadge
+                        label={`Localnic din ${currentUser.neighborhood ?? 'Timișoara'}`}
+                        size="xs"
+                      />
+                    ) : (
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[11px] font-semibold ${
+                          isDrink
+                            ? 'border-[#2D5947] text-[#F4EEE2]/80 bg-[#122B22]'
+                            : 'border-[#D6CFC5] text-[#6E5649] bg-[#FAF8F5]'
+                        }`}
+                      >
+                        Turist / Vizitator
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"
                     onClick={() => setProfileOpen(false)}
                     aria-label="Închide profil"
-                    className="opacity-70 hover:opacity-100"
+                    className="btn-press opacity-70 hover:opacity-100"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -151,8 +197,47 @@ export const Navbar: React.FC<NavbarProps> = ({
                     isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
                   }`}
                 >
-                  Cont verificat Timișoara · review-urile tale au pondere 2,0×.
+                  {currentUser.description}
                 </p>
+
+                {/* Switch active account to verify account-driven review role */}
+                <div
+                  className={`pt-2.5 border-t space-y-1.5 ${
+                    isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+                  }`}
+                >
+                  <div className="text-[11px] font-semibold opacity-75">
+                    Cont activ
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {availableUsers.map((acc) => {
+                      const active = acc.id === currentUser.id;
+                      return (
+                        <button
+                          key={acc.id}
+                          type="button"
+                          onClick={() => onSelectUser(acc.id)}
+                          className={`btn-press px-2 py-1.5 rounded-[3px] border text-left text-[11px] ${
+                            active
+                              ? isDrink
+                                ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A] font-bold'
+                                : 'bg-[#3A2418] text-white border-[#3A2418] font-bold'
+                              : isDrink
+                              ? 'border-[#285443] text-[#F4EEE2]/80 hover:border-[#F2A33A]/60'
+                              : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418]'
+                          }`}
+                        >
+                          <div className="truncate">{acc.name}</div>
+                          <div className="opacity-80">
+                            {acc.role === 'verified-local'
+                              ? `Localnic (${formatScore(acc.weightMultiplier)}×)`
+                              : `Turist (${formatScore(acc.weightMultiplier)}×)`}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <div
                   className={`pt-2.5 border-t space-y-2 ${
@@ -196,6 +281,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </header>

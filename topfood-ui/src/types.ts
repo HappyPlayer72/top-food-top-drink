@@ -31,6 +31,15 @@ export type TrapTier = 'local-staple' | 'mixed-fair' | 'tourist-trap';
 
 export type AuthorRole = 'verified-local' | 'tourist' | 'influencer' | 'regular';
 
+export interface UserAccount {
+  id: string;
+  name: string;
+  role: 'verified-local' | 'tourist';
+  neighborhood?: string;
+  weightMultiplier: number;
+  description: string;
+}
+
 export type SortOption = 'food-desc' | 'trap-asc' | 'gap-desc';
 
 export type QuickFilterId =
@@ -101,6 +110,8 @@ export interface Review {
   foodScore: number;
   /** Independent Score 2: Value & Tourist Trap Estimate (0 – 100%) */
   trapEstimatePct: number;
+  /** Whether the reviewer explicitly flagged this venue as a tourist trap */
+  markedAsTouristTrap?: boolean;
   date: string;
   text: string;
   language: string;
