@@ -11,11 +11,14 @@ import {
   Clock,
   MapPin,
   Scale,
+  ShieldCheck,
   ThumbsUp,
+  Volume2,
   X,
 } from 'lucide-react';
 import {
   AuthorRole,
+  NoiseLevel,
   Restaurant,
   Review,
   UserAccount,
@@ -54,6 +57,20 @@ export interface RestaurantDetailModalProps {
 }
 
 type ReviewFilterTab = 'verified-local' | 'tourist' | 'influencer' | 'all';
+
+const NOISE_OPTIONS: { id: NoiseLevel; label: string }[] = [
+  { id: 'linistit', label: 'Liniștit' },
+  { id: 'moderat', label: 'Moderat' },
+  { id: 'animat', label: 'Animat' },
+  { id: 'zgomotos', label: 'Zgomotos' },
+];
+
+const NOISE_LABELS: Record<NoiseLevel, string> = {
+  linistit: 'Liniștit',
+  moderat: 'Moderat',
+  animat: 'Animat',
+  zgomotos: 'Zgomotos',
+};
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -104,6 +121,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [scoreInput, setScoreInput] = useState<number>(9);
   const [gradeText, setGradeText] = useState<string>('9');
   const [markAsTrap, setMarkAsTrap] = useState<boolean>(false);
+  const [safetyScore, setSafetyScore] = useState<number | null>(null);
+  const [noiseLevel, setNoiseLevel] = useState<NoiseLevel | null>(null);
   const [praisedEmployee, setPraisedEmployee] = useState<string>('');
   const [reviewText, setReviewText] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -144,6 +163,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setScoreInput(initialGrade);
     setGradeText(String(initialGrade));
     setMarkAsTrap(false);
+    setSafetyScore(null);
+    setNoiseLevel(null);
     setFormError(null);
     setSubmittedNotice(null);
     if (modalOverlayRef.current) {
@@ -377,6 +398,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       text,
       language: 'RO',
       praisedEmployee: praisedEmployee || undefined,
+      safetyScore: safetyScore ?? undefined,
+      noiseLevel: noiseLevel ?? undefined,
       helpfulCount: 0,
     };
 
@@ -386,6 +409,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewText('');
     setPraisedEmployee('');
     setMarkAsTrap(false);
+    setSafetyScore(null);
+    setNoiseLevel(null);
     setSubmittedNotice(
       `Review publicat ca ${currentUser.name} (${formatScore(
         currentUser.weightMultiplier
@@ -1323,6 +1348,35 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
                       <p className="text-[15px] leading-[1.55]">{rev.text}</p>
 
+                      {(rev.safetyScore !== undefined || rev.noiseLevel !== undefined) && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {rev.safetyScore !== undefined && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[11px] font-semibold border ${
+                                isDrink
+                                  ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/90'
+                                  : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                              }`}
+                            >
+                              <ShieldCheck className="w-3 h-3" />
+                              Siguranță {rev.safetyScore}/5
+                            </span>
+                          )}
+                          {rev.noiseLevel !== undefined && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[11px] font-semibold border ${
+                                isDrink
+                                  ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/90'
+                                  : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                              }`}
+                            >
+                              <Volume2 className="w-3 h-3" />
+                              Zgomot: {NOISE_LABELS[rev.noiseLevel]}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div
                           className={`text-[12px] ${
@@ -1765,6 +1819,86 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       {markAsTrap ? 'Activ' : 'Opțional'}
                     </span>
                   </button>
+                </div>
+
+                {/* Safety & Noise Level */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <span className="text-[13px] font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 opacity-80" />
+                      <span>Cât de sigur te-ai simțit?</span>
+                    </span>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[1, 2, 3, 4, 5].map((lvl) => {
+                        const active = safetyScore === lvl;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={() =>
+                              setSafetyScore((prev) => (prev === lvl ? null : lvl))
+                            }
+                            aria-pressed={active}
+                            aria-label={`Siguranță ${lvl} din 5`}
+                            className={`btn-press min-h-[40px] rounded-[4px] border text-[13px] font-bold ${
+                              active
+                                ? isDrink
+                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
+                                : isDrink
+                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                            }`}
+                          >
+                            {lvl}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div
+                      className={`flex justify-between text-[10px] ${
+                        isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
+                      }`}
+                    >
+                      <span>Nesigur</span>
+                      <span>Foarte sigur</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="text-[13px] font-semibold flex items-center gap-1.5">
+                      <Volume2 className="w-3.5 h-3.5 opacity-80" />
+                      <span>Cât de zgomotos este?</span>
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {NOISE_OPTIONS.map((opt) => {
+                        const active = noiseLevel === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() =>
+                              setNoiseLevel((prev) =>
+                                prev === opt.id ? null : opt.id
+                              )
+                            }
+                            aria-pressed={active}
+                            className={`btn-press min-h-[40px] px-2 rounded-[4px] border text-[12px] font-semibold ${
+                              active
+                                ? isDrink
+                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
+                                : isDrink
+                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 {restaurant.team && restaurant.team.length > 0 && (

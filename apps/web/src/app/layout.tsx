@@ -8,9 +8,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'topfood/timișoara — Unde mănâncă timișorenii, nu turiștii',
+  title: 'topfood/timișoara — Timișoara pe gustate, nu pe ghicite',
   description:
-    'Clasamentul onest al restaurantelor și barurilor din Timișoara, bazat pe votul localnicilor și detectorul de capcane turistice.',
+    'Ghidul tău sincer prin Timișoara: mâncare cinstită și locuri pe bune, fără surprize la notă.',
 };
 
 export default function RootLayout({

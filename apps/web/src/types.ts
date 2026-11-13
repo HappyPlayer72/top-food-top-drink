@@ -124,6 +124,8 @@ export interface AspectScores {
   atmosphere: number;
 }
 
+export type NoiseLevel = 'linistit' | 'moderat' | 'animat' | 'zgomotos';
+
 export interface Review {
   id?: string;
   authorName: string;
@@ -159,6 +161,10 @@ export interface Review {
   ownerReplyAuthor?: string;
   /** Optional employee praised in this visit ("Rate the Employee / Angajatul lunii") */
   praisedEmployee?: string;
+  /** How safe the reviewer felt (1–5) */
+  safetyScore?: number;
+  /** Perceived noise level at the venue */
+  noiseLevel?: NoiseLevel;
 }
 
 export interface OwnerPost {
