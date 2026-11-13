@@ -105,6 +105,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setError(null);
 
     const trimmedEmail = email.trim().toLowerCase();
@@ -380,8 +381,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <button
                     key={acc.id}
                     type="button"
-                    disabled={submitting}
+                    aria-disabled={submitting}
                     onClick={async () => {
+                      if (submitting) return;
                       setError(null);
                       if (acc.email && (await tryBackend({ mode: 'demo', email: acc.email }))) return;
                       onLoginSuccess(acc);
@@ -793,8 +795,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
                 <button
                   type="submit"
-                  disabled={submitting}
-                  aria-busy={submitting}
+                  aria-disabled={submitting}
                   className={`btn-press w-full min-h-[48px] py-3 px-4 rounded-[4px] text-[15px] sm:text-[14px] font-bold flex items-center justify-center gap-2 ${
                     isDrink
                       ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
@@ -802,7 +803,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   }`}
                 >
                   <span>
-                    {mode === 'login' ? 'Intră în cont' : 'Creează cont și intră'}
+                    {submitting ? 'Se verifică…' : mode === 'login' ? 'Intră în cont' : 'Creează cont și intră'}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>

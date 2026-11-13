@@ -418,6 +418,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     if (onVoteHelpful && reviewId) {
       const res = await onVoteHelpful(reviewId);
       if (res.ok) setHelpfulServer((prev) => ({ ...prev, [key]: { voted: res.voted, count: res.helpfulCount } }));
+      else setSubmittedNotice(res.error);
       return;
     }
     setHelpfulVotedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1043,6 +1044,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             </div>
           </section>
 
+          <div role="status" aria-live="polite">
           {submittedNotice && (
             <div
               className={`px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold flex items-center gap-2 ${
@@ -1055,6 +1057,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               <span>{submittedNotice}</span>
             </div>
           )}
+          </div>
 
           {/* LOCALNICI VS TURIȘTI BARS + TOURIST TRAP STATUS */}
           <section className="space-y-4">

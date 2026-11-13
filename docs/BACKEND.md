@@ -108,12 +108,26 @@ Ce e gata:
 - Toate paginile (`page.tsx`) cheamă `loadShellData()` și dau datele la `TopFoodShell` ca props. Componentele n-au fost rescrise; `TopFoodShell` și `MonthlyTopView` primesc doar props opționale noi.
 - `next.config.ts` citește `.env` din rădăcină și transpilează pachetele `@tftd/*`.
 
-Ce rămâne (acțiunile userilor, acum încă locale în browser):
-1. **Login / cont**: `LoginScreen` folosește conturi demo. De legat la `accounts.register` / `accounts.login` printr-un Server Action, cu `accounts.createSessionToken` într-un cookie httpOnly.
-2. **Scrie review**: `recalculateRestaurantWithReview` calculează în browser. De înlocuit cu un Server Action care cheamă `writeReview`, apoi `router.refresh()`.
-3. **Fidelitate**: `FidelityView` ține cardurile în `localStorage`. De legat la `loyalty.myCards`, `loyalty.scanCode`, `loyalty.createPersonalCard`, `loyalty.addPersonalStamp`; ecranul owner-ului arată `loyalty.currentStampCode` ca QR (se reîmprospătează la `expiresInSeconds`).
-4. **Căutare + adaugă local**: câmpul de căutare filtrează local; pentru „caută și pe internet” și „adaugă local” → `searchPlaces`, `addFromGoogle`, `addManually`.
-5. **Vot „util”, vibe check**: `toggleHelpful`, `submitVibe`.
+Acțiunile userilor de pe site-ul public (gata, 13 nov seara):
+
+| Ce face userul | Server Action | Unde e legat |
+| --- | --- | --- |
+| Login / cont nou / conturi demo | `loginUser`, `registerUser`, `loginDemo`, `logoutUser` (`app/actions/user.ts`) | `LoginScreen` (prop `authenticate`), `TopFoodShell` |
+| Scrie review | `submitReview` → `writeReview` + recalcul scor | `RestaurantDetailModal` → `TopFoodShell.handleAddReview` |
+| „Util” | `voteHelpful` | `RestaurantDetailModal` (prop `onVoteHelpful`) |
+| „Cât e de plin acum” | `reportCrowd` | `TopFoodShell.handleUpdateCrowdReport` |
+| Fidelitate (portofel, ștampile, card personal) | `fidelityWallet`, `stampFidelity`, `createFidelityCard` (`app/actions/loyalty.ts`) | `FidelityView` (prop `useBackend`) |
+| QR-ul de la casă (owner) | `loyalty.currentStampCode` + `qrcode` | `/owner/[venueId]/fidelitate` (`LoyaltyPanel`) |
+| Caută pe internet / adaugă local | `searchVenues`, `addVenueFromInternet`, `addVenueManually` (`app/actions/venues.ts`) | `AddVenuePanel`, sub „niciun rezultat” în `EditorialListView` |
+
+- Sesiunea e același cookie ca la `/owner` (`lib/server/session.ts`). Cu backend pornit, cookie-ul decide cine e logat, nu `sessionStorage`.
+- Fără `DATABASE_URL`, toate acțiunile întorc `offline` și componentele merg ca înainte, local.
+- În demo, „Scanează la casă” generează singur codul localului (`DEMO_SCAN`); cu `DEMO_SCAN=off` trebuie scanat QR-ul de la `/owner/.../fidelitate`.
+- Conturi demo (seed, parola `DEMO_PASSWORD` sau `demo1234`): andreea@e-uvt.ro (localnic), luca@visit.ro (turist), `sandu.proprietar` (owner), `admin`. Scenariul de prezentare: `docs/DEMO.md`.
+
+Ce rămâne:
+1. Scanarea QR cu camera telefonului pe `/fidelitate` (acum: buton demo + funcția `stampFidelity(programId, code)` acceptă deja codul scanat).
+2. Verificarea de localnic din site (check-in GPS → `accounts.checkinFromLocation`, email universitar → `startUniversityEmail`/`confirmUniversityEmail`). Acum un cont nou e „turist” (1,0×).
 
 Model de Server Action (`apps/web/src/app/actions.ts`):
 

@@ -56,9 +56,7 @@ export function LoyaltyPanel({
               className="w-full max-w-[260px] rounded-[4px] bg-white p-3 [&>svg]:h-auto [&>svg]:w-full"
               dangerouslySetInnerHTML={{ __html: qrSvg }}
             />
-            <figcaption className="text-[13px] text-o-muted" aria-live="polite">
-              Cod nou în {expiresInSeconds} secunde
-            </figcaption>
+            <figcaption className="text-[13px] text-o-muted">Codul se reîmprospătează automat în fiecare minut.</figcaption>
           </figure>
           <div className="min-w-0 space-y-3">
             <h3 id="qr-titlu" className="font-display text-[30px] leading-tight text-o-fg">
@@ -80,7 +78,8 @@ export function LoyaltyPanel({
         <SubHeading id="program-titlu" note={program ? 'Un card nou îl înlocuiește pe cel actual.' : undefined}>
           {program ? 'Schimbă cardul de fidelitate' : 'Creează cardul de fidelitate'}
         </SubHeading>
-        <form key={state.seq} action={create} className="flex max-w-xl flex-col gap-4 rounded-[4px] border border-o-line bg-o-card p-5 sm:p-7">
+        <form action={create} className="flex max-w-xl flex-col gap-4 rounded-[4px] border border-o-line bg-o-card p-5 sm:p-7">
+          <div key={state.seq} className="contents">
           <Field label="Premiul" hint="Ce primește clientul când strânge toate ștampilele.">
             <input name="rewardTitle" required maxLength={80} defaultValue={state.values?.rewardTitle ?? ''} className={inputClass} placeholder="ex. O ciorbă din partea casei" />
           </Field>
@@ -102,6 +101,7 @@ export function LoyaltyPanel({
               ))}
             </select>
           </Field>
+          </div>
           <FormMessage state={state} />
           <div>
             <SubmitButton>{program ? 'Înlocuiește cardul' : 'Creează cardul'}</SubmitButton>

@@ -223,6 +223,7 @@ export function FidelityView({
   const [hydrated, setHydrated] = useState(false);
   const [expandedQrProgramId, setExpandedQrProgramId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastIsError, setToastIsError] = useState(false);
 
   // Vendor signup form state
   const [venueName, setVenueName] = useState('');
@@ -240,7 +241,7 @@ export function FidelityView({
       setPrograms(res.programs);
       return true;
     }
-    if (!res.offline) setToastMessage(res.error);
+    if (!res.offline) showToast(res.error, true);
     return false;
   };
 
@@ -275,11 +276,14 @@ export function FidelityView({
     }
   }, [programs, hydrated]);
 
-  const showToast = (msg: string) => {
+  /** Succes: dispare după 10 s. Eroare: rămâne până o închide userul (WCAG 2.2.1). */
+  const showToast = (msg: string, isError = false) => {
     setToastMessage(msg);
+    setToastIsError(isError);
+    if (isError) return;
     window.setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev));
-    }, 3200);
+    }, 10000);
   };
 
   /** Ștampilă / premiu pe backend (același apel: cardul plin + scanare = premiul). */
@@ -289,7 +293,7 @@ export function FidelityView({
       return;
     }
     const res = await stampFidelity(id);
-    showToast(res.ok ? res.message : res.error);
+    showToast(res.ok ? res.message : res.error, !res.ok);
     await refreshFromBackend();
   };
 
@@ -487,10 +491,10 @@ export function FidelityView({
         </p>
       </div>
 
-      {/* Toast Notification */}
+      {/* Toast Notification — zona live există mereu, se schimbă doar conținutul */}
+      <div role={toastIsError ? 'alert' : 'status'} aria-live={toastIsError ? 'assertive' : 'polite'}>
       {toastMessage && (
         <div
-          role="status"
           className={`mb-6 flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-sm ${
             isDrink
               ? 'bg-[#143025] border-[#F2A33A]/50 text-[#F4EEE2]'
@@ -511,6 +515,7 @@ export function FidelityView({
           </button>
         </div>
       )}
+      </div>
 
       {/* Segmented Switch: Cardurile mele / Înscriere local */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
