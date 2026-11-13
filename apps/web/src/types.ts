@@ -78,6 +78,24 @@ export interface SignatureDish {
   isMustOrder?: boolean;
 }
 
+export interface MenuItem {
+  name: string;
+  priceRon: number;
+  description?: string;
+  portion?: string;
+  isMustOrder?: boolean;
+}
+
+export interface MenuCategory {
+  title: string;
+  items: MenuItem[];
+}
+
+export interface WeeklyHoursEntry {
+  day: string;
+  hours: string;
+}
+
 /**
  * Multi-signal Tourist Trap Index breakdown (weights from TOP FOOD Architecture):
  * - 30% Discrepancy between Tourist scores and Verified Local scores
@@ -238,8 +256,11 @@ export interface Restaurant {
   coordinates: Coordinates;
   address: string;
   hours: string;
+  weeklyHours?: WeeklyHoursEntry[];
   openNow: boolean;
   phone: string;
+  lastUpdated?: string;
+  menuCategories?: MenuCategory[];
 
   // --- Monthly Leaderboard ---
   monthlyRank?: number;
