@@ -1,0 +1,482 @@
+/**
+ * Modelul de date TOP FOOD / TOP DRINK (docs/ARHITECTURA.md → Modelul de date).
+ *
+ * Coloanele sunt camelCase în TypeScript și snake_case în Postgres (casing: "snake_case").
+ * Regula 1: tabelele de monetizare (partnerships, adSlots) NU se citesc din scoring sau leaderboard.
+ */
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  customType,
+  date,
+  geometry,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  real,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  vector,
+} from "drizzle-orm/pg-core";
+
+// ---------- Tipuri comune ----------
+
+/** Poligon PostGIS pentru granițele orașului (GeoJSON la intrare/ieșire prin ST_GeomFromGeoJSON). */
+const multiPolygon = customType<{ data: string }>({
+  dataType: () => "geometry(MultiPolygon, 4326)",
+});
+
+const point = () => geometry({ type: "point", mode: "xy", srid: 4326 });
+const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow();
+
+export const vertical = pgEnum("vertical", ["food", "drink"]);
+export const reviewSource = pgEnum("review_source", ["native", "google", "tripadvisor", "facebook", "tiktok", "instagram"]);
+export const socialPlatform = pgEnum("social_platform", ["tiktok", "instagram", "facebook", "youtube"]);
+export const authorType = pgEnum("author_type", ["local", "tourist", "unknown"]);
+export const reviewStatus = pgEnum("review_status", ["published", "flagged", "hidden"]);
+export const venueStatus = pgEnum("venue_status", ["active", "closed"]);
+export const userRole = pgEnum("user_role", ["user", "local", "influencer", "owner", "employee", "admin"]);
+export const verificationMethod = pgEnum("verification_method", ["gps", "university_email", "vouch"]);
+export const verificationStatus = pgEnum("verification_status", ["pending", "verified", "rejected", "expired"]);
+export const claimMethod = pgEnum("claim_method", ["google_business", "phone_code", "cui"]);
+export const claimStatus = pgEnum("claim_status", ["pending", "verified", "rejected"]);
+export const managerRole = pgEnum("manager_role", ["owner", "manager"]);
+export const postType = pgEnum("post_type", ["menu", "event", "offer", "news"]);
+export const submissionStatus = pgEnum("submission_status", ["pending", "processed", "failed"]);
+export const partnershipPlan = pgEnum("partnership_plan", ["basic", "highlight"]);
+export const paymentStatus = pgEnum("payment_status", ["pending", "paid", "failed", "cancelled"]);
+export const reportTarget = pgEnum("report_target", ["review", "venue", "owner_claim", "trap_appeal", "user", "post"]);
+export const reportStatus = pgEnum("report_status", ["open", "resolved", "rejected"]);
+export const matchStatus = pgEnum("match_status", ["pending", "confirmed", "rejected"]);
+
+// ---------- Oraș ----------
+
+export const cities = pgTable("cities", {
+  slug: text().primaryKey(), // "timisoara"
+  name: text().notNull(), // "Timișoara"
+  boundary: multiPolygon(),
+  neighborhoods: text().array().notNull().default(sql`'{}'::text[]`),
+  /** Prețuri medii locale: { food: { romanesc: 45, pizza: 40 }, drink: { beer05l: 14, cocktail: 32 } } (lei). */
+  localAveragePrices: jsonb().$type<CityPrices>().notNull().default({ food: {}, drink: {} }),
+  /** Media orașului pe scara 0–10, recalculată de scoring; ancora din formula Scorului Onest. */
+  meanScore: jsonb().$type<{ food: number; drink: number }>().notNull().default({ food: 7, drink: 7 }),
+  updatedAt: createdAt(),
+});
+
+export const touristZones = pgTable(
+  "tourist_zones",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    citySlug: text().notNull().references(() => cities.slug),
+    name: text().notNull(),
+    location: point().notNull(),
+    radiusM: integer().notNull().default(300),
+  },
+  (t) => [index().using("gist", t.location)],
+);
+
+// ---------- Local ----------
+
+export const venues = pgTable(
+  "venues",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    citySlug: text().notNull().references(() => cities.slug),
+    vertical: vertical().notNull(),
+    name: text().notNull(),
+    slug: text().notNull(),
+    categories: text().array().notNull().default(sql`'{}'::text[]`),
+    location: point().notNull(),
+    address: text(),
+    neighborhood: text(),
+    phone: text(),
+    website: text(),
+    /** 1–4, ca la Google ($–$$$$). */
+    priceLevel: integer(),
+    /** Interval de preț în lei pe persoană (food) sau, pentru drink, prețul berii 0,5 l / cocktail. */
+    priceMinLei: integer(),
+    priceMaxLei: integer(),
+    drinkPrices: jsonb().$type<{ beer05l?: number; cocktail?: number }>(),
+    openingHours: jsonb().$type<Record<string, string>>(),
+    status: venueStatus().notNull().default("active"),
+
+    // Scoruri (scrise DOAR de packages/scoring)
+    honestScore: real(),
+    localsScore: real(),
+    touristsScore: real(),
+    totalWeight: real(),
+    touristTrapIndex: integer(),
+    /** Motivele afișate la „De ce?” (regula 3). */
+    scoreExplanation: jsonb().$type<ScoreExplanation>(),
+    scoreUpdatedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex().on(t.citySlug, t.vertical, t.slug),
+    index().using("gist", t.location),
+    index().on(t.citySlug, t.vertical, t.honestScore),
+  ],
+);
+
+/** ID-urile localului pe platformele externe + ratingul brut de acolo. */
+export const venueSources = pgTable(
+  "venue_sources",
+  {
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    source: reviewSource().notNull(),
+    externalId: text().notNull(),
+    rawRating: real(),
+    rawReviewCount: integer(),
+    url: text(),
+    fetchedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.source, t.externalId] }), index().on(t.venueId)],
+);
+
+/** Potriviri nesigure între platforme → coada de admin (modulul B → J). */
+export const matchCandidates = pgTable("match_candidates", {
+  id: uuid().primaryKey().defaultRandom(),
+  venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+  source: reviewSource().notNull(),
+  externalId: text().notNull(),
+  payload: jsonb().notNull(),
+  nameSimilarity: real().notNull(),
+  distanceM: real(),
+  status: matchStatus().notNull().default("pending"),
+  decidedBy: uuid().references(() => users.id),
+  createdAt: createdAt(),
+});
+
+// ---------- Useri și verificare ----------
+
+export const users = pgTable("users", {
+  id: uuid().primaryKey().defaultRandom(),
+  username: text().notNull().unique(),
+  displayName: text().notNull(),
+  email: text().unique(),
+  phone: text().unique(),
+  passwordHash: text(),
+  googleId: text().unique(),
+  roles: userRole().array().notNull().default(sql`'{user}'::user_role[]`),
+  avatarUrl: text(),
+  /** Orașul în care e localnic verificat + până când (insigna expiră după 12 luni fără activitate). */
+  localCitySlug: text().references(() => cities.slug),
+  localNeighborhood: text(),
+  localUntil: timestamp({ withTimezone: true }),
+  followers: integer(),
+  createdAt: createdAt(),
+});
+
+export const userSocialLinks = pgTable(
+  "user_social_links",
+  {
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    platform: socialPlatform().notNull(),
+    url: text().notNull(),
+    /** true doar după OAuth (influencer). */
+    verified: boolean().notNull().default(false),
+    followers: integer(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.platform] })],
+);
+
+/** GDPR: doar ziua și orașul/localul, niciodată coordonatele sau traseul. */
+export const checkins = pgTable(
+  "checkins",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    citySlug: text().notNull().references(() => cities.slug),
+    venueId: uuid().references(() => venues.id, { onDelete: "set null" }),
+    day: date().notNull(),
+  },
+  (t) => [uniqueIndex().on(t.userId, t.citySlug, t.day, t.venueId)],
+);
+
+export const localVerifications = pgTable("local_verifications", {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+  citySlug: text().notNull().references(() => cities.slug),
+  method: verificationMethod().notNull(),
+  status: verificationStatus().notNull().default("pending"),
+  /** Dovezi minime: zilele cu check-in, domeniul de email sau ID-urile garanților. */
+  evidence: jsonb().notNull().default({}),
+  verifiedAt: timestamp({ withTimezone: true }),
+  expiresAt: timestamp({ withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+export const vouches = pgTable(
+  "vouches",
+  {
+    voucherId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    voucheeId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    citySlug: text().notNull().references(() => cities.slug),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.voucherId, t.voucheeId, t.citySlug] })],
+);
+
+// ---------- Owner ----------
+
+export const ownerClaims = pgTable("owner_claims", {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+  venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+  method: claimMethod().notNull(),
+  status: claimStatus().notNull().default("pending"),
+  cui: text(),
+  /** Hash-ul codului trimis prin SMS/apel; niciodată codul în clar. */
+  codeHash: text(),
+  decidedBy: uuid().references(() => users.id),
+  decidedAt: timestamp({ withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+export const venueManagers = pgTable(
+  "venue_managers",
+  {
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: managerRole().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.venueId, t.userId] })],
+);
+
+export const posts = pgTable(
+  "posts",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    authorId: uuid().notNull().references(() => users.id),
+    type: postType().notNull(),
+    title: text().notNull(),
+    body: text().notNull(),
+    photos: text().array().notNull().default(sql`'{}'::text[]`),
+    /** Pentru evenimente (DJ, concerte) → pagina topdrink/{oras}/weekend. */
+    eventAt: timestamp({ withTimezone: true }),
+    publishAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.venueId, t.publishAt), index().on(t.eventAt)],
+);
+
+export const employees = pgTable("employees", {
+  id: uuid().primaryKey().defaultRandom(),
+  venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+  userId: uuid().references(() => users.id, { onDelete: "set null" }),
+  firstName: text().notNull(),
+  role: text().notNull(),
+  photoUrl: text(),
+  /** Angajatul apare public doar după ce acceptă (GDPR). */
+  accepted: boolean().notNull().default(false),
+  active: boolean().notNull().default(true),
+  createdAt: createdAt(),
+});
+
+// ---------- Review-uri ----------
+
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    source: reviewSource().notNull(),
+    externalId: text(),
+    authorId: uuid().references(() => users.id, { onDelete: "set null" }),
+    /** Autorul de pe platforma externă: { name, reviewCount, profileUrl, citiesReviewed }. */
+    externalAuthor: jsonb().$type<ExternalAuthor>(),
+    /** Nota pe scara 0–10 (convertită din 1–5 etc.). */
+    rating: real().notNull(),
+    originalRating: real().notNull(),
+    originalScale: integer().notNull().default(5),
+    text: text(),
+    language: text(),
+    visitedAt: date(),
+    /** TOP DRINK: momentul vizitei → scor „vineri–sâmbătă noaptea” vs „în timpul săptămânii”. */
+    visitWeekendNight: boolean(),
+    postedAt: timestamp({ withTimezone: true }).notNull(),
+    servedByEmployeeId: uuid().references(() => employees.id, { onDelete: "set null" }),
+
+    // Rezultatele analizei (modulul C)
+    authorType: authorType().notNull().default("unknown"),
+    aspects: jsonb().$type<Record<string, number>>(),
+    isPaid: boolean().notNull().default(false),
+    verifiedVisit: boolean().notNull().default(false),
+    fakeProbability: real().notNull().default(0),
+    fakeSignals: jsonb().$type<string[]>().notNull().default([]),
+    /** Ponderea finală (modulul D). */
+    weight: real(),
+    embedding: vector({ dimensions: 384 }),
+    analyzedAt: timestamp({ withTimezone: true }),
+    status: reviewStatus().notNull().default("published"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex().on(t.source, t.externalId),
+    index().on(t.venueId, t.postedAt),
+    index().on(t.authorId),
+  ],
+);
+
+export const reviewReplies = pgTable("review_replies", {
+  id: uuid().primaryKey().defaultRandom(),
+  reviewId: uuid().notNull().references(() => reviews.id, { onDelete: "cascade" }),
+  authorId: uuid().notNull().references(() => users.id),
+  text: text().notNull(),
+  createdAt: createdAt(),
+});
+
+export const employeeRatings = pgTable(
+  "employee_ratings",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    employeeId: uuid().notNull().references(() => employees.id, { onDelete: "cascade" }),
+    reviewId: uuid().references(() => reviews.id, { onDelete: "set null" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** "2026-10" — anti-abuz: un rating per angajat per lună. */
+    month: text().notNull(),
+    friendliness: integer().notNull(),
+    speed: integer().notNull(),
+    comment: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.employeeId, t.userId, t.month)],
+);
+
+/** Link TikTok/Instagram/Facebook trimis de useri (nivelul 3 de ingestie). */
+export const socialSubmissions = pgTable("social_submissions", {
+  id: uuid().primaryKey().defaultRandom(),
+  venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+  submittedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+  platform: socialPlatform().notNull(),
+  url: text().notNull().unique(),
+  status: submissionStatus().notNull().default("pending"),
+  /** { sentiment, dishes, priceMentioned, isAd, adSignals } */
+  analysis: jsonb(),
+  createdAt: createdAt(),
+});
+
+/** TOP DRINK „vibe check”: cât e de plin acum (1–5), expiră după 2 ore. */
+export const vibeChecks = pgTable(
+  "vibe_checks",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    userId: uuid().references(() => users.id, { onDelete: "set null" }),
+    level: integer().notNull(),
+    createdAt: createdAt(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+  },
+  (t) => [index().on(t.venueId, t.expiresAt)],
+);
+
+// ---------- Monetizare (NU se citește din scoring/leaderboard) ----------
+
+export const partnerships = pgTable("partnerships", {
+  id: uuid().primaryKey().defaultRandom(),
+  venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+  plan: partnershipPlan().notNull(),
+  startsAt: timestamp({ withTimezone: true }).notNull(),
+  endsAt: timestamp({ withTimezone: true }).notNull(),
+  paymentStatus: paymentStatus().notNull().default("pending"),
+  createdAt: createdAt(),
+});
+
+export const adSlots = pgTable("ad_slots", {
+  id: uuid().primaryKey().defaultRandom(),
+  citySlug: text().notNull().references(() => cities.slug),
+  vertical: vertical().notNull(),
+  placement: text().notNull(),
+  advertiser: text().notNull(),
+  creativeUrl: text().notNull(),
+  linkUrl: text().notNull(),
+  startsAt: timestamp({ withTimezone: true }).notNull(),
+  endsAt: timestamp({ withTimezone: true }).notNull(),
+  impressions: integer().notNull().default(0),
+  clicks: integer().notNull().default(0),
+});
+
+// ---------- Leaderboard ----------
+
+export const leaderboardSnapshots = pgTable(
+  "leaderboard_snapshots",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    citySlug: text().notNull().references(() => cities.slug),
+    vertical: vertical().notNull(),
+    /** "all" pentru topul general. */
+    category: text().notNull(),
+    /** "2026-10" */
+    month: text().notNull(),
+    entries: jsonb().$type<LeaderboardEntry[]>().notNull(),
+    awards: jsonb().$type<LeaderboardAwards>().notNull(),
+    frozenAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.citySlug, t.vertical, t.category, t.month)],
+);
+
+// ---------- Moderare ----------
+
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    targetType: reportTarget().notNull(),
+    targetId: text().notNull(),
+    reportedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    reason: text().notNull(),
+    status: reportStatus().notNull().default("open"),
+    decision: text(),
+    decidedBy: uuid().references(() => users.id),
+    decidedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.status, t.createdAt)],
+);
+
+// ---------- Tipuri JSON ----------
+
+export type CityPrices = {
+  food: Record<string, number>;
+  drink: { beer05l?: number | null; cocktail?: number | null };
+};
+
+export type ExternalAuthor = {
+  name: string;
+  reviewCount?: number;
+  profileUrl?: string;
+  /** Câte orașe/țări diferite are în review-uri (semnal de turist). */
+  citiesReviewed?: number;
+  isLocalGuide?: boolean;
+};
+
+export type ScoreExplanation = {
+  reviewCount: number;
+  localCount: number;
+  touristCount: number;
+  enoughData: boolean;
+  trapLevel: "none" | "possible" | "trap";
+  trapReasons: { signal: string; value: number; points: number; text: string }[];
+};
+
+export type LeaderboardEntry = {
+  rank: number;
+  venueId: string;
+  name: string;
+  score: number;
+  localReviews: number;
+  /** Diferența de loc față de luna trecută; null = intră în top. */
+  movement: number | null;
+};
+
+export type LeaderboardAwards = {
+  revelation?: { venueId: string; from: number; to: number };
+  employee?: { employeeId: string; venueId: string; mentions: number };
+  local?: { userId: string; reviews: number; helpfulVotes: number };
+};
