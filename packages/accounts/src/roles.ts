@@ -1,10 +1,14 @@
 /** Influencer (conturi sociale verificate) și revendicarea localului de către owner. */
 import { randomInt } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq, gte, lt, sql } from "drizzle-orm";
 import { forbidden, invalid, notFound, ownerClaims, userSocialLinks, users, venueManagers, venues, type Db } from "@tftd/db";
 import { hashCode } from "./local.ts";
 
 export const INFLUENCER_MIN_FOLLOWERS = 1000;
+export const MAX_CLAIM_ATTEMPTS = 5;
+export const MAX_CLAIMS_PER_DAY = 3;
+const HAS_OWNER = "Localul are deja un proprietar. Dacă e o greșeală, scrie-ne și decide un admin.";
+export const TOO_MANY_ATTEMPTS = "Prea multe încercări greșite. Cere un cod nou peste 24 de ore.";
 
 /**
  * Leagă un cont social de profil. `verified` vine DOAR din fluxul OAuth al platformei (dovada că e al lui);
@@ -44,42 +48,82 @@ export async function startClaim(db: Db, userId: string, venueId: string, method
     .select({ userId: venueManagers.userId })
     .from(venueManagers)
     .where(and(eq(venueManagers.venueId, venueId), eq(venueManagers.role, "owner")));
-  if (owner) throw forbidden("Localul are deja un proprietar. Dacă e o greșeală, scrie-ne și decide un admin.");
+  if (owner) throw forbidden(HAS_OWNER);
   if (method === "cui" && !/^(RO)?\d{2,10}$/i.test(cui ?? "")) throw invalid("CUI invalid.");
 
   const code = method === "phone_code" ? (process.env.DEMO_CLAIM_CODE ?? String(randomInt(100000, 1000000))) : null;
-  const [claim] = await db
-    .insert(ownerClaims)
-    .values({ userId, venueId, method, cui: cui ?? null, codeHash: code ? hashCode(code) : null })
-    .returning({ id: ownerClaims.id });
-  return { claimId: claim!.id, code, sendTo: method === "phone_code" ? venue.phone : null };
+  const claim = await db.transaction(async (tx) => {
+    // Lock per (user, local): cererile paralele nu pot depăși limita de mai jos.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`claim:${userId}:${venueId}`}))`);
+    const [recent] = await tx
+      .select({ n: count() })
+      .from(ownerClaims)
+      .where(and(eq(ownerClaims.userId, userId), eq(ownerClaims.venueId, venueId), gte(ownerClaims.createdAt, new Date(Date.now() - 86_400_000))));
+    if ((recent?.n ?? 0) >= MAX_CLAIMS_PER_DAY) {
+      throw invalid(`Ai cerut deja de ${MAX_CLAIMS_PER_DAY} ori revendicarea acestui local în ultimele 24 de ore. Încearcă din nou mai târziu.`);
+    }
+    const [row] = await tx
+      .insert(ownerClaims)
+      .values({ userId, venueId, method, cui: cui ?? null, codeHash: code ? hashCode(code) : null })
+      .returning({ id: ownerClaims.id });
+    return row!;
+  });
+  return { claimId: claim.id, code, sendTo: method === "phone_code" ? venue.phone : null };
 }
 
-/** Pasul 2 pentru `phone_code` și `google_business`: confirmarea face userul owner. */
+/** Pasul 2 pentru `phone_code` și `google_business`: confirmarea face userul owner. Cel mult 5 încercări. */
 export async function confirmClaim(db: Db, userId: string, claimId: string, proof: { code?: string; googleBusinessVerified?: boolean }) {
   const [claim] = await db.select().from(ownerClaims).where(eq(ownerClaims.id, claimId));
   if (!claim || claim.userId !== userId) throw notFound("Cererea");
+  if (claim.status === "rejected" && claim.attempts >= MAX_CLAIM_ATTEMPTS) throw invalid(TOO_MANY_ATTEMPTS);
   if (claim.status !== "pending") throw invalid("Cererea a fost deja procesată.");
+  // Încercarea se numără ÎNAINTE de comparație, atomic: o rafală de cereri paralele nu poate depăși limita.
+  const [tried] = await db
+    .update(ownerClaims)
+    .set({ attempts: sql`${ownerClaims.attempts} + 1` })
+    .where(and(eq(ownerClaims.id, claimId), eq(ownerClaims.status, "pending"), lt(ownerClaims.attempts, MAX_CLAIM_ATTEMPTS)))
+    .returning({ attempts: ownerClaims.attempts });
+  if (!tried) throw invalid(TOO_MANY_ATTEMPTS);
   const ok =
     (claim.method === "phone_code" && !!proof.code && claim.codeHash === hashCode(proof.code)) ||
     (claim.method === "google_business" && proof.googleBusinessVerified === true);
-  if (!ok) throw invalid("Dovada nu se potrivește.");
+  if (!ok) {
+    if (tried.attempts < MAX_CLAIM_ATTEMPTS) throw invalid("Dovada nu se potrivește.");
+    await db
+      .update(ownerClaims)
+      .set({ status: "rejected", decidedAt: new Date() })
+      .where(and(eq(ownerClaims.id, claimId), eq(ownerClaims.status, "pending")));
+    throw invalid(TOO_MANY_ATTEMPTS);
+  }
   await approveClaim(db, claim.id, null);
 }
 
-/** Folosită și de admin (moderation) pentru cererile cu CUI. */
+/** Folosită și de admin (moderation) pentru cererile cu CUI. Un local are un singur owner. */
 export async function approveClaim(db: Db, claimId: string, adminId: string | null) {
-  const [claim] = await db
-    .update(ownerClaims)
-    .set({ status: "verified", decidedBy: adminId, decidedAt: new Date() })
-    .where(eq(ownerClaims.id, claimId))
-    .returning();
-  if (!claim) throw notFound("Cererea");
-  await db.insert(venueManagers).values({ venueId: claim.venueId, userId: claim.userId, role: "owner" }).onConflictDoNothing();
-  await db
-    .update(users)
-    .set({ roles: sql`(SELECT array_agg(DISTINCT r) FROM unnest(${users.roles} || '{owner}'::user_role[]) r)` })
-    .where(eq(users.id, claim.userId));
+  // Tranzacție + lock pe rândul localului: doi useri care confirmă în paralel nu pot deveni amândoi owner.
+  const approved = await db.transaction(async (tx) => {
+    const [claim] = await tx.select().from(ownerClaims).where(eq(ownerClaims.id, claimId));
+    if (!claim) throw notFound("Cererea");
+    await tx.select({ id: venues.id }).from(venues).where(eq(venues.id, claim.venueId)).for("update");
+    const [owner] = await tx
+      .select({ userId: venueManagers.userId })
+      .from(venueManagers)
+      .where(and(eq(venueManagers.venueId, claim.venueId), eq(venueManagers.role, "owner")));
+    const decision = { decidedBy: adminId, decidedAt: new Date() };
+    if (owner && owner.userId !== claim.userId) {
+      await tx.update(ownerClaims).set({ status: "rejected", ...decision }).where(eq(ownerClaims.id, claimId));
+      return false;
+    }
+    await tx.update(ownerClaims).set({ status: "verified", ...decision }).where(eq(ownerClaims.id, claimId));
+    await tx.insert(venueManagers).values({ venueId: claim.venueId, userId: claim.userId, role: "owner" }).onConflictDoNothing();
+    await tx
+      .update(users)
+      .set({ roles: sql`(SELECT array_agg(DISTINCT r) FROM unnest(${users.roles} || '{owner}'::user_role[]) r)` })
+      .where(eq(users.id, claim.userId));
+    return true;
+  });
+  // Aruncăm după commit: respingerea cererii trebuie să rămână salvată.
+  if (!approved) throw forbidden(HAS_OWNER);
 }
 
 /** Owner-ul adaugă un manager (alt cont). */

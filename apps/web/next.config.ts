@@ -25,6 +25,9 @@ const nextConfig: NextConfig = {
     '@tftd/review-analysis',
     '@tftd/scoring',
   ],
+  serverExternalPackages: ['postgres'],
+  // Monorepo: rădăcina pentru tracing e repo-ul, nu apps/web.
+  outputFileTracingRoot: resolve(__dirname, '../..'),
 };
 
 export default nextConfig;
