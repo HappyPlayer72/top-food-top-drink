@@ -378,40 +378,130 @@
 }
 
 /* ============================================================================
-   Dark Mode (Warm Espresso #1A120E for topfood, preserves all 8 PDF tokens)
+   Light Mode for topdrink (html:not(.dark) — Warm Spumă + Sticlă #17382C ink)
+   ============================================================================ */
+html:not(.dark) .bg-\[\#17382C\] {
+  background-color: #F6F3EB;
+}
+
+html:not(.dark) .bg-\[\#17382C\]\/95 {
+  background-color: rgba(246, 243, 235, 0.94);
+}
+
+html:not(.dark) .bg-\[\#143025\],
+html:not(.dark) .bg-\[\#122B22\] {
+  background-color: #FFFFFF;
+}
+
+html:not(.dark) .bg-\[\#1E4335\] {
+  background-color: #EBE6DA;
+}
+
+html:not(.dark) .from-\[\#143025\] {
+  --tw-gradient-from: rgba(255, 255, 255, 0.72);
+  --tw-gradient-stops: var(--tw-gradient-from), rgba(255, 255, 255, 0.15), transparent;
+}
+
+html:not(.dark) .text-\[\#F4EEE2\] {
+  color: #17382C;
+}
+
+html:not(.dark) .text-\[\#F4EEE2\]\/90 {
+  color: rgba(23, 56, 44, 0.9);
+}
+
+html:not(.dark) .text-\[\#F4EEE2\]\/85 {
+  color: rgba(23, 56, 44, 0.85);
+}
+
+html:not(.dark) .text-\[\#F4EEE2\]\/80 {
+  color: rgba(23, 56, 44, 0.8);
+}
+
+html:not(.dark) .text-\[\#F4EEE2\]\/75 {
+  color: rgba(23, 56, 44, 0.72);
+}
+
+html:not(.dark) .text-\[\#F4EEE2\]\/70 {
+  color: rgba(23, 56, 44, 0.68);
+}
+
+html:not(.dark) .text-\[\#F4EEE2\]\/65,
+html:not(.dark) .text-\[\#F4EEE2\]\/60,
+html:not(.dark) .text-\[\#F4EEE2\]\/55 {
+  color: rgba(23, 56, 44, 0.6);
+}
+
+html:not(.dark) .text-\[\#F2A33A\]\/90,
+html:not(.dark) .text-\[\#F2A33A\] {
+  color: #B96B0A;
+}
+
+html:not(.dark) .bg-\[\#F2A33A\] .text-\[\#17382C\],
+html:not(.dark) .bg-\[\#F2A33A\].text-\[\#17382C\] {
+  color: #17382C;
+}
+
+html:not(.dark) .border-\[\#285443\],
+html:not(.dark) .border-\[\#2D5947\],
+html:not(.dark) .border-\[\#295645\] {
+  border-color: #D4DDD7;
+}
+
+html:not(.dark) .divide-\[\#285443\] > :not(:last-child) {
+  border-color: #D4DDD7;
+}
+
+html:not(.dark) .bg-\[\#285443\] {
+  background-color: #D9E1DC;
+}
+
+html:not(.dark) .hover\:bg-\[\#1C4234\]:hover,
+html:not(.dark) .hover\:bg-\[\#1E4335\]:hover {
+  background-color: #ECE7DB;
+}
+
+html:not(.dark) .hover\:border-\[\#F2A33A\]:hover,
+html:not(.dark) .hover\:border-\[\#F2A33A\]\/60:hover,
+html:not(.dark) .hover\:border-\[\#F2A33A\]\/70:hover {
+  border-color: #17382C;
+}
+
+/* ============================================================================
+   Dark Mode (Evening Slate #22262E for topfood, Sticlă #17382C for topdrink)
    ============================================================================ */
 html.dark {
-  background-color: #1A120E;
+  background-color: #22262E;
   color: #F4EEE2;
   color-scheme: dark;
 }
 
 html.dark ::-webkit-scrollbar-thumb {
-  background: #4A382D;
+  background: #464E5E;
 }
 
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6E5649;
+  background: #6C7484;
 }
 
 html.dark .bg-white {
-  background-color: #1A120E;
+  background-color: #22262E;
 }
 
 html.dark .bg-white\/95 {
-  background-color: rgba(26, 18, 14, 0.94);
+  background-color: rgba(34, 38, 46, 0.94);
 }
 
 html.dark .bg-\[\#FAF8F5\] {
-  background-color: #241914;
+  background-color: #2B303A;
 }
 
 html.dark .bg-\[\#F2EFE9\] {
-  background-color: #2A1E18;
+  background-color: #313743;
 }
 
 html.dark .bg-\[\#ECE6DD\] {
-  background-color: #2E221B;
+  background-color: #343A46;
 }
 
 html.dark .text-\[\#3A2418\] {
@@ -419,46 +509,46 @@ html.dark .text-\[\#3A2418\] {
 }
 
 html.dark .text-\[\#3A2418\]\/85 {
-  color: rgba(244, 238, 226, 0.85);
+  color: rgba(244, 238, 226, 0.86);
 }
 
 html.dark .text-\[\#6E5649\] {
-  color: #C2B3A6;
+  color: #B6BAC4;
 }
 
 html.dark .text-\[\#6E5649\]\/90 {
-  color: rgba(194, 179, 166, 0.9);
+  color: rgba(182, 186, 196, 0.9);
 }
 
 html.dark .border-\[\#E6DFD5\],
 html.dark .border-\[\#D6CFC5\] {
-  border-color: #3E2E24;
+  border-color: #3D4452;
 }
 
 html.dark .divide-\[\#E6DFD5\] > :not(:last-child) {
-  border-color: #3E2E24;
+  border-color: #3D4452;
 }
 
 html.dark .border-\[\#3A2418\] {
-  border-color: #6E5649;
+  border-color: #6C7484;
 }
 
 html.dark .hover\:bg-\[\#FAF8F5\]:hover {
-  background-color: #241914;
+  background-color: #2B303A;
 }
 
 html.dark .hover\:bg-\[\#EAE5DC\]:hover {
-  background-color: #33251E;
+  background-color: #39404E;
 }
 
 html.dark .hover\:border-\[\#3A2418\]:hover {
   border-color: #F4EEE2;
 }
 
-/* Active Cafea pills & buttons invert cleanly in Dark Mode */
+/* Active Cafea pills & buttons invert cleanly in Evening Slate Dark Mode */
 html.dark .bg-\[\#3A2418\] {
   background-color: #F4EEE2;
-  color: #1A120E;
+  color: #22262E;
   border-color: #F4EEE2;
 }
 
