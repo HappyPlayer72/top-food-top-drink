@@ -12,7 +12,7 @@ Fiecare membru lucrează pe branch-ul lui și deschide Pull Request spre `main`.
 | --- | --- | --- |
 | Oli | `oli` | de stabilit |
 | Serban | `serban` | de stabilit |
-| Adi | `adi` | de stabilit |
+| Adi | `adi` | Backend + Date / AI (vezi [`docs/BACKEND.md`](docs/BACKEND.md)) |
 | Alex | `alex` | de stabilit |
 
 Rolurile propuse: **Frontend** (F + UI pentru E, G) · **Backend** (E, G, H, J + modelul de date) · **Date / AI** (A, B, C, D, I) · **Design / Produs / Pitch** (identitate, seed, demo). Completați coloana de mai sus după ce vă împărțiți.

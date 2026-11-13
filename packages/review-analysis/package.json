@@ -1,0 +1,15 @@
+{
+  "name": "@tftd/review-analysis",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "~1.6.0",
+    "@tftd/db": "*",
+    "drizzle-orm": "^0.44.0",
+    "franc-min": "^6.2.0",
+    "zod": "^4.0.0"
+  }
+}

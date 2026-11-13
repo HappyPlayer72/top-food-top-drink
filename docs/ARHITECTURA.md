@@ -328,12 +328,11 @@ Decizii încă deschise (de discutat în echipă):
 
 ## Identitate vizuală
 
-Identitatea vizuală e gata în Claude Design: „TOP FOOD / TOP DRINK — Identitate vizuală”. Detalii în [`design/`](../design/).
+Identitatea vizuală e în Claude Design: [TOP FOOD / TOP DRINK — Identitate vizuală](https://claude.ai/artifact/S46PhX5PXags3MXLNhp8KU). Culorile și regulile exacte sunt în [`design/README.md`](../design/README.md).
 
-- Fonturi: Bricolage Grotesque (titluri, scoruri), Inter (text), JetBrains Mono (slug /oraș, cifre).
-- Culori: TOP FOOD `#C8321A` + `#F28C28`; TOP DRINK pe `#0E0B1A` cu `#A78BFA` + `#FF5FDC`.
-- Sistem comun, două variante: TOP FOOD cu accent cald, TOP DRINK cu accent de noapte (violet/neon pe fundal închis).
-- Logo: wordmark cu „/oraș” ca element de identitate (ex. TOP FOOD/timișoara).
-- Insigne: Localnic verificat, Influencer, Sponsorizat, Posibilă capcană / Capcană turistică, Angajatul lunii, Partener.
-- Machete pentru mobil: pagina orașului, pagina localului, topdrink noaptea, leaderboard-ul lunar.
-- Accesibilitate: contrast WCAG AA; insigna de capcană are icon + text, nu doar culoare.
+- TOP FOOD: semnul e fața de masă în carouri roșii de cârciumă; text maro-cafea pe alb.
+- TOP DRINK: fundal verde de sticlă, accent chihlimbar; scorul stă pe un suport de bere rotund.
+- Font unic: Archivo (îngust și gros pentru titluri și scoruri, normal pentru text).
+- Logo: `topfood/timișoara`, `topdrink/timișoara`; URL-ul e numele.
+- Insigne: Localnic = plăcuța albastră de stradă cu cartierul; Capcană = triunghi de avertizare; Sponsorizat = mai modest decât restul; Angajatul lunii = ecuson.
+- Accesibilitate: contrast WCAG AA; capcana se recunoaște după formă, nu doar după culoare.
