@@ -45,6 +45,8 @@
     background-color: #FFFFFF;
     color: #3A2418;
     scroll-behavior: smooth;
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -52,6 +54,33 @@
     font-variation-settings: "wdth" 100;
     line-height: 1.5;
     margin: 0;
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  select,
+  input,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  @media (pointer: coarse) {
+    input[type="range"] {
+      min-height: 36px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 24px;
+      height: 24px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+    }
   }
 
   button:focus-visible,
@@ -65,14 +94,14 @@
     outline-offset: 2px;
   }
 
-  html:not(.dark) .bg-\[\#17382C\] button:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] a:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] input:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] select:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] textarea:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] [role="button"]:focus-visible,
-  html:not(.dark) .bg-\[\#17382C\] [tabindex="0"]:focus-visible {
-    outline: 2px solid #17382C;
+  .bg-\[\#17382C\] button:focus-visible,
+  .bg-\[\#17382C\] a:focus-visible,
+  .bg-\[\#17382C\] input:focus-visible,
+  .bg-\[\#17382C\] select:focus-visible,
+  .bg-\[\#17382C\] textarea:focus-visible,
+  .bg-\[\#17382C\] [role="button"]:focus-visible,
+  .bg-\[\#17382C\] [tabindex="0"]:focus-visible {
+    outline: 2px solid #F2A33A;
     outline-offset: 2px;
   }
 
@@ -332,7 +361,7 @@
 }
 
 .modal-panel-enter {
-  animation: modalPanelIn 250ms var(--ease-out) forwards;
+  animation: modalPanelIn 250ms var(--ease-out);
 }
 
 .drawer-sheet-enter {
@@ -410,96 +439,6 @@
       transform: none !important;
     }
   }
-}
-
-/* ============================================================================
-   Light Mode for topdrink (html:not(.dark) — Warm Spumă + Sticlă #17382C ink)
-   ============================================================================ */
-html:not(.dark) .bg-\[\#17382C\] {
-  background-color: #F6F3EB;
-}
-
-html:not(.dark) .bg-\[\#17382C\]\/95 {
-  background-color: rgba(246, 243, 235, 0.94);
-}
-
-html:not(.dark) .bg-\[\#143025\],
-html:not(.dark) .bg-\[\#122B22\] {
-  background-color: #FFFFFF;
-}
-
-html:not(.dark) .bg-\[\#1E4335\] {
-  background-color: #EBE6DA;
-}
-
-html:not(.dark) .from-\[\#143025\] {
-  --tw-gradient-from: rgba(255, 255, 255, 0.72);
-  --tw-gradient-stops: var(--tw-gradient-from), rgba(255, 255, 255, 0.15), transparent;
-}
-
-html:not(.dark) .text-\[\#F4EEE2\] {
-  color: #17382C;
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/90 {
-  color: rgba(23, 56, 44, 0.9);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/85 {
-  color: rgba(23, 56, 44, 0.85);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/80 {
-  color: rgba(23, 56, 44, 0.8);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/75 {
-  color: rgba(23, 56, 44, 0.72);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/70 {
-  color: rgba(23, 56, 44, 0.68);
-}
-
-html:not(.dark) .text-\[\#F4EEE2\]\/65,
-html:not(.dark) .text-\[\#F4EEE2\]\/60,
-html:not(.dark) .text-\[\#F4EEE2\]\/55 {
-  color: rgba(23, 56, 44, 0.72);
-}
-
-html:not(.dark) .text-\[\#F2A33A\]\/90,
-html:not(.dark) .text-\[\#F2A33A\] {
-  color: #9E5906;
-}
-
-html:not(.dark) .bg-\[\#F2A33A\] .text-\[\#17382C\],
-html:not(.dark) .bg-\[\#F2A33A\].text-\[\#17382C\] {
-  color: #17382C;
-}
-
-html:not(.dark) .border-\[\#285443\],
-html:not(.dark) .border-\[\#2D5947\],
-html:not(.dark) .border-\[\#295645\] {
-  border-color: #D4DDD7;
-}
-
-html:not(.dark) .divide-\[\#285443\] > :not(:last-child) {
-  border-color: #D4DDD7;
-}
-
-html:not(.dark) .bg-\[\#285443\] {
-  background-color: #D9E1DC;
-}
-
-html:not(.dark) .hover\:bg-\[\#1C4234\]:hover,
-html:not(.dark) .hover\:bg-\[\#1E4335\]:hover {
-  background-color: #ECE7DB;
-}
-
-html:not(.dark) .hover\:border-\[\#F2A33A\]:hover,
-html:not(.dark) .hover\:border-\[\#F2A33A\]\/60:hover,
-html:not(.dark) .hover\:border-\[\#F2A33A\]\/70:hover {
-  border-color: #17382C;
 }
 
 /* ============================================================================

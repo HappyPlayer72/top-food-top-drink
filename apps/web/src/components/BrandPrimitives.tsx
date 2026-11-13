@@ -95,7 +95,10 @@ export const CoasterScore: React.FC<{
   size?: 'md' | 'lg';
   className?: string;
 }> = ({ score, size = 'md', className = '' }) => {
-  const dims = size === 'lg' ? 'w-20 h-20 text-[34px]' : 'w-14 h-14 text-[26px]';
+  const dims =
+    size === 'lg'
+      ? 'w-16 h-16 text-[28px] sm:w-20 sm:h-20 sm:text-[34px]'
+      : 'w-12 h-12 text-[22px] sm:w-14 sm:h-14 sm:text-[26px]';
   return (
     <div
       className={`coaster-badge inline-flex items-center justify-center shrink-0 select-none ${dims} ${className}`}
@@ -121,16 +124,24 @@ export const BrandWordmark: React.FC<{
     <button
       type="button"
       onClick={onClick}
-      className="btn-press inline-flex items-center gap-2.5 text-left rounded-[4px] group"
+      className="btn-press inline-flex items-center gap-2 sm:gap-2.5 text-left rounded-[4px] group min-w-0"
     >
       {isDrink ? (
-        <CoasterMark size={compact ? 24 : 28} />
+        <CoasterMark
+          size={compact ? 24 : 28}
+          className={compact ? '' : 'max-[374px]:w-6 max-[374px]:h-6'}
+        />
       ) : (
-        <CarouMark size={compact ? 24 : 28} />
+        <CarouMark
+          size={compact ? 24 : 28}
+          className={compact ? '' : 'max-[374px]:w-6 max-[374px]:h-6'}
+        />
       )}
       <span
-        className={`inline-flex items-baseline leading-none ${
-          compact ? 'text-[22px]' : 'text-[25px] sm:text-[28px]'
+        className={`inline-flex items-baseline leading-none truncate ${
+          compact
+            ? 'text-[19px] min-[375px]:text-[22px]'
+            : 'text-[20px] min-[375px]:text-[24px] sm:text-[28px]'
         } ${isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'}`}
       >
         <span className="font-display">
@@ -495,7 +506,7 @@ export const AvertizareaCard: React.FC<{
           type="button"
           onClick={() => setShowFormula((prev) => !prev)}
           aria-expanded={showFormula}
-          className={`btn-press text-[13px] font-semibold underline underline-offset-4 hover:opacity-80 ${
+          className={`btn-press min-h-[44px] sm:min-h-0 inline-flex items-center text-[13px] font-semibold underline underline-offset-4 hover:opacity-80 ${
             dark ? 'text-[#F2A33A]' : 'text-[#B3261E]'
           }`}
         >

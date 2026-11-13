@@ -19,6 +19,13 @@ import {
   TrapBadge,
 } from './BrandPrimitives';
 
+function normalizeRo(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 export interface EditorialListViewProps {
   vertical: Vertical;
   restaurants: Restaurant[];
@@ -108,7 +115,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
 
   // Filtered Food Lists
   const filteredFoodOrganic = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = normalizeRo(searchQuery.trim());
     return restaurants
       .filter((r) => !r.isSponsored && r.touristTrapIndex < 60)
       .filter((r) => {
@@ -122,9 +129,11 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
           return false;
         }
         if (q) {
-          const hay = `${r.name} ${r.shortCategory ?? r.cuisine} ${
-            r.shortNeighborhood ?? r.neighborhood
-          } ${r.whatToOrder.map((d) => d.name).join(' ')}`.toLowerCase();
+          const hay = normalizeRo(
+            `${r.name} ${r.shortCategory ?? r.cuisine} ${
+              r.shortNeighborhood ?? r.neighborhood
+            } ${r.whatToOrder.map((d) => d.name).join(' ')}`
+          );
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -144,9 +153,35 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       .sort((a, b) => b.touristTrapIndex - a.touristTrapIndex);
   }, [restaurants, foodFilters]);
 
+  const totalFoodReviews = useMemo(
+    () =>
+      restaurants.reduce(
+        (sum, r) =>
+          sum +
+          (r.reviewCounts
+            ? r.reviewCounts.locals +
+              r.reviewCounts.tourists +
+              r.reviewCounts.influencers
+            : r.reviews.length),
+        0
+      ),
+    [restaurants]
+  );
+
+  const hasActiveFoodCriteria =
+    searchQuery.trim().length > 0 || foodFilters.length > 0;
+
+  const drinkHeading = drinkFilters.includes('in-timpul-saptamanii')
+    ? 'Topul din timpul săptămânii'
+    : drinkFilters.includes('vineri-noaptea')
+    ? 'Topul de vineri'
+    : 'Topul barurilor';
+
+  const hasActiveDrinkSearch = searchQuery.trim().length > 0;
+
   // Filtered Drink Lists
   const filteredDrinkOrganic = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = normalizeRo(searchQuery.trim());
     return drinkVenues
       .filter((r) => !r.isSponsored)
       .filter((r) => {
@@ -154,9 +189,11 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
           if (!r.drinkTags?.includes(f)) return false;
         }
         if (q) {
-          const hay = `${r.name} ${r.shortCategory ?? r.cuisine} ${
-            r.shortNeighborhood ?? r.neighborhood
-          } ${r.whatToOrder.map((d) => d.name).join(' ')}`.toLowerCase();
+          const hay = normalizeRo(
+            `${r.name} ${r.shortCategory ?? r.cuisine} ${
+              r.shortNeighborhood ?? r.neighborhood
+            } ${r.whatToOrder.map((d) => d.name).join(' ')}`
+          );
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -264,13 +301,13 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       type="button"
       onClick={() => onSelectRestaurant(venue)}
       style={{ '--stagger-idx': staggerIdx } as React.CSSProperties}
-      className="venue-row-interactive stagger-fade-in w-full py-3.5 flex items-center justify-between gap-3.5 text-left hover:bg-[#FAF8F5] px-1.5 -mx-1.5 rounded-[4px]"
+      className="venue-row-interactive stagger-fade-in w-full py-3.5 flex items-center justify-between gap-2.5 sm:gap-3.5 text-left hover:bg-[#FAF8F5] px-0 sm:px-1.5 sm:-mx-1.5 rounded-[4px]"
     >
-      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-        <span className="font-display text-[26px] leading-none text-[#3A2418] w-5 shrink-0">
+      <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+        <span className="font-display text-[22px] sm:text-[26px] leading-none text-[#3A2418] w-4 sm:w-5 pt-0.5 sm:pt-0 shrink-0">
           {rank}
         </span>
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5]">
+        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5]">
           <img
             src={venue.photoUrl}
             alt={venue.name}
@@ -280,10 +317,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
           />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="font-bold text-[17px] text-[#3A2418] leading-snug truncate">
+          <div className="font-bold text-[16px] sm:text-[17px] text-[#3A2418] leading-snug line-clamp-2 sm:truncate">
             {venue.name}
           </div>
-          <div className="text-[13px] text-[#6E5649] truncate">
+          <div className="text-[12px] sm:text-[13px] text-[#6E5649] truncate">
             {venue.shortCategory ?? venue.cuisine},{' '}
             {venue.shortNeighborhood ?? venue.neighborhood},{' '}
             {venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}
@@ -297,7 +334,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               size="xs"
             />
             {venue.whatToOrder[0] && (
-              <span className="text-[11px] text-[#6E5649] truncate">
+              <span className="text-[11px] text-[#6E5649] truncate max-w-full">
                 {venue.whatToOrder[0].name}
               </span>
             )}
@@ -305,7 +342,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         </div>
       </div>
 
-      <span className="font-display text-[34px] sm:text-[38px] leading-none text-[#3A2418] tabular-nums shrink-0">
+      <span className="font-display text-[28px] sm:text-[38px] leading-none text-[#3A2418] tabular-nums shrink-0">
         {formatScore(venue.foodQualityScore)}
       </span>
     </button>
@@ -316,11 +353,11 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // ============================================================================
   if (isDrink) {
     return (
-      <div className="min-h-screen bg-[#17382C] text-[#F4EEE2] pb-24">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-5 sm:pt-8 space-y-8">
+      <div className="min-h-screen bg-[#17382C] text-[#F4EEE2] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 space-y-6 sm:space-y-8">
           {/* Hero */}
-          <section className="space-y-4">
-            <h1 className="font-display text-[44px] sm:text-[56px] leading-[0.94] text-[#F4EEE2] max-w-xl">
+          <section className="space-y-3.5 sm:space-y-4">
+            <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#F4EEE2] max-w-xl">
               Unde ieșim în seara asta
             </h1>
 
@@ -338,14 +375,14 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
                   placeholder="bere artizanală, jazz, Cetate..."
-                  className="w-full px-3.5 py-2.5 pr-11 rounded-[4px] bg-[#122B22] border border-[#2D5947] text-[15px] text-[#F4EEE2] placeholder:text-current placeholder:opacity-60 focus:outline-none focus:ring-1 focus:ring-[#F2A33A] focus:border-[#F2A33A]"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 pr-11 rounded-[4px] bg-[#122B22] border border-[#2D5947] text-[16px] sm:text-[15px] text-[#F4EEE2] placeholder:text-current placeholder:opacity-60 focus:outline-none focus:ring-1 focus:ring-[#F2A33A] focus:border-[#F2A33A]"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => onSearchChange('')}
                     aria-label="Șterge căutarea"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-[#F4EEE2]/70 hover:text-[#F4EEE2]"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#F4EEE2]/70 hover:text-[#F4EEE2]"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -354,7 +391,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             </div>
 
             {/* Filter Pills (Chihlimbar #F2A33A active) */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-0.5 sm:pb-0">
               {DRINK_FILTER_PILLS.map((pill) => {
                 const active = drinkFilters.includes(pill.id);
                 return (
@@ -362,7 +399,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     key={pill.id}
                     type="button"
                     onClick={() => onToggleDrinkFilter(pill.id)}
-                    className={`btn-press px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border ${
+                    className={`btn-press shrink-0 min-h-[44px] sm:min-h-0 px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border whitespace-nowrap ${
                       active
                         ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
                         : 'bg-[#17382C] text-[#F4EEE2] border-[#2D5947] hover:border-[#F2A33A]/60'
@@ -380,7 +417,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setVibeSubmittedNotice(null)}
-                  className="btn-press text-[#F2A33A] text-[12px] font-semibold"
+                  className="btn-press min-h-[44px] sm:min-h-0 px-2 -mr-2 text-[#F2A33A] text-[12px] font-semibold shrink-0"
                 >
                   Închide
                 </button>
@@ -390,17 +427,17 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
 
           {/* Main 12-column editorial layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-            {/* LEFT 7 COLUMNS: Topul de vineri */}
+            {/* LEFT 7 COLUMNS: Dynamic drink ranking */}
             <section
-              aria-label="Topul de vineri"
+              aria-label={drinkHeading}
               className="lg:col-span-7 space-y-3"
             >
-              <div className="space-y-1.5 pb-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#F4EEE2]">
-                    Topul de vineri
+              <div className="space-y-1 pb-1">
+                <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                  <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#F4EEE2]">
+                    {drinkHeading}
                   </h2>
-                  <span className="text-[13px] text-[#F4EEE2]/65">
+                  <span className="text-[12px] sm:text-[13px] text-[#F4EEE2]/65">
                     plin acum, din raportări
                   </span>
                 </div>
@@ -410,7 +447,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     type="button"
                     onClick={() => setShowScorOnestInfo((prev) => !prev)}
                     aria-expanded={showScorOnestInfo}
-                    className="btn-press text-[12px] font-semibold text-[#F2A33A] underline underline-offset-4 hover:opacity-85"
+                    className="btn-press min-h-[44px] sm:min-h-0 inline-flex items-center -my-1.5 sm:my-0 text-[12px] font-semibold text-[#F2A33A] underline underline-offset-4 hover:opacity-85"
                   >
                     Cum calculăm Scorul Onest?
                   </button>
@@ -472,9 +509,11 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#143025] via-[#143025]/25 to-transparent" />
                         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
-                          <span className="px-2.5 py-1 rounded-[3px] bg-[#F2A33A] text-[#17382C] font-bold text-[11px] leading-none">
-                            #1 În topul de vineri
-                          </span>
+                          {!hasActiveDrinkSearch && drinkFilters.length === 1 && drinkFilters[0] === 'vineri-noaptea' && (
+                            <span className="px-2.5 py-1 rounded-[3px] bg-[#F2A33A] text-[#17382C] font-bold text-[11px] leading-none">
+                              #1 În topul de vineri
+                            </span>
+                          )}
                           <LocalnicBadge
                             label={`Localnici ${formatScore(featuredDrink.localsScore)}`}
                             size="xs"
@@ -482,46 +521,50 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="p-4 flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <div className="flex items-baseline gap-2.5">
-                            <span className="font-display text-[30px] leading-none text-[#F2A33A]">
-                              1
-                            </span>
-                            <h3 className="font-display text-[24px] sm:text-[26px] leading-none text-[#F4EEE2] truncate">
-                              {featuredDrink.name}
-                            </h3>
-                          </div>
-
-                          <div className="text-[13px] text-[#F4EEE2]/75 leading-snug">
-                            {featuredDrink.shortCategory ?? featuredDrink.cuisine},{' '}
-                            {featuredDrink.shortNeighborhood ?? featuredDrink.neighborhood}.{' '}
-                            {featuredDrink.priceRangeLabel}
-                          </div>
-
-                          {featuredDrink.whatToOrder[0] && (
-                            <div className="inline-flex items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-[#1E4335] text-[#F4EEE2]/90">
-                              <span className="text-[#F2A33A] font-semibold">
-                                Ce să iei:
+                      <div className="p-3.5 sm:p-4 space-y-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-baseline gap-2">
+                              <span className="font-display text-[28px] sm:text-[30px] leading-none text-[#F2A33A] shrink-0">
+                                1
                               </span>
-                              <span className="truncate">
-                                {featuredDrink.whatToOrder[0].name} ·{' '}
-                                {featuredDrink.whatToOrder[0].priceRon} lei
-                              </span>
+                              <h3 className="font-display text-[22px] sm:text-[26px] leading-[1.05] text-[#F4EEE2] line-clamp-2 sm:truncate">
+                                {featuredDrink.name}
+                              </h3>
                             </div>
-                          )}
 
-                          {featuredDrink.crowdSegments && featuredDrink.crowdLabel && (
-                            <CrowdMeter
-                              segments={featuredDrink.crowdSegments}
-                              label={featuredDrink.crowdLabel}
-                            />
-                          )}
+                            <div className="text-[13px] text-[#F4EEE2]/75 leading-snug">
+                              {featuredDrink.shortCategory ?? featuredDrink.cuisine},{' '}
+                              {featuredDrink.shortNeighborhood ?? featuredDrink.neighborhood}.{' '}
+                              {featuredDrink.priceRangeLabel}
+                            </div>
+                          </div>
+
+                          <CoasterScore score={featuredDrink.foodQualityScore} size="lg" />
                         </div>
 
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <CoasterScore score={featuredDrink.foodQualityScore} size="lg" />
-                          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#F2A33A]">
+                        {featuredDrink.whatToOrder[0] && (
+                          <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-[#1E4335] text-[#F4EEE2]/90">
+                            <span className="text-[#F2A33A] font-semibold shrink-0">
+                              Ce să iei:
+                            </span>
+                            <span className="min-w-0 truncate">
+                              {featuredDrink.whatToOrder[0].name} ·{' '}
+                              {featuredDrink.whatToOrder[0].priceRon} lei
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
+                          <div className="min-w-0">
+                            {featuredDrink.crowdSegments && featuredDrink.crowdLabel && (
+                              <CrowdMeter
+                                segments={featuredDrink.crowdSegments}
+                                label={featuredDrink.crowdLabel}
+                              />
+                            )}
+                          </div>
+                          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#F2A33A] ml-auto shrink-0 pt-1">
                             <span>Vezi fișa</span>
                             <ArrowRight className="w-3.5 h-3.5 venue-cta-arrow opacity-75" />
                           </span>
@@ -539,14 +582,14 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                           type="button"
                           onClick={() => onSelectRestaurant(venue)}
                           style={{ '--stagger-idx': idx + 1 } as React.CSSProperties}
-                          className="venue-row-interactive stagger-fade-in w-full py-4 flex items-center justify-between gap-3.5 text-left hover:bg-[#1C4234] px-1.5 -mx-1.5 rounded-[4px]"
+                          className="venue-row-interactive stagger-fade-in w-full py-4 flex items-center justify-between gap-2.5 sm:gap-3.5 text-left hover:bg-[#1C4234] px-0 sm:px-1.5 sm:-mx-1.5 rounded-[4px]"
                         >
-                          <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                            <span className="font-display text-[24px] leading-none text-[#F4EEE2]/70 w-4 pt-1 shrink-0">
+                          <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+                            <span className="font-display text-[22px] sm:text-[24px] leading-none text-[#F4EEE2]/70 w-4 pt-1 shrink-0">
                               {idx + 2}
                             </span>
 
-                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 border border-[#285443] bg-[#122B22]">
+                            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 border border-[#285443] bg-[#122B22]">
                               <img
                                 src={venue.photoUrl}
                                 alt={venue.name}
@@ -557,10 +600,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                             </div>
 
                             <div className="min-w-0 flex-1">
-                              <div className="font-bold text-[17px] leading-snug text-[#F4EEE2] truncate">
+                              <div className="font-bold text-[16px] sm:text-[17px] leading-snug text-[#F4EEE2] line-clamp-2 sm:truncate">
                                 {venue.name}
                               </div>
-                              <div className="text-[13px] text-[#F4EEE2]/75 mt-0.5 leading-snug">
+                              <div className="text-[12px] sm:text-[13px] text-[#F4EEE2]/75 mt-0.5 leading-snug">
                                 {venue.shortCategory ?? venue.cuisine},{' '}
                                 {venue.shortNeighborhood ?? venue.neighborhood}.{' '}
                                 {venue.priceRangeLabel}
@@ -598,7 +641,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               className="lg:col-span-5 space-y-6"
             >
               <div className="space-y-4">
-                <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#F4EEE2]">
+                <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#F4EEE2]">
                   Weekendul ăsta
                 </h2>
 
@@ -615,7 +658,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                           targetVenue && onSelectRestaurant(targetVenue)
                         }
                         style={{ '--stagger-idx': idx } as React.CSSProperties}
-                        className="venue-row-interactive stagger-fade-in w-full py-4 flex items-center gap-3 text-left hover:bg-[#1C4234] px-1.5 -mx-1.5 rounded-[4px]"
+                        className="venue-row-interactive stagger-fade-in w-full py-4 flex items-center gap-3 text-left hover:bg-[#1C4234] px-0 sm:px-1.5 sm:-mx-1.5 rounded-[4px]"
                       >
                         {targetVenue?.photoUrl && (
                           <div className="w-14 h-14 rounded-[4px] overflow-hidden shrink-0 border border-[#285443] bg-[#122B22]">
@@ -654,7 +697,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsVibeModalOpen(true)}
-                className="btn-press w-full py-3.5 px-5 rounded-[4px] bg-[#F2A33A] text-[#17382C] font-bold text-[15px] hover:brightness-105"
+                className="btn-press w-full min-h-[48px] py-3.5 px-5 rounded-[4px] bg-[#F2A33A] text-[#17382C] font-bold text-[15px] hover:brightness-105"
               >
                 Spune cât e de plin unde ești
               </button>
@@ -672,13 +715,14 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               role="dialog"
               aria-modal="true"
               aria-labelledby="vibe-modal-title"
-              className="drawer-sheet-enter w-full sm:max-w-md bg-[#17382C] border border-[#2D5947] text-[#F4EEE2] rounded-t-[8px] sm:rounded-[6px] p-5 space-y-4"
+              className="drawer-sheet-enter w-full max-w-full sm:max-w-md bg-[#17382C] border border-[#2D5947] text-[#F4EEE2] rounded-t-[12px] sm:rounded-[6px] px-4 pt-3 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-4 max-h-[90dvh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between">
+              <div className="sm:hidden w-10 h-1 rounded-full mx-auto bg-[#F4EEE2]/25" />
+              <div className="flex items-center justify-between gap-2">
                 <h3
                   id="vibe-modal-title"
-                  className="font-display text-[24px] leading-none"
+                  className="font-display text-[22px] sm:text-[24px] leading-none"
                 >
                   Raportează cât e de plin
                 </h3>
@@ -694,13 +738,17 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
 
               <form onSubmit={handleVibeSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[13px] font-semibold block">
+                  <label
+                    htmlFor="vibe-venue-select"
+                    className="text-[13px] font-semibold block"
+                  >
                     Unde ești acum?
                   </label>
                   <select
+                    id="vibe-venue-select"
                     value={vibeVenueId}
                     onChange={(e) => setVibeVenueId(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-[4px] bg-[#122B22] border border-[#2D5947] text-[#F4EEE2] text-[14px]"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-[4px] bg-[#122B22] border border-[#2D5947] text-[#F4EEE2] text-[16px] sm:text-[14px]"
                   >
                     {drinkVenues.map((v) => (
                       <option key={v.id} value={v.id}>
@@ -711,9 +759,9 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[13px] font-semibold block">
+                  <span className="text-[13px] font-semibold block">
                     Cum e atmosfera? (expiră după 2 ore)
-                  </label>
+                  </span>
                   <div className="space-y-1.5">
                     {CROWD_PRESETS.map((preset) => {
                       const active = vibeSegments === preset.segments;
@@ -722,14 +770,14 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                           key={preset.segments}
                           type="button"
                           onClick={() => setVibeSegments(preset.segments)}
-                          className={`btn-press w-full px-3 py-2.5 rounded-[4px] border flex items-center justify-between text-left text-[13px] ${
+                          className={`btn-press w-full min-h-[44px] px-3 py-2.5 rounded-[4px] border flex items-center justify-between gap-2 text-left text-[13px] ${
                             active
                               ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F4EEE2] font-semibold'
                               : 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/80 hover:border-[#F2A33A]/50'
                           }`}
                         >
                           <span>{preset.title}</span>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 shrink-0">
                             {[1, 2, 3, 4, 5].map((i) => (
                               <span
                                 key={i}
@@ -749,7 +797,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
 
                 <button
                   type="submit"
-                  className="btn-press w-full py-3 rounded-[4px] bg-[#F2A33A] text-[#17382C] font-bold text-[14px] hover:brightness-105"
+                  className="btn-press w-full min-h-[48px] py-3 rounded-[4px] bg-[#F2A33A] text-[#17382C] font-bold text-[14px] hover:brightness-105"
                 >
                   Trimite raportarea live
                 </button>
@@ -765,10 +813,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // TOPFOOD / TIMIȘOARA VIEW (Page 3 — White + Cafea + Carou)
   // ============================================================================
   return (
-    <div className="bg-white text-[#3A2418] pb-24">
+    <div className="bg-white text-[#3A2418] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
       {/* HERO BLOCK */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-5 sm:pt-8 pb-6 space-y-4">
-        <h1 className="font-display text-[44px] sm:text-[56px] leading-[0.94] text-[#3A2418] max-w-xl">
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 pb-5 sm:pb-6 space-y-3.5 sm:space-y-4">
+        <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#3A2418] max-w-xl">
           Unde mănâncă timișorenii
           <span className="hidden sm:inline">, nu turiștii</span>
         </h1>
@@ -787,14 +835,14 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="ciorbă, pizza, Iosefin..."
-              className="w-full px-3.5 py-2.5 pr-11 rounded-[4px] bg-white border border-[#3A2418] text-[15px] text-[#3A2418] placeholder-[#8C7B70] focus:outline-none focus:ring-1 focus:ring-[#3A2418]"
+              className="w-full min-h-[44px] px-3.5 py-2.5 pr-11 rounded-[4px] bg-white border border-[#3A2418] text-[16px] sm:text-[15px] text-[#3A2418] placeholder-[#8C7B70] focus:outline-none focus:ring-1 focus:ring-[#3A2418]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
                 aria-label="Șterge căutarea"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-[#6E5649] hover:text-[#3A2418]"
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#6E5649] hover:text-[#3A2418]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -803,7 +851,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         </div>
 
         {/* Quick Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pt-0.5">
           {FOOD_FILTER_PILLS.map((pill) => {
             const active = foodFilters.includes(pill.id);
             return (
@@ -811,7 +859,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 key={pill.id}
                 type="button"
                 onClick={() => onToggleFoodFilter(pill.id)}
-                className={`btn-press px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border ${
+                className={`btn-press shrink-0 min-h-[44px] sm:min-h-0 px-3.5 py-2 rounded-[4px] text-[13px] font-semibold border whitespace-nowrap ${
                   active
                     ? 'bg-[#3A2418] text-white border-[#3A2418]'
                     : 'bg-white text-[#3A2418] border-[#D6CFC5] hover:border-[#3A2418]'
@@ -828,16 +876,16 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       <CarouStrip height={10} />
 
       {/* MAIN EDITORIAL 12-COLUMN FEED */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-7 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-7 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
         {/* LEFT 7 COLUMNS: Topul onest */}
         <section aria-label="Topul onest" className="lg:col-span-7 space-y-4">
-          <div className="space-y-1.5 pb-1">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#3A2418]">
+          <div className="space-y-1 pb-1">
+            <div className="flex items-baseline justify-between gap-2 flex-wrap">
+              <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#3A2418]">
                 Topul onest
               </h2>
-              <span className="text-[13px] text-[#6E5649]">
-                după 4.180 de review-uri
+              <span className="text-[12px] sm:text-[13px] text-[#6E5649]">
+                după {totalFoodReviews.toLocaleString('ro-RO')} de review-uri
               </span>
             </div>
 
@@ -846,7 +894,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 type="button"
                 onClick={() => setShowScorOnestInfo((prev) => !prev)}
                 aria-expanded={showScorOnestInfo}
-                className="btn-press text-[12px] font-semibold text-[#6E5649] underline underline-offset-4 hover:text-[#3A2418]"
+                className="btn-press min-h-[44px] sm:min-h-0 inline-flex items-center -my-1.5 sm:my-0 text-[12px] font-semibold text-[#6E5649] underline underline-offset-4 hover:text-[#3A2418]"
               >
                 Cum calculăm Scorul Onest?
               </button>
@@ -913,9 +961,11 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
                     <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-[3px] bg-[#3A2418] text-white font-bold text-[11px] leading-none">
-                        #1 În topul localnicilor
-                      </span>
+                      {!hasActiveFoodCriteria && (
+                        <span className="px-2.5 py-1 rounded-[3px] bg-[#3A2418] text-white font-bold text-[11px] leading-none">
+                          #1 În topul localnicilor
+                        </span>
+                      )}
                       <LocalnicBadge
                         label={`Localnici ${formatScore(featuredFood.localsScore)}`}
                         size="xs"
@@ -923,45 +973,50 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-4 sm:p-5 flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <div className="flex items-baseline gap-2.5">
-                        <span className="font-display text-[34px] leading-none text-[#B3261E] shrink-0">
-                          1
-                        </span>
-                        <h3 className="font-display text-[26px] sm:text-[30px] leading-none text-[#3A2418] truncate">
-                          {featuredFood.name}
-                        </h3>
+                  <div className="p-3.5 sm:p-5 space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-display text-[30px] sm:text-[34px] leading-none text-[#B3261E] shrink-0">
+                            1
+                          </span>
+                          <h3 className="font-display text-[24px] sm:text-[30px] leading-[1.05] text-[#3A2418] line-clamp-2 sm:truncate">
+                            {featuredFood.name}
+                          </h3>
+                        </div>
+
+                        <div className="text-[13px] text-[#6E5649]">
+                          {featuredFood.shortCategory ?? featuredFood.cuisine},{' '}
+                          {featuredFood.shortNeighborhood ?? featuredFood.neighborhood},{' '}
+                          {featuredFood.priceRangeLabel ?? `~${featuredFood.avgMealPriceRon} lei`}
+                        </div>
                       </div>
 
-                      <div className="text-[13px] text-[#6E5649]">
-                        {featuredFood.shortCategory ?? featuredFood.cuisine},{' '}
-                        {featuredFood.shortNeighborhood ?? featuredFood.neighborhood},{' '}
-                        {featuredFood.priceRangeLabel ?? `~${featuredFood.avgMealPriceRon} lei`}
-                      </div>
+                      <span className="font-display text-[40px] min-[375px]:text-[44px] sm:text-[52px] leading-[0.88] text-[#3A2418] tabular-nums shrink-0">
+                        {formatScore(featuredFood.foodQualityScore)}
+                      </span>
+                    </div>
 
-                      <p className="text-[13px] text-[#3A2418]/85 line-clamp-2 leading-snug">
-                        {featuredFood.editorialHeadline}
-                      </p>
+                    <p className="text-[13px] text-[#3A2418]/85 line-clamp-2 leading-snug">
+                      {featuredFood.editorialHeadline}
+                    </p>
 
-                      {featuredFood.whatToOrder[0] && (
-                        <div className="inline-flex items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-white border border-[#E6DFD5] text-[#3A2418]">
-                          <span className="text-[#B3261E] font-semibold">
+                    <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
+                      {featuredFood.whatToOrder[0] ? (
+                        <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-white border border-[#E6DFD5] text-[#3A2418]">
+                          <span className="text-[#B3261E] font-semibold shrink-0">
                             Recomandat:
                           </span>
-                          <span className="truncate">
+                          <span className="min-w-0 truncate">
                             {featuredFood.whatToOrder[0].name} ·{' '}
                             {featuredFood.whatToOrder[0].priceRon} lei
                           </span>
                         </div>
+                      ) : (
+                        <span />
                       )}
-                    </div>
 
-                    <div className="flex flex-col items-end justify-between shrink-0 self-stretch">
-                      <span className="font-display text-[44px] sm:text-[52px] leading-[0.88] text-[#3A2418] tabular-nums">
-                        {formatScore(featuredFood.foodQualityScore)}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#B3261E] mt-2">
+                      <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#B3261E] ml-auto shrink-0">
                         <span>Vezi fișa</span>
                         <ArrowRight className="w-3.5 h-3.5 venue-cta-arrow opacity-75" />
                       </span>
@@ -991,12 +1046,12 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 </div>
               )}
 
-              <div className="pt-4 flex items-center gap-5 border-t border-[#E6DFD5]">
+              <div className="pt-3 flex items-center flex-wrap gap-4 sm:gap-5 border-t border-[#E6DFD5]">
                 {filteredFoodOrganic.length > 5 && (
                   <button
                     type="button"
                     onClick={() => setShowAllTop((prev) => !prev)}
-                    className="btn-press text-[14px] font-semibold text-[#B3261E] underline underline-offset-4 hover:opacity-80"
+                    className="btn-press min-h-[44px] inline-flex items-center text-[14px] font-semibold text-[#B3261E] underline underline-offset-4 hover:opacity-80"
                   >
                     {showAllTop
                       ? 'Arată primele 5'
@@ -1006,7 +1061,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 <button
                   type="button"
                   onClick={onOpenMonthlyTop}
-                  className="btn-press text-[14px] font-semibold text-[#3A2418] underline underline-offset-4 hover:text-[#B3261E]"
+                  className="btn-press min-h-[44px] inline-flex items-center text-[14px] font-semibold text-[#3A2418] underline underline-offset-4 hover:text-[#B3261E]"
                 >
                   Clasamentul lunii
                 </button>
@@ -1022,12 +1077,13 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             className="lg:col-span-5 border-t-[3px] border-[#B3261E] pt-4 space-y-4"
           >
             <div className="space-y-1.5">
-              <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#3A2418]">
+              <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#3A2418]">
                 Atenție în Piața Unirii
               </h2>
               <p className="text-[14px] text-[#6E5649] leading-snug">
-                Trei terase din centru au scoruri mult mai mari la turiști decât
-                la localnici.
+                {foodTraps.length}{' '}
+                {foodTraps.length === 1 ? 'local' : 'localuri'} din centru au
+                scoruri mult mai mari la turiști decât la localnici.
               </p>
             </div>
 
@@ -1040,9 +1096,9 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     type="button"
                     onClick={() => onSelectRestaurant(trap)}
                     style={{ '--stagger-idx': idx } as React.CSSProperties}
-                    className="venue-row-interactive stagger-fade-in w-full py-3.5 text-left hover:bg-[#FAF8F5] px-1.5 -mx-1.5 rounded-[4px] flex items-start gap-3"
+                    className="venue-row-interactive stagger-fade-in w-full py-3.5 text-left hover:bg-[#FAF8F5] px-0 sm:px-1.5 sm:-mx-1.5 rounded-[4px] flex items-start gap-2.5 sm:gap-3"
                   >
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5] mt-0.5">
+                    <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5] mt-0.5">
                       <img
                         src={trap.photoUrl}
                         alt={trap.name}
@@ -1053,8 +1109,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-[15px] text-[#3A2418] truncate">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <span className="font-bold text-[15px] text-[#3A2418] leading-snug">
                           {trap.name}
                         </span>
                         <TrapBadge
@@ -1065,7 +1121,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                       <p className="text-[12px] text-[#6E5649] leading-snug">
                         {trap.editorialHeadline}
                       </p>
-                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap pt-0.5">
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[3px] bg-[#FAF8F5] border border-[#E6DFD5] text-[11px] font-semibold text-[#3A2418]">
                           <span className="text-[#1F4E8C]">
                             Localnici {formatScore(trap.localsScore)}
@@ -1075,7 +1131,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                             Turiști {formatScore(trap.touristsScore)}
                           </span>
                         </span>
-                        <span className="font-display text-[20px] leading-none text-[#3A2418] tabular-nums">
+                        <span className="font-display text-[20px] leading-none text-[#3A2418] tabular-nums ml-auto">
                           {formatScore(trap.foodQualityScore)}
                         </span>
                       </div>
@@ -1092,7 +1148,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   type="button"
                   onClick={() => setExpandedTrapPreview((prev) => !prev)}
                   aria-expanded={expandedTrapPreview}
-                  className="btn-press text-[13px] font-semibold text-[#B3261E] underline underline-offset-4 hover:opacity-80"
+                  className="btn-press min-h-[44px] inline-flex items-center text-left text-[13px] font-semibold text-[#B3261E] underline underline-offset-4 hover:opacity-80"
                 >
                   {expandedTrapPreview
                     ? 'Ascunde exemplul de avertizare'

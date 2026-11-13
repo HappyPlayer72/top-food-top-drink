@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, MapPin, Moon, Sun, User } from 'lucide-react';
+import { ArrowRight, ChevronDown, Eye, EyeOff, Lock, Mail, MapPin, Moon, Sun, User } from 'lucide-react';
 import { Neighborhood, UserAccount, Vertical, formatScore } from '../types';
 import { NEIGHBORHOODS } from '../data/restaurants';
 import { BrandWordmark, CarouStrip, LocalnicBadge } from './BrandPrimitives';
@@ -50,9 +50,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'verified-local' | 'tourist'>('verified-local');
+  const [selectedRole, setSelectedRole] = useState<'verified-local' | 'tourist'>('tourist');
   const [neighborhood, setNeighborhood] = useState<Neighborhood>('Iosefin');
   const [confirmLocalCheckin, setConfirmLocalCheckin] = useState(false);
+  const [gpsVerified, setGpsVerified] = useState(false);
+  const [showWeightsInfo, setShowWeightsInfo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const emailSuggestsLocal = isAcademicLocalEmail(email);
@@ -94,27 +96,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         return;
       }
 
-      if (
-        selectedRole === 'verified-local' &&
-        !emailSuggestsLocal &&
-        !confirmLocalCheckin
-      ) {
+      if (selectedRole === 'verified-local' && !confirmLocalCheckin && !gpsVerified) {
         setError(
-          'Confirmă că locuiești în Timișoara (verificare locală GDPR) pentru a crea un cont de localnic fără adresă UVT/UPT.'
+          'Confirmă declarația GDPR sau fă un check-in GPS în Timișoara pentru a continua ca localnic.'
         );
         return;
       }
 
-      const isLocal = selectedRole === 'verified-local' || emailSuggestsLocal;
+      const isDeclaredLocal = selectedRole === 'verified-local';
+      const isVerifiedLocal = isDeclaredLocal && gpsVerified;
       const newUser: UserAccount = {
         id: `user-${Date.now()}`,
         name: trimmedName,
         email: trimmedEmail,
-        role: isLocal ? 'verified-local' : 'tourist',
-        neighborhood: isLocal ? neighborhood : undefined,
-        weightMultiplier: isLocal ? 2.0 : 1.0,
-        description: isLocal
-          ? `Cont verificat ${neighborhood} · review-urile tale au pondere 2,0×.`
+        role: isVerifiedLocal ? 'verified-local' : 'tourist',
+        neighborhood: isDeclaredLocal ? neighborhood : undefined,
+        weightMultiplier: isVerifiedLocal ? 2.0 : 1.0,
+        description: isVerifiedLocal
+          ? `Localnic verificat GPS (${neighborhood}) · review-urile tale au pondere 2,0×.`
+          : isDeclaredLocal
+          ? `Localnic neverificat (${neighborhood}) · pondere 1,0× până la check-in GPS în Timișoara.`
           : 'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
       };
       onLoginSuccess(newUser);
@@ -130,17 +131,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
-    const isLocal = emailSuggestsLocal;
     const sessionUser: UserAccount = {
       id: `user-${trimmedEmail.replace(/[^a-z0-9]/g, '-')}`,
       name: formatNameFromEmail(trimmedEmail),
       email: trimmedEmail,
-      role: isLocal ? 'verified-local' : 'tourist',
-      neighborhood: isLocal ? 'Timișoara' : undefined,
-      weightMultiplier: isLocal ? 2.0 : 1.0,
-      description: isLocal
-        ? 'Cont universitar verificat Timișoara · review-urile tale au pondere 2,0×.'
-        : 'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
+      role: 'tourist',
+      neighborhood: undefined,
+      weightMultiplier: 1.0,
+      description:
+        'Cont de vizitator (1,0×) · verifică prezența prin check-in GPS pentru statut de localnic 2,0×.',
     };
     onLoginSuccess(sessionUser);
   };
@@ -157,33 +156,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     >
       {/* Top Minimal Masthead */}
       <header
-        className={`border-b ${
+        className={`pt-[env(safe-area-inset-top)] border-b ${
           isDrink
             ? 'bg-[#17382C]/95 border-[#285443]'
             : 'bg-white/95 border-[#E6DFD5]'
         }`}
       >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 min-h-14 sm:h-16 py-2 sm:py-0 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <BrandWordmark vertical={vertical} onClick={onContinueAsGuest} />
             <button
               type="button"
               onClick={onContinueAsGuest}
-              className={`btn-press inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1.5 rounded-[4px] border shrink-0 ${
+              className={`btn-press inline-flex items-center gap-1.5 min-h-[40px] sm:min-h-[34px] text-[12px] sm:text-[13px] font-semibold px-2.5 sm:px-3 py-1.5 rounded-[4px] border shrink-0 whitespace-nowrap ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
               }`}
             >
-              ← Înapoi la clasament
+              <span className="sm:hidden">← Înapoi</span>
+              <span className="hidden sm:inline">← Înapoi la clasament</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={() => onVerticalChange(isDrink ? 'food' : 'drink')}
-              className={`btn-press text-[13px] font-semibold px-3 py-1.5 rounded-[4px] border ${
+              className={`btn-press min-h-[40px] sm:min-h-[34px] text-[12px] sm:text-[13px] font-semibold px-2.5 sm:px-3 py-1.5 rounded-[4px] border ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
@@ -197,7 +197,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               onClick={onToggleDarkMode}
               aria-label={darkMode ? 'Comută la mod luminos' : 'Comută la mod întunecat'}
               title={darkMode ? 'Mod luminos' : 'Mod întunecat'}
-              className={`btn-press w-9 h-9 rounded-full flex items-center justify-center ${
+              className={`btn-press w-11 h-11 sm:w-9 sm:h-9 rounded-full flex items-center justify-center ${
                 isDrink
                   ? 'text-[#F4EEE2] hover:bg-[#1E4335]'
                   : 'text-[#3A2418] hover:bg-[#FAF8F5]'
@@ -216,18 +216,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       {!isDrink && <CarouStrip height={8} />}
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center py-8 sm:py-12 px-4 sm:px-6">
-        <div className="max-w-5xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <main className="flex-1 flex items-start lg:items-center py-5 sm:py-10 lg:py-12 px-4 sm:px-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="max-w-5xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 lg:gap-12 items-start">
           {/* Left Column: Editorial Context & Quick Demo Access */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="space-y-3">
-              <h1 className="font-display text-[38px] sm:text-[46px] leading-[1.02]">
+          <div className="lg:col-span-5 space-y-4 sm:space-y-6">
+            <div className="space-y-2 sm:space-y-3">
+              <h1 className="font-display text-[32px] sm:text-[42px] lg:text-[46px] leading-[1.02]">
                 {isDrink
                   ? 'Unde ies timișorenii, fără capcane.'
                   : 'Unde mănâncă timișorenii, nu turiștii.'}
               </h1>
               <p
-                className={`text-[15px] leading-relaxed ${
+                className={`text-[14px] sm:text-[15px] leading-relaxed ${
                   isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'
                 }`}
               >
@@ -236,9 +236,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </p>
             </div>
 
+            {/* Mobile Disclosure Trigger for Trust Weights */}
+            <div className="lg:hidden">
+              <button
+                type="button"
+                aria-expanded={showWeightsInfo}
+                onClick={() => setShowWeightsInfo((prev) => !prev)}
+                className={`btn-press w-full min-h-[44px] px-3.5 py-2.5 rounded-[6px] border text-[13px] font-semibold flex items-center justify-between gap-2 ${
+                  isDrink
+                    ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                    : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                }`}
+              >
+                <span>De ce notele au ponderi 2,0× și 1,0×?</span>
+                <ChevronDown
+                  className={`w-4 h-4 shrink-0 transition-transform ${
+                    showWeightsInfo ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
             {/* Trust Weights Explanation */}
             <div
-              className={`rounded-[6px] border p-4 space-y-3 ${
+              className={`${showWeightsInfo ? 'block' : 'hidden'} lg:block rounded-[6px] border p-4 space-y-3 ${
                 isDrink
                   ? 'bg-[#143025] border-[#285443]'
                   : 'bg-[#FAF8F5] border-[#E6DFD5]'
@@ -315,7 +336,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     key={acc.id}
                     type="button"
                     onClick={() => onLoginSuccess(acc)}
-                    className={`btn-press w-full rounded-[6px] border px-3.5 py-2.5 text-left flex items-center justify-between gap-3 ${
+                    className={`btn-press w-full min-h-[52px] rounded-[6px] border px-3.5 py-2.5 text-left flex items-center justify-between gap-3 ${
                       isDrink
                         ? 'bg-[#143025] border-[#285443] hover:border-[#F2A33A]'
                         : 'bg-white border-[#E6DFD5] hover:border-[#3A2418]'
@@ -372,7 +393,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           {/* Right Column: Login / Register Form Card */}
           <div className="lg:col-span-7">
             <div
-              className={`rounded-[6px] border p-5 sm:p-7 space-y-5 ${
+              className={`rounded-[6px] border p-4 sm:p-7 space-y-5 ${
                 isDrink
                   ? 'bg-[#143025] border-[#2D5947]'
                   : 'bg-white border-[#3A2418]'
@@ -393,7 +414,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   role="tab"
                   aria-selected={mode === 'login'}
                   onClick={() => handleModeChange('login')}
-                  className={`btn-press py-2 text-[13px] rounded-[3px] font-semibold ${
+                  className={`btn-press min-h-[44px] py-2 text-[13px] rounded-[3px] font-semibold ${
                     mode === 'login'
                       ? isDrink
                         ? 'bg-[#F2A33A] text-[#17382C] font-bold'
@@ -410,7 +431,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   role="tab"
                   aria-selected={mode === 'register'}
                   onClick={() => handleModeChange('register')}
-                  className={`btn-press py-2 text-[13px] rounded-[3px] font-semibold ${
+                  className={`btn-press min-h-[44px] py-2 text-[13px] rounded-[3px] font-semibold ${
                     mode === 'register'
                       ? isDrink
                         ? 'bg-[#F2A33A] text-[#17382C] font-bold'
@@ -463,7 +484,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                         placeholder="ex: Vlad P."
                         aria-invalid={Boolean(error)}
                         aria-describedby={error ? 'auth-error-msg' : undefined}
-                        className={`w-full pl-9 pr-3 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
+                        className={`w-full min-h-[44px] pl-9 pr-3 py-2.5 rounded-[4px] border text-[16px] sm:text-[14px] focus:outline-none ${inputClasses}`}
                       />
                     </div>
                   </div>
@@ -496,7 +517,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       placeholder="andreea@e-uvt.ro"
                       aria-invalid={Boolean(error)}
                       aria-describedby={error ? 'auth-error-msg' : undefined}
-                      className={`w-full pl-9 pr-3 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
+                      className={`w-full min-h-[44px] pl-9 pr-3 py-2.5 rounded-[4px] border text-[16px] sm:text-[14px] focus:outline-none ${inputClasses}`}
                     />
                   </div>
                 </div>
@@ -525,7 +546,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       placeholder="Minim 6 caractere"
                       aria-invalid={Boolean(error)}
                       aria-describedby={error ? 'auth-error-msg' : undefined}
-                      className={`w-full pl-9 pr-11 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
+                      className={`w-full min-h-[44px] pl-9 pr-12 py-2.5 rounded-[4px] border text-[16px] sm:text-[14px] focus:outline-none ${inputClasses}`}
                     />
                     <button
                       type="button"
@@ -533,7 +554,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       aria-label={
                         showPassword ? 'Ascunde parola' : 'Arată parola'
                       }
-                      className={`absolute right-1.5 top-1/2 -translate-y-1/2 min-w-9 min-h-9 flex items-center justify-center rounded-[3px] ${
+                      className={`absolute right-0.5 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-[3px] ${
                         isDrink
                           ? 'text-[#F4EEE2]/70 hover:text-[#F4EEE2]'
                           : 'text-[#6E5649] hover:text-[#3A2418]'
@@ -568,15 +589,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <LocalnicBadge label="Localnic" size="xs" />
-                          <span className="font-display text-[17px]">2,0×</span>
+                          <LocalnicBadge label={gpsVerified ? 'Localnic verificat' : 'Localnic'} size="xs" />
+                          <span className="font-display text-[17px]">
+                            {gpsVerified ? '2,0×' : '1,0×'}
+                          </span>
                         </div>
                         <p
                           className={`text-[12px] ${
                             isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
                           }`}
                         >
-                          Locuiesc sau studiez aici
+                          {gpsVerified
+                            ? 'Check-in GPS activ în Timișoara'
+                            : '2,0× doar după check-in GPS'}
                         </p>
                       </button>
 
@@ -630,7 +655,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                           onChange={(e) =>
                             setNeighborhood(e.target.value as Neighborhood)
                           }
-                          className={`w-full px-3 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
+                          className={`w-full min-h-[44px] px-3 py-2.5 rounded-[4px] border text-[16px] sm:text-[14px] focus:outline-none ${inputClasses}`}
                         >
                           {NEIGHBORHOODS.map((n) => (
                             <option key={n} value={n}>
@@ -639,10 +664,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                           ))}
                         </select>
 
-                        {!emailSuggestsLocal && (
+                        <div className="space-y-2">
                           <label
                             htmlFor="auth-local-confirm"
-                            className={`flex items-start gap-2.5 rounded-[4px] border p-3 text-[12px] leading-snug cursor-pointer ${
+                            className={`flex items-start gap-2.5 rounded-[4px] border min-h-[48px] p-3 text-[12px] leading-snug cursor-pointer ${
                               isDrink
                                 ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85'
                                 : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
@@ -658,13 +683,43 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                               }}
                               aria-invalid={Boolean(error)}
                               aria-describedby={error ? 'auth-error-msg' : undefined}
-                              className="mt-0.5 h-4 w-4 shrink-0 accent-[#B3261E]"
+                              className="mt-0.5 h-5 w-5 shrink-0 accent-[#B3261E]"
                             />
                             <span>
-                              Confirm că locuiesc în Timișoara (verificare locală GDPR — reținem doar ziua și orașul, niciodată traseul)
+                              Confirm că locuiesc în Timișoara (fără check-in GPS vei primi statut neverificat 1,0×)
                             </span>
                           </label>
-                        )}
+
+                          <button
+                            type="button"
+                            aria-pressed={gpsVerified}
+                            onClick={() => {
+                              setGpsVerified((prev) => !prev);
+                              if (error) setError(null);
+                            }}
+                            className={`btn-press w-full min-h-[44px] px-3 py-2 rounded-[4px] border text-[12px] font-semibold flex items-center justify-between gap-2 ${
+                              gpsVerified
+                                ? isDrink
+                                  ? 'border-[#F2A33A] bg-[#1E4335] text-[#F4EEE2]'
+                                  : 'border-[#1F4E8C] bg-[#1F4E8C]/10 text-[#1F4E8C]'
+                                : isDrink
+                                ? 'border-[#285443] bg-[#122B22] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                                : 'border-[#E6DFD5] bg-white text-[#3A2418] hover:border-[#1F4E8C]'
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5 text-left">
+                              <MapPin className="w-3.5 h-3.5 shrink-0" />
+                              <span>
+                                {gpsVerified
+                                  ? 'Check-in GPS Timișoara confirmat (2,0×)'
+                                  : 'Simulează check-in GPS Timișoara (pentru 2,0×)'}
+                              </span>
+                            </span>
+                            <span className="font-semibold text-[11px] tabular-nums shrink-0">
+                              {gpsVerified ? '2,0× activ' : '1,0×'}
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -686,7 +741,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
                 <button
                   type="submit"
-                  className={`btn-press w-full py-3 px-4 rounded-[4px] text-[14px] font-bold flex items-center justify-center gap-2 ${
+                  className={`btn-press w-full min-h-[48px] py-3 px-4 rounded-[4px] text-[15px] sm:text-[14px] font-bold flex items-center justify-center gap-2 ${
                     isDrink
                       ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
                       : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
@@ -714,7 +769,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <button
                   type="button"
                   onClick={onContinueAsGuest}
-                  className={`btn-press font-semibold underline underline-offset-4 text-left sm:text-right ${
+                  className={`btn-press min-h-[44px] inline-flex items-center font-semibold underline underline-offset-4 text-left sm:text-right ${
                     isDrink
                       ? 'text-[#F2A33A] hover:opacity-85'
                       : 'text-[#3A2418] hover:text-[#B3261E]'
