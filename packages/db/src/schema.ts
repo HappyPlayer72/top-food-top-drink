@@ -39,7 +39,8 @@ export const reviewSource = pgEnum("review_source", ["native", "google", "tripad
 export const socialPlatform = pgEnum("social_platform", ["tiktok", "instagram", "facebook", "youtube"]);
 export const authorType = pgEnum("author_type", ["local", "tourist", "unknown"]);
 export const reviewStatus = pgEnum("review_status", ["published", "flagged", "hidden"]);
-export const venueStatus = pgEnum("venue_status", ["active", "closed"]);
+/** `pending` = adăugat de un user de mână, așteaptă aprobarea unui admin. */
+export const venueStatus = pgEnum("venue_status", ["active", "closed", "pending"]);
 export const userRole = pgEnum("user_role", ["user", "local", "influencer", "owner", "employee", "admin"]);
 export const verificationMethod = pgEnum("verification_method", ["gps", "university_email", "vouch"]);
 export const verificationStatus = pgEnum("verification_status", ["pending", "verified", "rejected", "expired"]);
@@ -102,8 +103,21 @@ export const venues = pgTable(
     priceMinLei: integer(),
     priceMaxLei: integer(),
     drinkPrices: jsonb().$type<{ beer05l?: number; cocktail?: number }>(),
-    openingHours: jsonb().$type<Record<string, string>>(),
+    openingHours: jsonb().$type<OpeningHours>(),
     status: venueStatus().notNull().default("active"),
+    /** Cine l-a adăugat (null = ingestia automată sau seed). */
+    addedBy: uuid(),
+
+    // Prezentare (scrisă de owner sau de echipă)
+    photos: text().array().notNull().default(sql`'{}'::text[]`),
+    editorialHeadline: text(),
+    editorialWriteup: text().array().notNull().default(sql`'{}'::text[]`),
+    /** „prânz rapid”, „întâlnire”, „cu copiii”… */
+    occasionTags: text().array().notNull().default(sql`'{}'::text[]`),
+    /** TOP DRINK: „muzica-live”, „se-danseaza”… */
+    drinkTags: text().array().notNull().default(sql`'{}'::text[]`),
+    /** Media aspectelor din review-uri, pe scara 0–10 (scrisă de scoring). */
+    aspectScores: jsonb().$type<Record<string, number>>(),
 
     // Scoruri (scrise DOAR de packages/scoring)
     honestScore: real(),
@@ -376,6 +390,80 @@ export const vibeChecks = pgTable(
   (t) => [index().on(t.venueId, t.expiresAt)],
 );
 
+/** „Ce să comanzi”: felurile recomandate, puse de owner. */
+export const menuItems = pgTable(
+  "menu_items",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    priceLei: integer(),
+    description: text(),
+    mustOrder: boolean().notNull().default(false),
+    position: integer().notNull().default(0),
+  },
+  (t) => [index().on(t.venueId, t.position)],
+);
+
+/** Voturi „util” pe review-uri: un vot per user per review. */
+export const reviewVotes = pgTable(
+  "review_votes",
+  {
+    reviewId: uuid().notNull().references(() => reviews.id, { onDelete: "cascade" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.reviewId, t.userId] })],
+);
+
+// ---------- Fidelitate (carduri cu ștampile) ----------
+
+/**
+ * Program de fidelitate: al unui local (creat de owner, ștampile prin QR rotativ)
+ * sau personal (un user își ține evidența la o cafenea care nu e pe platformă).
+ */
+export const loyaltyPrograms = pgTable("loyalty_programs", {
+  id: uuid().primaryKey().defaultRandom(),
+  venueId: uuid().references(() => venues.id, { onDelete: "cascade" }),
+  createdBy: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+  /** Doar pentru programele personale (fără local pe platformă). */
+  customName: text(),
+  rewardTitle: text().notNull(),
+  stampsRequired: integer().notNull(),
+  icon: text().notNull().default("heart"),
+  accentColor: text(),
+  /** Secretul cu care se semnează codul QR rotativ (nu iese niciodată din backend). */
+  stampSecret: text(),
+  active: boolean().notNull().default(true),
+  createdAt: createdAt(),
+});
+
+export const loyaltyCards = pgTable(
+  "loyalty_cards",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    programId: uuid().notNull().references(() => loyaltyPrograms.id, { onDelete: "cascade" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    stamps: integer().notNull().default(0),
+    redeemed: integer().notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.programId, t.userId)],
+);
+
+/** Istoricul ștampilelor; anti-trișat: o ștampilă pe card pe zi. */
+export const loyaltyStamps = pgTable(
+  "loyalty_stamps",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    cardId: uuid().notNull().references(() => loyaltyCards.id, { onDelete: "cascade" }),
+    day: date().notNull(),
+    kind: text().notNull().default("stamp"), // "stamp" | "redeem"
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.cardId, t.day, t.kind)],
+);
+
 // ---------- Monetizare (NU se citește din scoring/leaderboard) ----------
 
 export const partnerships = pgTable("partnerships", {
@@ -446,6 +534,10 @@ export type CityPrices = {
   food: Record<string, number>;
   drink: { beer05l?: number | null; cocktail?: number | null };
 };
+
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+/** Program: { mon: [["11:00", "22:00"]], sat: [["12:00", "02:00"]] }; o zi lipsă = închis. Ora României. */
+export type OpeningHours = Partial<Record<Weekday, [string, string][]>>;
 
 export type ExternalAuthor = {
   name: string;

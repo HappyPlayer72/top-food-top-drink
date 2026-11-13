@@ -3,6 +3,8 @@
  * Text Search pentru descoperirea localelor, Place Details pentru rating + max 5 review-uri.
  * Cheia: GOOGLE_PLACES_API_KEY.
  */
+import type { OpeningHours, Weekday } from "@tftd/db";
+
 const BASE = "https://places.googleapis.com/v1";
 
 export type GooglePlace = {
@@ -18,9 +20,30 @@ export type GooglePlace = {
   googleMapsUri?: string;
   primaryType?: string;
   types?: string[];
-  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  regularOpeningHours?: {
+    weekdayDescriptions?: string[];
+    periods?: { open: GoogleTime; close?: GoogleTime }[];
+  };
   reviews?: GoogleReview[];
 };
+
+/** Google: day 0 = duminică. */
+export type GoogleTime = { day: number; hour: number; minute?: number };
+
+const GOOGLE_DAYS: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const hhmm = (t: GoogleTime) => `${String(t.hour).padStart(2, "0")}:${String(t.minute ?? 0).padStart(2, "0")}`;
+
+/** Perioadele Google → { mon: [["11:00","22:00"]] }. Deschis non-stop = o perioadă fără `close`. */
+export function toOpeningHours(periods: { open: GoogleTime; close?: GoogleTime }[] | undefined): OpeningHours | null {
+  if (!periods?.length) return null;
+  const out: OpeningHours = {};
+  for (const p of periods) {
+    const day = GOOGLE_DAYS[p.open.day];
+    if (!day) continue;
+    (out[day] ??= []).push([hhmm(p.open), p.close ? hhmm(p.close) : "24:00"]);
+  }
+  return out;
+}
 
 export type GoogleReview = {
   name: string;
@@ -70,6 +93,16 @@ export async function searchText(
   if (!res.ok) throw new Error(`Google Places searchText ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as { places?: GooglePlace[]; nextPageToken?: string };
   return { places: json.places ?? [], nextPageToken: json.nextPageToken };
+}
+
+/** Un singur loc cu toate câmpurile de prezentare (pentru adăugarea de către un user). */
+export async function getPlace(placeId: string): Promise<GooglePlace> {
+  const fields = DISCOVERY_FIELDS.split(",").filter((f) => f.startsWith("places.")).map((f) => f.slice(7)).join(",");
+  const res = await fetch(`${BASE}/places/${encodeURIComponent(placeId)}?languageCode=ro`, {
+    headers: { "X-Goog-Api-Key": apiKey(), "X-Goog-FieldMask": fields },
+  });
+  if (!res.ok) throw new Error(`Google Places get ${res.status}: ${await res.text()}`);
+  return (await res.json()) as GooglePlace;
 }
 
 export async function placeDetails(placeId: string): Promise<GooglePlace> {
@@ -127,9 +160,7 @@ export function toExternalPlace(p: GooglePlace, citySlug: string, vertical: "foo
     rating: p.rating ?? null,
     reviewCount: p.userRatingCount ?? null,
     url: p.googleMapsUri ?? null,
-    openingHours: p.regularOpeningHours?.weekdayDescriptions
-      ? Object.fromEntries(p.regularOpeningHours.weekdayDescriptions.map((d, i) => [String(i), d]))
-      : null,
+    openingHours: toOpeningHours(p.regularOpeningHours?.periods),
   };
 }
 

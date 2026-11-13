@@ -62,6 +62,26 @@ await userProfile(db, "andreea0");
 | Owner: parteneriat | `monetization.buyPartnership` (Highlight refuzat la capcane și review-uri suspecte) |
 | Admin | `moderation.queue`, `moderation.resolveReport`, `moderation.decideMatch`, `moderation.decideClaim` |
 
+
+### Nou: fidelitate, căutare pe internet, localuri adăugate de useri, „util”, meniu
+
+| Ce face userul | Funcție |
+| --- | --- |
+| Caută un local (la noi + pe Google) | `searchPlaces(db, { citySlug, vertical, query, center })` → `{ onPlatform, fromInternet }` (internetul doar cu `GOOGLE_PLACES_API_KEY`) |
+| Adaugă un local găsit pe Google | `addFromGoogle(db, userId, { citySlug, vertical, placeId })` → intră direct |
+| Adaugă un local de mână | `addManually(db, userId, { ..., name, address, lat, lng })` → „în așteptare” până aprobă adminul (`moderation.resolveReport(..., "accept")`); duplicatele sunt recunoscute |
+| Revendică localul (owner) | `accounts.startClaim` / `accounts.confirmClaim`, ca înainte |
+| Vot „util” pe review | `toggleHelpful(db, userId, reviewId)` |
+| Top recenzenți | `topReviewers(db, "timisoara")` |
+| Fidelitate: owner creează cardul | `loyalty.createVenueProgram(db, ownerId, venueId, { rewardTitle, stampsRequired, icon })` |
+| Fidelitate: ecranul owner-ului cu QR | `loyalty.currentStampCode(db, ownerId, programId)` → `{ code, expiresInSeconds }` (codul se schimbă la fiecare minut; afișează-l ca QR) |
+| Fidelitate: clientul scanează | `loyalty.scanCode(db, userId, code)` → +1 ștampilă sau premiul (max o ștampilă pe zi) |
+| Fidelitate: card personal (local care nu e la noi) | `loyalty.createPersonalCard`, `loyalty.addPersonalStamp` |
+| Portofelul userului | `loyalty.myCards(db, userId)` |
+| Owner: meniu, poze, text, program | `owner.setMenu`, `owner.updatePresentation` |
+
+`venuePage` întoarce acum și `menu`, `aspectScores` (0–10 pe mâncare, servire, preț…), `loyalty`, `venue.photos`, `venue.headline`, `venue.writeup`, `venue.openNow`, `venue.openLabel` („Deschis până la 23:00”), `venue.hoursText`, iar fiecare review are `helpfulCount`. `cityPage` dă pe fiecare card `openNow`, `openLabel`, `photo`, `aspectScores`.
+
 Erorile pentru user sunt `ServiceError` cu `code` (`not_found`, `forbidden`, `invalid`, `conflict`, `unauthorized`) și mesaj în română, gata de afișat.
 
 ## Pe module

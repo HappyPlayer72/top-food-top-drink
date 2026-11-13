@@ -1,6 +1,6 @@
 /** Leagă un local găsit pe o platformă externă de fișa noastră (sau creează una nouă). */
 import { and, eq } from "drizzle-orm";
-import { matchCandidates, venueSources, venues, type Db } from "@tftd/db";
+import { matchCandidates, venueSources, venues, type Db, type OpeningHours } from "@tftd/db";
 import { findMatch, normalizeName, type Place } from "./match.ts";
 
 export type ExternalPlace = Place & {
@@ -14,7 +14,7 @@ export type ExternalPlace = Place & {
   rating?: number | null;
   reviewCount?: number | null;
   url?: string | null;
-  openingHours?: Record<string, string> | null;
+  openingHours?: OpeningHours | null;
 };
 
 export type LinkResult = { venueId: string; outcome: "existing-source" | "matched" | "created" | "queued-for-admin" };

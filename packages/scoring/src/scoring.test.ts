@@ -95,3 +95,16 @@ it("haversine: Piața Unirii → Piața Victoriei ≈ 500 m", () => {
   expect(d).toBeGreaterThan(450);
   expect(d).toBeLessThan(600);
 });
+
+describe("aspecte adunate pe local", () => {
+  it("media ponderată, pe scara 0–10, doar cu minim 3 mențiuni", async () => {
+    const { aggregateAspects } = await import("./venue.ts");
+    const r = aggregateAspects([
+      { weight: 2, aspects: { mancare: 1, servire: -1 } },
+      { weight: 1, aspects: { mancare: 0.5 } },
+      { weight: 1, aspects: { mancare: 0 } },
+    ]);
+    expect(r.mancare).toBeCloseTo(8.1, 1);
+    expect(r.servire).toBeUndefined();
+  });
+});
