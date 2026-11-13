@@ -1,20 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, MapPin, Moon, Sun, User } from 'lucide-react';
 import { Neighborhood, UserAccount, Vertical, formatScore } from '../types';
+import { NEIGHBORHOODS } from '../data/restaurants';
 import { BrandWordmark, CarouStrip, LocalnicBadge } from './BrandPrimitives';
-
-const TIMISOARA_NEIGHBORHOODS: Neighborhood[] = [
-  'Iosefin',
-  'Cetate / Piața Unirii',
-  'Fabric',
-  'Elisabetin',
-  'Complexul Studențesc',
-  'Piața Victoriei',
-  'Piața Libertății',
-  'Bastion',
-];
 
 export interface LoginScreenProps {
   vertical: Vertical;
@@ -62,9 +52,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'verified-local' | 'tourist'>('verified-local');
   const [neighborhood, setNeighborhood] = useState<Neighborhood>('Iosefin');
+  const [confirmLocalCheckin, setConfirmLocalCheckin] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const emailSuggestsLocal = isAcademicLocalEmail(email);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onContinueAsGuest();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onContinueAsGuest]);
 
   const handleModeChange = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -90,6 +91,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       const trimmedName = name.trim();
       if (trimmedName.length < 2) {
         setError('Introdu numele sau inițialele pe care vrei să le afișăm.');
+        return;
+      }
+
+      if (
+        selectedRole === 'verified-local' &&
+        !emailSuggestsLocal &&
+        !confirmLocalCheckin
+      ) {
+        setError(
+          'Confirmă că locuiești în Timișoara (verificare locală GDPR) pentru a crea un cont de localnic fără adresă UVT/UPT.'
+        );
         return;
       }
 
@@ -151,8 +163,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             : 'bg-white/95 border-[#E6DFD5]'
         }`}
       >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-4">
-          <BrandWordmark vertical={vertical} />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 min-h-14 sm:h-16 py-2 sm:py-0 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <BrandWordmark vertical={vertical} onClick={onContinueAsGuest} />
+            <button
+              type="button"
+              onClick={onContinueAsGuest}
+              className={`btn-press inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1.5 rounded-[4px] border shrink-0 ${
+                isDrink
+                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                  : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+              }`}
+            >
+              ← Înapoi la clasament
+            </button>
+          </div>
 
           <div className="flex items-center gap-2">
             <button
@@ -436,6 +461,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="ex: Vlad P."
+                        aria-invalid={Boolean(error)}
+                        aria-describedby={error ? 'auth-error-msg' : undefined}
                         className={`w-full pl-9 pr-3 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
                       />
                     </div>
@@ -467,6 +494,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="andreea@e-uvt.ro"
+                      aria-invalid={Boolean(error)}
+                      aria-describedby={error ? 'auth-error-msg' : undefined}
                       className={`w-full pl-9 pr-3 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
                     />
                   </div>
@@ -494,7 +523,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Minim 6 caractere"
-                      className={`w-full pl-9 pr-10 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
+                      aria-invalid={Boolean(error)}
+                      aria-describedby={error ? 'auth-error-msg' : undefined}
+                      className={`w-full pl-9 pr-11 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
                     />
                     <button
                       type="button"
@@ -502,7 +533,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       aria-label={
                         showPassword ? 'Ascunde parola' : 'Arată parola'
                       }
-                      className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-[3px] ${
+                      className={`absolute right-1.5 top-1/2 -translate-y-1/2 min-w-9 min-h-9 flex items-center justify-center rounded-[3px] ${
                         isDrink
                           ? 'text-[#F4EEE2]/70 hover:text-[#F4EEE2]'
                           : 'text-[#6E5649] hover:text-[#3A2418]'
@@ -601,12 +632,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                           }
                           className={`w-full px-3 py-2.5 rounded-[4px] border text-[14px] focus:outline-none ${inputClasses}`}
                         >
-                          {TIMISOARA_NEIGHBORHOODS.map((n) => (
+                          {NEIGHBORHOODS.map((n) => (
                             <option key={n} value={n}>
                               {n}
                             </option>
                           ))}
                         </select>
+
+                        {!emailSuggestsLocal && (
+                          <label
+                            htmlFor="auth-local-confirm"
+                            className={`flex items-start gap-2.5 rounded-[4px] border p-3 text-[12px] leading-snug cursor-pointer ${
+                              isDrink
+                                ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85'
+                                : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                            }`}
+                          >
+                            <input
+                              id="auth-local-confirm"
+                              type="checkbox"
+                              checked={confirmLocalCheckin}
+                              onChange={(e) => {
+                                setConfirmLocalCheckin(e.target.checked);
+                                if (e.target.checked && error) setError(null);
+                              }}
+                              aria-invalid={Boolean(error)}
+                              aria-describedby={error ? 'auth-error-msg' : undefined}
+                              className="mt-0.5 h-4 w-4 shrink-0 accent-[#B3261E]"
+                            />
+                            <span>
+                              Confirm că locuiesc în Timișoara (verificare locală GDPR — reținem doar ziua și orașul, niciodată traseul)
+                            </span>
+                          </label>
+                        )}
                       </div>
                     )}
                   </div>
@@ -614,6 +672,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
                 {error && (
                   <div
+                    id="auth-error-msg"
                     role="alert"
                     className={`rounded-[4px] border px-3 py-2 text-[13px] font-semibold ${
                       isDrink

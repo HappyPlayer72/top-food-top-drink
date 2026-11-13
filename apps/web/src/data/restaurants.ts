@@ -18,18 +18,6 @@ export const NEIGHBORHOODS: Neighborhood[] = [
   'Elisabetin',
 ];
 
-export const CUISINES: string[] = [
-  'Românesc',
-  'Pizza',
-  'Patiserie',
-  'Bistro',
-  'Street food',
-  'Pub',
-  'Cocktail bar',
-  'Club',
-  'Terasă',
-];
-
 export const TOURIST_ZONES: TouristZone[] = [
   {
     id: 'piata-unirii',
@@ -68,44 +56,6 @@ export const TOURIST_ZONES: TouristZone[] = [
     radiusM: 300,
   },
 ];
-
-export const TRAP_FORMULA_WEIGHTS = [
-  {
-    id: 'gap',
-    weightPct: 30,
-    label: 'Decalaj scor turiști vs. localnici',
-    description:
-      'Când turiștii dau 8,4 iar localnicii dau 5,1, localul optimizează decorul și poziția în piață în detrimentul farfuriei.',
-  },
-  {
-    id: 'proximity',
-    weightPct: 20,
-    label: 'Proximitate zonă turistică (<300 m)',
-    description:
-      'Distanța față de Piața Unirii, Piața Victoriei, Piața Libertății și Bastion, corelată cu traficul de tranzit.',
-  },
-  {
-    id: 'price',
-    weightPct: 20,
-    label: 'Preț vs. media categoriei în Timișoara',
-    description:
-      'Diferența procentuală față de media orașului pentru același tip de mâncare.',
-  },
-  {
-    id: 'foreign',
-    weightPct: 15,
-    label: 'Review-uri în limbi străine',
-    description:
-      'Procentul de recenzii lăsate de vizitatori aflați în trecere față de comunitatea rezidentă.',
-  },
-  {
-    id: 'single-visit',
-    weightPct: 15,
-    label: 'Clienți care nu revin (o singură vizită)',
-    description:
-      'Procentul clienților care nu mai revin niciodată după prima masă.',
-  },
-] as const;
 
 export const INITIAL_RESTAURANTS: Restaurant[] = [
   // ============================================================================
@@ -1518,9 +1468,6 @@ export const TOP_LOCAL_REVIEWERS: TopReviewer[] = [
     helpfulVotes: 190,
   },
 ];
-
-// Export alias so components importing either RESTAURANTS or INITIAL_RESTAURANTS work cleanly
-export const RESTAURANTS: Restaurant[] = INITIAL_RESTAURANTS;
 
 /**
  * Helper to recalculate a restaurant's Dual-Rating scores when a new community review is submitted

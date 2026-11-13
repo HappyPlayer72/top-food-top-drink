@@ -121,7 +121,7 @@ export const BrandWordmark: React.FC<{
     <button
       type="button"
       onClick={onClick}
-      className="btn-press inline-flex items-center gap-2.5 text-left focus:outline-none group"
+      className="btn-press inline-flex items-center gap-2.5 text-left rounded-[4px] group"
     >
       {isDrink ? (
         <CoasterMark size={compact ? 24 : 28} />
@@ -428,6 +428,7 @@ export const AvertizareaCard: React.FC<{
   breakdown?: TrapBreakdown;
   onSelectVenue?: () => void;
   defaultOpen?: boolean;
+  dark?: boolean;
 }> = ({
   venueName,
   trapIndex,
@@ -435,9 +436,11 @@ export const AvertizareaCard: React.FC<{
   breakdown,
   onSelectVenue,
   defaultOpen = false,
+  dark = false,
 }) => {
   const [showFormula, setShowFormula] = useState(defaultOpen);
   const isSevere = trapIndex >= 80;
+  const strongTextClass = dark ? 'text-[#F4EEE2]' : 'text-[#3A2418]';
 
   return (
     <div className="border-t-[3px] border-[#B3261E] pt-3.5 space-y-2.5">
@@ -446,7 +449,11 @@ export const AvertizareaCard: React.FC<{
           variant={isSevere ? 'severe' : 'possible'}
           label={isSevere ? 'Capcană turistică' : 'Posibilă capcană turistică'}
         />
-        <span className="font-display text-[24px] leading-none text-[#3A2418] tabular-nums">
+        <span
+          className={`font-display text-[24px] leading-none tabular-nums ${
+            dark ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
+          }`}
+        >
           {trapIndex} din 100
         </span>
       </div>
@@ -455,17 +462,29 @@ export const AvertizareaCard: React.FC<{
         <button
           type="button"
           onClick={onSelectVenue}
-          className="font-display text-[26px] leading-tight text-[#3A2418] hover:text-[#B3261E] text-left block transition-colors"
+          className={`font-display text-[26px] leading-tight text-left block transition-colors ${
+            dark
+              ? 'text-[#F4EEE2] hover:text-[#F2A33A]'
+              : 'text-[#3A2418] hover:text-[#B3261E]'
+          }`}
         >
           {venueName}
         </button>
       ) : (
-        <h3 className="font-display text-[26px] leading-tight text-[#3A2418]">
+        <h3
+          className={`font-display text-[26px] leading-tight ${
+            dark ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
+          }`}
+        >
           {venueName}
         </h3>
       )}
 
-      <ul className="space-y-1 text-[14px] text-[#3A2418] list-disc pl-4">
+      <ul
+        className={`space-y-1 text-[14px] list-disc pl-4 ${
+          dark ? 'text-[#F4EEE2]/90' : 'text-[#3A2418]'
+        }`}
+      >
         {reasons.map((reason, idx) => (
           <li key={idx}>{reason}</li>
         ))}
@@ -476,7 +495,9 @@ export const AvertizareaCard: React.FC<{
           type="button"
           onClick={() => setShowFormula((prev) => !prev)}
           aria-expanded={showFormula}
-          className="btn-press text-[13px] font-semibold text-[#B3261E] underline underline-offset-4 hover:opacity-80"
+          className={`btn-press text-[13px] font-semibold underline underline-offset-4 hover:opacity-80 ${
+            dark ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+          }`}
         >
           {showFormula ? 'Ascunde calculul' : 'Cum calculăm asta'}
         </button>
@@ -485,14 +506,24 @@ export const AvertizareaCard: React.FC<{
       {breakdown && (
         <div className="collapse-grid" data-open={showFormula}>
           <div className="collapse-inner">
-            <div className="bg-[#FAF8F5] border border-[#E6DFD5] p-3 rounded-[4px] space-y-2 text-[12px] text-[#3A2418]">
+            <div
+              className={`border p-3 rounded-[4px] space-y-2 text-[12px] ${
+                dark
+                  ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                  : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+              }`}
+            >
               <p className="font-semibold">
                 Formula Tourist Trap Index ({trapIndex} din 100) combină 5 semnale obiective:
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[#6E5649]">
+              <div
+                className={`grid grid-cols-1 sm:grid-cols-2 gap-1.5 ${
+                  dark ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                }`}
+              >
                 <div>
                   • 30% decalaj turiști vs. localnici:{' '}
-                  <strong className="text-[#3A2418]">
+                  <strong className={strongTextClass}>
                     {breakdown.touristVsLocalGap > 0
                       ? `+${formatScore(breakdown.touristVsLocalGap)}`
                       : formatScore(breakdown.touristVsLocalGap)}{' '}
@@ -501,13 +532,13 @@ export const AvertizareaCard: React.FC<{
                 </div>
                 <div>
                   • 20% distanță de zona turistică:{' '}
-                  <strong className="text-[#3A2418]">
+                  <strong className={strongTextClass}>
                     {breakdown.touristZoneProximityM} m
                   </strong>
                 </div>
                 <div>
                   • 20% preț față de categorie:{' '}
-                  <strong className="text-[#3A2418]">
+                  <strong className={strongTextClass}>
                     {breakdown.priceVsCategoryPct > 0
                       ? `+${breakdown.priceVsCategoryPct}%`
                       : `${breakdown.priceVsCategoryPct}%`}
@@ -515,13 +546,13 @@ export const AvertizareaCard: React.FC<{
                 </div>
                 <div>
                   • 15% review-uri în limbi străine:{' '}
-                  <strong className="text-[#3A2418]">
+                  <strong className={strongTextClass}>
                     {breakdown.foreignLangReviewsPct}%
                   </strong>
                 </div>
                 <div className="sm:col-span-2">
                   • 15% clienți care nu revin (o singură vizită):{' '}
-                  <strong className="text-[#3A2418]">
+                  <strong className={strongTextClass}>
                     {breakdown.singleVisitPct}%
                   </strong>
                 </div>

@@ -127,6 +127,20 @@ const NEIGHBORHOOD_CAMERAS: Record<string, NeighborhoodCamera> = {
   },
 };
 
+const PRIMARY_CAMERA_KEYS = [
+  'ALL',
+  'Cetate / Piața Unirii',
+  'Iosefin',
+  'Fabric',
+] as const;
+
+const SECONDARY_CAMERA_KEYS = [
+  'Piața Victoriei',
+  'Piața Libertății',
+  'Complexul Studențesc',
+  'Elisabetin',
+] as const;
+
 const TIMISOARA_LANDMARKS = [
   { name: 'Domul Romano-Catolic', lat: 45.7581, lng: 21.2298 },
   { name: 'Palatul Baroc', lat: 45.7576, lng: 21.2283 },
@@ -198,6 +212,23 @@ export function MapView({
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [sidebarQuery, setSidebarQuery] = useState<string>('');
   const [activeCam, setActiveCam] = useState<string>('ALL');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeZoneId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveZoneId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeZoneId]);
 
   const [zoom, setZoom] = useState<number>(1.08);
   const [centerSvg, setCenterSvg] = useState<{ x: number; y: number }>(() =>
@@ -282,6 +313,9 @@ export function MapView({
     setCenterSvg(pt);
     if (targetZoom) setZoom(targetZoom);
     else setZoom((prev) => Math.max(prev, 1.85));
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   }, []);
 
   const flyToCamera = useCallback(
@@ -360,24 +394,23 @@ export function MapView({
     return nodes;
   }, [visibleRestaurants, zoom]);
 
-  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (e.button !== 0) return;
+  const startPan = (clientX: number, clientY: number) => {
     setIsDragging(true);
     dragStartRef.current = {
-      clientX: e.clientX,
-      clientY: e.clientY,
+      clientX,
+      clientY,
       startX: centerSvg.x,
       startY: centerSvg.y,
     };
   };
 
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const movePan = (clientX: number, clientY: number) => {
     if (!isDragging || !dragStartRef.current || !mapContainerRef.current) return;
     const rect = mapContainerRef.current.getBoundingClientRect();
     const viewW = MAP_WIDTH / zoom;
     const viewH = MAP_HEIGHT / zoom;
-    const dx = (e.clientX - dragStartRef.current.clientX) * (viewW / rect.width);
-    const dy = (e.clientY - dragStartRef.current.clientY) * (viewH / rect.height);
+    const dx = (clientX - dragStartRef.current.clientX) * (viewW / rect.width);
+    const dy = (clientY - dragStartRef.current.clientY) * (viewH / rect.height);
 
     setCenterSvg({
       x: Math.max(120, Math.min(MAP_WIDTH - 120, dragStartRef.current.startX - dx)),
@@ -385,9 +418,36 @@ export function MapView({
     });
   };
 
-  const handleMouseUp = () => {
+  const endPan = () => {
     setIsDragging(false);
     dragStartRef.current = null;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return;
+    startPan(e.clientX, e.clientY);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    movePan(e.clientX, e.clientY);
+  };
+
+  const handleMouseUp = () => {
+    endPan();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length !== 1) return;
+    startPan(e.touches[0].clientX, e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length !== 1) return;
+    movePan(e.touches[0].clientX, e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    endPan();
   };
 
   const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
@@ -436,7 +496,8 @@ export function MapView({
             }`}
           />
 
-          {Object.entries(NEIGHBORHOOD_CAMERAS).map(([key, cam]) => {
+          {PRIMARY_CAMERA_KEYS.map((key) => {
+            const cam = NEIGHBORHOOD_CAMERAS[key];
             const isCurrent = activeCam === key;
             return (
               <button
@@ -457,6 +518,56 @@ export function MapView({
               </button>
             );
           })}
+
+          <select
+            aria-label="Mai multe zone"
+            value={
+              SECONDARY_CAMERA_KEYS.includes(
+                activeCam as (typeof SECONDARY_CAMERA_KEYS)[number]
+              )
+                ? activeCam
+                : ''
+            }
+            onChange={(e) => {
+              if (e.target.value) flyToCamera(e.target.value);
+            }}
+            className={`px-2.5 py-1 rounded-[4px] text-[12px] font-semibold border transition-colors shrink-0 ${
+              SECONDARY_CAMERA_KEYS.includes(
+                activeCam as (typeof SECONDARY_CAMERA_KEYS)[number]
+              )
+                ? isDrink
+                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                  : 'bg-[#3A2418] text-white border-[#3A2418]'
+                : isDrink
+                ? 'bg-[#143025] text-[#F4EEE2]/85 border-[#285443] hover:border-[#F2A33A]/50'
+                : 'bg-white text-[#6E5649] border-[#E6DFD5] hover:text-[#3A2418]'
+            }`}
+          >
+            <option
+              value=""
+              disabled
+              className={
+                isDrink
+                  ? 'bg-[#143025] text-[#F4EEE2]'
+                  : 'bg-white text-[#3A2418]'
+              }
+            >
+              Mai multe zone…
+            </option>
+            {SECONDARY_CAMERA_KEYS.map((key) => (
+              <option
+                key={key}
+                value={key}
+                className={
+                  isDrink
+                    ? 'bg-[#143025] text-[#F4EEE2]'
+                    : 'bg-white text-[#3A2418]'
+                }
+              >
+                {NEIGHBORHOOD_CAMERAS[key].shortLabel}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -499,7 +610,7 @@ export function MapView({
         {/* LEFT PANEL */}
         {sidebarOpen && (
           <aside
-            className={`w-80 lg:w-96 shrink-0 h-full border-r flex flex-col z-20 ${
+            className={`absolute inset-y-0 left-0 w-[86vw] max-w-80 z-30 shadow-xl md:static md:w-80 md:max-w-none lg:w-96 md:shadow-none shrink-0 h-full border-r flex flex-col ${
               isDrink
                 ? 'bg-[#17382C] border-[#285443]'
                 : 'bg-white border-[#E6DFD5]'
@@ -528,75 +639,70 @@ export function MapView({
               </div>
 
               <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTierFilter((p) => (p === 'local-staple' ? 'all' : 'local-staple'))
-                  }
-                  className={`p-2 rounded-[4px] border text-left transition-colors ${
-                    tierFilter === 'local-staple'
-                      ? isDrink
+                {(
+                  [
+                    {
+                      id: 'local-staple' as const,
+                      label: 'Onest',
+                      count: tierCounts.staple,
+                      range: '0–25%',
+                      activeClass: isDrink
                         ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                        : 'bg-[#3A2418] text-white border-[#3A2418]'
-                      : isDrink
-                      ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
-                      : 'bg-white border-[#D6CFC5] text-[#3A2418]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span>Onest</span>
-                    <span>{tierCounts.staple}</span>
-                  </div>
-                  <div className="text-[10px] opacity-75 mt-0.5">0–25%</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTierFilter((p) => (p === 'mixed-fair' ? 'all' : 'mixed-fair'))
-                  }
-                  className={`p-2 rounded-[4px] border text-left transition-colors ${
-                    tierFilter === 'mixed-fair'
-                      ? 'bg-[#E0A526] text-[#3A2418] border-[#3A2418]'
-                      : isDrink
-                      ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
-                      : 'bg-[#E0A526]/20 border-[#E0A526] text-[#3A2418]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span>Mixt</span>
-                    <span>{tierCounts.mixed}</span>
-                  </div>
-                  <div className="text-[10px] opacity-75 mt-0.5">26–60%</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTierFilter((p) => (p === 'tourist-trap' ? 'all' : 'tourist-trap'))
-                  }
-                  className={`p-2 rounded-[4px] border text-left transition-colors ${
-                    tierFilter === 'tourist-trap'
-                      ? 'bg-[#B3261E] text-white border-[#B3261E]'
-                      : 'bg-[#B3261E]/12 border-[#B3261E]/40 text-[#B3261E]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span>▲ Capcană</span>
-                    <span>{tierCounts.trap}</span>
-                  </div>
-                  <div className="text-[10px] opacity-80 mt-0.5">61–100%</div>
-                </button>
+                        : 'bg-[#3A2418] text-white border-[#3A2418]',
+                      idleClass: isDrink
+                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                        : 'bg-white border-[#D6CFC5] text-[#3A2418]',
+                    },
+                    {
+                      id: 'mixed-fair' as const,
+                      label: 'Mixt',
+                      count: tierCounts.mixed,
+                      range: '26–60%',
+                      activeClass: 'bg-[#E0A526] text-[#3A2418] border-[#3A2418]',
+                      idleClass: isDrink
+                        ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                        : 'bg-[#E0A526]/20 border-[#E0A526] text-[#3A2418]',
+                    },
+                    {
+                      id: 'tourist-trap' as const,
+                      label: '▲ Capcană',
+                      count: tierCounts.trap,
+                      range: '61–100%',
+                      activeClass: 'bg-[#B3261E] text-white border-[#B3261E]',
+                      idleClass: isDrink
+                        ? 'bg-[#143025] border-[#B3261E]/60 text-[#F4EEE2]'
+                        : 'bg-[#B3261E]/12 border-[#B3261E]/40 text-[#B3261E]',
+                    },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() =>
+                      setTierFilter((p) => (p === item.id ? 'all' : item.id))
+                    }
+                    className={`p-2 rounded-[4px] border text-left transition-colors ${
+                      tierFilter === item.id ? item.activeClass : item.idleClass
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-bold">
+                      <span>{item.label}</span>
+                      <span>{item.count}</span>
+                    </div>
+                    <div className="text-[10px] opacity-80 mt-0.5">{item.range}</div>
+                  </button>
+                ))}
               </div>
 
               <div className="relative">
-                <Search className="w-3.5 h-3.5 opacity-60 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 opacity-60 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={sidebarQuery}
                   onChange={(e) => setSidebarQuery(e.target.value)}
                   placeholder="Caută pe hartă..."
-                  className={`w-full pl-8 pr-7 py-1.5 text-[13px] rounded-[4px] border focus:outline-none ${
+                  aria-label="Caută pe hartă"
+                  className={`w-full pl-8 pr-9 py-1.5 text-[13px] rounded-[4px] border ${
                     isDrink
                       ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2] placeholder:text-[#F4EEE2]/50'
                       : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder:text-[#6E5649]'
@@ -606,7 +712,8 @@ export function MapView({
                   <button
                     type="button"
                     onClick={() => setSidebarQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-70 hover:opacity-100"
+                    aria-label="Șterge căutarea"
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-[4px] opacity-70 hover:opacity-100"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -675,8 +782,8 @@ export function MapView({
                       className={`w-full p-3.5 text-left transition-colors flex items-center justify-between gap-3 ${
                         isSelected
                           ? isDrink
-                            ? 'bg-[#1E4335] border-l-4 border-l-[#F2A33A]'
-                            : 'bg-[#FAF8F5] border-l-4 border-l-[#B3261E]'
+                            ? 'bg-[#1E4335] ring-1 ring-inset ring-[#F2A33A]'
+                            : 'bg-[#FAF8F5] ring-1 ring-inset ring-[#3A2418]'
                           : isDrink
                           ? 'hover:bg-[#1C4234]'
                           : 'hover:bg-[#FAF8F5]/70'
@@ -728,8 +835,12 @@ export function MapView({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             onWheel={handleWheel}
-            className={`w-full h-full ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`w-full h-full touch-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
           >
             <defs>
               <pattern id="tm-grid" width="80" height="80" patternUnits="userSpaceOnUse">
@@ -904,11 +1015,22 @@ export function MapView({
                 return (
                   <g
                     key={zone.id}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Zonă turistică ${zone.name}, rază ${zone.radiusM} metri`}
+                    aria-pressed={isZoneSelected}
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveZoneId((prev) => (prev === zone.id ? null : zone.id));
                     }}
-                    className="cursor-pointer"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveZoneId((prev) => (prev === zone.id ? null : zone.id));
+                      }
+                    }}
+                    className="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A]"
                   >
                     <circle
                       cx={center.x}
@@ -1033,13 +1155,24 @@ export function MapView({
                   <g
                     key={restaurant.id}
                     transform={`translate(${x}, ${y}) scale(${pinScale})`}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${restaurant.name}, ${restaurant.shortNeighborhood ?? restaurant.neighborhood}, scor ${formatScore(restaurant.foodQualityScore)} din 10${isTrap ? `, ${tierStyle.label}` : ''}`}
+                    aria-pressed={isSelected}
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveRestaurantId(restaurant.id);
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveRestaurantId(restaurant.id);
+                      }
+                    }}
                     onMouseEnter={() => setHoveredRestaurantId(restaurant.id)}
                     onMouseLeave={() => setHoveredRestaurantId(null)}
-                    className="cursor-pointer"
+                    className="cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A]"
                   >
                     <g filter="url(#pin-shadow)">
                       {isDrink && !isTrap ? (
@@ -1134,10 +1267,35 @@ export function MapView({
               })}
           </svg>
 
+          {/* Floating Legend Pill when sidebar is collapsed */}
+          {!sidebarOpen && (
+            <div
+              className={`pointer-events-none absolute left-4 z-10 px-3 py-1.5 rounded-[4px] border text-[11px] font-semibold shadow-sm max-w-[calc(100%-5rem)] ${
+                activeZone
+                  ? 'hidden md:block md:bottom-4'
+                  : 'top-4 md:top-auto md:bottom-4'
+              } ${
+                isDrink
+                  ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                  : 'bg-white/95 border-[#D6CFC5] text-[#3A2418]'
+              }`}
+            >
+              Cercuri 300 m = zone turistice · ▲ = risc capcană
+            </div>
+          )}
+
           {/* Zoom Controls */}
           <div className="absolute top-4 right-4 flex flex-col items-end gap-2 z-10">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[4px] bg-white/95 border border-[#D6CFC5] text-[11px] font-semibold text-[#3A2418]">
-              <Navigation className="w-3 h-3 text-[#B3261E]" />
+            <div
+              className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[4px] border text-[11px] font-semibold ${
+                isDrink
+                  ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                  : 'bg-white/95 border-[#D6CFC5] text-[#3A2418]'
+              }`}
+            >
+              <Navigation
+                className={`w-3 h-3 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}
+              />
               <span>
                 {currentLatLng.lat.toFixed(4)}°N, {currentLatLng.lng.toFixed(4)}°E
               </span>
@@ -1145,11 +1303,21 @@ export function MapView({
               <span>{formatScore(zoom)}×</span>
             </div>
 
-            <div className="flex flex-col bg-white rounded-[4px] border border-[#D6CFC5] overflow-hidden text-[#3A2418]">
+            <div
+              className={`flex flex-col rounded-[4px] border overflow-hidden ${
+                isDrink
+                  ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                  : 'bg-white border-[#D6CFC5] text-[#3A2418]'
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => setZoom((z) => Math.min(4.2, Number((z * 1.3).toFixed(2))))}
-                className="p-2.5 hover:bg-[#FAF8F5] border-b border-[#E6DFD5]"
+                className={`w-10 h-10 flex items-center justify-center border-b ${
+                  isDrink
+                    ? 'hover:bg-[#1E4335] border-[#285443]'
+                    : 'hover:bg-[#FAF8F5] border-[#E6DFD5]'
+                }`}
                 aria-label="Mărește harta"
               >
                 <ZoomIn className="w-4 h-4" />
@@ -1157,7 +1325,11 @@ export function MapView({
               <button
                 type="button"
                 onClick={() => setZoom((z) => Math.max(0.85, Number((z / 1.3).toFixed(2))))}
-                className="p-2.5 hover:bg-[#FAF8F5] border-b border-[#E6DFD5]"
+                className={`w-10 h-10 flex items-center justify-center border-b ${
+                  isDrink
+                    ? 'hover:bg-[#1E4335] border-[#285443]'
+                    : 'hover:bg-[#FAF8F5] border-[#E6DFD5]'
+                }`}
                 aria-label="Micșorează harta"
               >
                 <ZoomOut className="w-4 h-4" />
@@ -1165,7 +1337,9 @@ export function MapView({
               <button
                 type="button"
                 onClick={() => flyToCamera('ALL')}
-                className="p-2.5 hover:bg-[#FAF8F5]"
+                className={`w-10 h-10 flex items-center justify-center ${
+                  isDrink ? 'hover:bg-[#1E4335]' : 'hover:bg-[#FAF8F5]'
+                }`}
                 aria-label="Resetează harta"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -1175,10 +1349,20 @@ export function MapView({
 
           {/* Active Tourist Zone Info */}
           {activeZone && (
-            <div className="absolute top-4 left-4 max-w-sm bg-white border border-[#E0A526] rounded-[4px] p-4 shadow-md z-20 text-[#3A2418]">
+            <div
+              className={`absolute top-4 left-4 max-w-sm border rounded-[4px] p-4 shadow-md z-20 ${
+                isDrink
+                  ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                  : 'bg-white border-[#E0A526] text-[#3A2418]'
+              }`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-[#B3261E] shrink-0" />
+                  <AlertTriangle
+                    className={`w-4 h-4 shrink-0 ${
+                      isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+                    }`}
+                  />
                   <h4 className="font-display text-[20px] leading-tight">
                     {activeZone.name}
                   </h4>
@@ -1186,15 +1370,24 @@ export function MapView({
                 <button
                   type="button"
                   onClick={() => setActiveZoneId(null)}
-                  className="p-1 opacity-70 hover:opacity-100"
+                  aria-label="Închide zona turistică"
+                  className="w-9 h-9 flex items-center justify-center -mr-1.5 -mt-1.5 rounded-[4px] opacity-70 hover:opacity-100 shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-[13px] text-[#6E5649] mt-2 leading-snug">
+              <p
+                className={`text-[13px] mt-2 leading-snug ${
+                  isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                }`}
+              >
                 {activeZone.description}
               </p>
-              <div className="mt-2.5 pt-2 border-t border-[#E6DFD5] flex items-center justify-between text-[12px]">
+              <div
+                className={`mt-2.5 pt-2 border-t flex items-center justify-between text-[12px] ${
+                  isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+                }`}
+              >
                 <span>Rază 300 m · 20% semnal capcană</span>
                 <button
                   type="button"
@@ -1204,7 +1397,9 @@ export function MapView({
                     );
                     setZoom(2.6);
                   }}
-                  className="font-semibold text-[#B3261E] underline"
+                  className={`font-semibold underline ${
+                    isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+                  }`}
                 >
                   Focalizează
                 </button>
@@ -1214,13 +1409,29 @@ export function MapView({
 
           {/* Bottom Floating Preview Card */}
           {activeRestaurant && (
-            <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-5 md:w-[430px] bg-white text-[#3A2418] rounded-[6px] border border-[#3A2418] shadow-lg overflow-hidden z-20">
-              <div className="px-3.5 py-2 bg-[#FAF8F5] border-b border-[#E6DFD5] flex items-center justify-between text-[12px]">
+            <div
+              className={`absolute bottom-16 md:bottom-4 left-4 right-4 md:left-auto md:right-5 md:w-[430px] rounded-[6px] border shadow-lg overflow-hidden z-20 ${
+                isDrink
+                  ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                  : 'bg-white text-[#3A2418] border-[#3A2418]'
+              }`}
+            >
+              <div
+                className={`px-3.5 py-2 border-b flex items-center justify-between text-[12px] ${
+                  isDrink
+                    ? 'bg-[#122B22] border-[#285443]'
+                    : 'bg-[#FAF8F5] border-[#E6DFD5]'
+                }`}
+              >
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={handlePrevRestaurant}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-[3px] border border-[#D6CFC5] bg-white hover:border-[#3A2418]"
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-[3px] border ${
+                      isDrink
+                        ? 'border-[#285443] bg-[#143025] text-[#F4EEE2] hover:border-[#F2A33A]'
+                        : 'border-[#D6CFC5] bg-white hover:border-[#3A2418]'
+                    }`}
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                     <span>Anterior</span>
@@ -1228,7 +1439,11 @@ export function MapView({
                   <button
                     type="button"
                     onClick={handleNextRestaurant}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-[3px] border border-[#D6CFC5] bg-white hover:border-[#3A2418]"
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-[3px] border ${
+                      isDrink
+                        ? 'border-[#285443] bg-[#143025] text-[#F4EEE2] hover:border-[#F2A33A]'
+                        : 'border-[#D6CFC5] bg-white hover:border-[#3A2418]'
+                    }`}
                   >
                     <span>Următorul</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -1236,14 +1451,19 @@ export function MapView({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[#6E5649]">
+                  <span className={isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}>
                     {visibleRestaurants.findIndex((r) => r.id === activeRestaurant.id) + 1}{' '}
                     / {visibleRestaurants.length}
                   </span>
                   <button
                     type="button"
                     onClick={() => setActiveRestaurantId(null)}
-                    className="p-1 text-[#6E5649] hover:text-[#3A2418]"
+                    aria-label="Închide previzualizarea"
+                    className={`w-9 h-9 flex items-center justify-center -mr-1.5 rounded-[4px] ${
+                      isDrink
+                        ? 'text-[#F4EEE2]/75 hover:text-[#F4EEE2]'
+                        : 'text-[#6E5649] hover:text-[#3A2418]'
+                    }`}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -1256,14 +1476,22 @@ export function MapView({
                     <h3 className="font-display text-[24px] leading-tight truncate">
                       {activeRestaurant.name}
                     </h3>
-                    <p className="text-[13px] text-[#6E5649] mt-0.5">
+                    <p
+                      className={`text-[13px] mt-0.5 ${
+                        isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
+                      }`}
+                    >
                       {activeRestaurant.shortCategory ?? activeRestaurant.cuisine},{' '}
                       {activeRestaurant.shortNeighborhood ?? activeRestaurant.neighborhood} ·{' '}
                       {activeRestaurant.trapBreakdown.touristZoneProximityM} m de centru
                     </p>
                   </div>
 
-                  <span className="font-display text-[36px] leading-none text-[#3A2418] tabular-nums shrink-0">
+                  <span
+                    className={`font-display text-[36px] leading-none tabular-nums shrink-0 ${
+                      isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
+                    }`}
+                  >
                     {formatScore(activeRestaurant.foodQualityScore)}
                   </span>
                 </div>
@@ -1274,7 +1502,7 @@ export function MapView({
                       label={`Localnici ${formatScore(activeRestaurant.localsScore)}`}
                       size="xs"
                     />
-                    <span className="text-[#6E5649]">
+                    <span className={isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}>
                       Turiști <strong>{formatScore(activeRestaurant.touristsScore)}</strong>
                     </span>
                   </div>
@@ -1291,7 +1519,11 @@ export function MapView({
                 <button
                   type="button"
                   onClick={() => onSelectRestaurant(activeRestaurant)}
-                  className="w-full py-2.5 px-4 rounded-[4px] bg-[#B3261E] text-white font-bold text-[13px] flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                  className={`w-full py-2.5 px-4 rounded-[4px] font-bold text-[13px] flex items-center justify-center gap-2 hover:opacity-90 transition-opacity ${
+                    isDrink
+                      ? 'bg-[#F2A33A] text-[#17382C]'
+                      : 'bg-[#B3261E] text-white'
+                  }`}
                 >
                   <span>Deschide fișa localului</span>
                   <ExternalLink className="w-3.5 h-3.5" />

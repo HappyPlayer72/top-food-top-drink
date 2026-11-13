@@ -106,7 +106,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
             type="button"
             onClick={onBack}
             aria-label="Înapoi"
-            className={`btn-press w-9 h-9 rounded-[4px] border flex items-center justify-center ${
+            className={`btn-press w-11 h-11 rounded-[4px] border flex items-center justify-center ${
               isDrink
                 ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                 : 'border-[#E6DFD5] text-[#3A2418] hover:border-[#3A2418]'
@@ -244,7 +244,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectRestaurant(second)}
-                  className="venue-row-interactive text-center flex flex-col items-center group focus:outline-none"
+                  className="venue-row-interactive text-center flex flex-col items-center group"
                 >
                   <div
                     className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 mb-2 shrink-0 ${
@@ -256,13 +256,13 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                     <img
                       src={second.photoUrl}
                       alt={second.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
                   <span className="font-bold text-[14px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
-                    {second.id === 'pizzeria-din-fabric'
-                      ? 'Cuptorul din Fabric'
-                      : second.name}
+                    {second.name}
                   </span>
                   <span
                     className={`text-[12px] font-semibold mt-1 mb-2.5 ${
@@ -294,7 +294,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectRestaurant(first)}
-                  className="venue-row-interactive text-center flex flex-col items-center group focus:outline-none"
+                  className="venue-row-interactive text-center flex flex-col items-center group"
                 >
                   <Trophy
                     className={`w-5 h-5 mb-1.5 ${
@@ -311,6 +311,8 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                     <img
                       src={first.photoUrl}
                       alt={first.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
@@ -346,7 +348,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectRestaurant(third)}
-                  className="venue-row-interactive text-center flex flex-col items-center group focus:outline-none"
+                  className="venue-row-interactive text-center flex flex-col items-center group"
                 >
                   <div
                     className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 mb-2 shrink-0 ${
@@ -358,6 +360,8 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                     <img
                       src={third.photoUrl}
                       alt={third.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
@@ -434,6 +438,8 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                           <img
                             src={spot.photoUrl}
                             alt={spot.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover venue-photo-zoom"
                           />
                         </div>
@@ -617,7 +623,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                             isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
                           }`}
                         >
-                          Menționată pe nume în {emp.mentions} de review-uri.
+                          Nominalizări pe nume în {emp.mentions} de review-uri.
                         </div>
                       </div>
                     </div>

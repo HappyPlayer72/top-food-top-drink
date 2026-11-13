@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, X } from 'lucide-react';
 import {
   DrinkQuickFilter,
@@ -30,6 +30,7 @@ export interface EditorialListViewProps {
   onToggleFoodFilter: (f: FoodQuickFilter) => void;
   drinkFilters: DrinkQuickFilter[];
   onToggleDrinkFilter: (f: DrinkQuickFilter) => void;
+  onResetFilters?: () => void;
   onSelectRestaurant: (restaurant: Restaurant) => void;
   onOpenMonthlyTop: () => void;
   onUpdateCrowdReport: (
@@ -57,11 +58,10 @@ const CROWD_PRESETS: {
   title: string;
   reportLabel: string;
 }[] = [
-  { segments: 1, title: 'Gol / Liniștit', reportLabel: 'Foarte liber, chiar acum' },
-  { segments: 2, title: 'Locuri libere', reportLabel: 'Locuri libere, chiar acum' },
-  { segments: 3, title: 'Animație plăcută', reportLabel: 'Atmosferă animată, chiar acum' },
-  { segments: 4, title: 'Aproape plin', reportLabel: 'Aproape plin, chiar acum' },
-  { segments: 5, title: 'Plin / Coadă', reportLabel: 'Coadă la intrare, chiar acum' },
+  { segments: 1, title: 'Liber / Liniștit', reportLabel: 'Liber și liniștit, chiar acum' },
+  { segments: 2, title: 'Locuri la mese', reportLabel: 'Locuri libere la mese, chiar acum' },
+  { segments: 4, title: 'Animat / Aproape plin', reportLabel: 'Animat, aproape plin, chiar acum' },
+  { segments: 5, title: 'Plin / Coadă la intrare', reportLabel: 'Plin, coadă la intrare, chiar acum' },
 ];
 
 export const EditorialListView: React.FC<EditorialListViewProps> = ({
@@ -75,6 +75,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   onToggleFoodFilter,
   drinkFilters,
   onToggleDrinkFilter,
+  onResetFilters,
   onSelectRestaurant,
   onOpenMonthlyTop,
   onUpdateCrowdReport,
@@ -82,6 +83,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   const isDrink = vertical === 'drink';
   const [showAllTop, setShowAllTop] = useState(false);
   const [expandedTrapPreview, setExpandedTrapPreview] = useState(false);
+  const [showScorOnestInfo, setShowScorOnestInfo] = useState(false);
 
   // Vibe Check modal state for topdrink
   const [isVibeModalOpen, setIsVibeModalOpen] = useState(false);
@@ -92,6 +94,17 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   const [vibeSubmittedNotice, setVibeSubmittedNotice] = useState<string | null>(
     null
   );
+
+  useEffect(() => {
+    if (!isVibeModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsVibeModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isVibeModalOpen]);
 
   // Filtered Food Lists
   const filteredFoodOrganic = useMemo(() => {
@@ -133,16 +146,36 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
 
   // Filtered Drink Lists
   const filteredDrinkOrganic = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return drinkVenues
       .filter((r) => !r.isSponsored)
       .filter((r) => {
         for (const f of drinkFilters) {
           if (!r.drinkTags?.includes(f)) return false;
         }
+        if (q) {
+          const hay = `${r.name} ${r.shortCategory ?? r.cuisine} ${
+            r.shortNeighborhood ?? r.neighborhood
+          } ${r.whatToOrder.map((d) => d.name).join(' ')}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
         return true;
       })
       .sort((a, b) => b.foodQualityScore - a.foodQualityScore);
-  }, [drinkVenues, drinkFilters]);
+  }, [drinkVenues, drinkFilters, searchQuery]);
+
+  const handleResetAll = () => {
+    onSearchChange('');
+    if (onResetFilters) {
+      onResetFilters();
+      return;
+    }
+    if (isDrink) {
+      drinkFilters.forEach((f) => onToggleDrinkFilter(f));
+    } else {
+      foodFilters.forEach((f) => onToggleFoodFilter(f));
+    }
+  };
 
   const drinkSponsored = useMemo(
     () => drinkVenues.find((r) => r.isSponsored && r.touristTrapIndex < 80),
@@ -163,7 +196,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   const handleVibeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const preset =
-      CROWD_PRESETS.find((p) => p.segments === vibeSegments) ?? CROWD_PRESETS[3];
+      CROWD_PRESETS.find((p) => p.segments === vibeSegments) ?? CROWD_PRESETS[2];
     onUpdateCrowdReport(vibeVenueId, vibeSegments, preset.reportLabel);
     const venueName =
       drinkVenues.find((d) => d.id === vibeVenueId)?.name ?? 'local';
@@ -172,6 +205,111 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
     );
     setIsVibeModalOpen(false);
   };
+
+  const renderSponsoredCard = (venue: Restaurant) => (
+    <button
+      type="button"
+      onClick={() => onSelectRestaurant(venue)}
+      className={
+        isDrink
+          ? 'btn-press w-full mt-3 px-4 py-3.5 rounded-[4px] bg-[#1E4335] border border-[#295645] flex items-center justify-between gap-4 text-left hover:border-[#F4EEE2]/30'
+          : 'btn-press w-full my-2 px-4 py-3.5 rounded-[4px] bg-[#F2EFE9] flex items-center justify-between gap-4 text-left hover:bg-[#EAE5DC]'
+      }
+    >
+      <div className="min-w-0">
+        <div
+          className={`text-[11px] ${
+            isDrink ? 'text-[#F4EEE2]/60' : 'text-[#6E5649]'
+          }`}
+        >
+          {venue.sponsoredNote ??
+            (isDrink
+              ? 'Sponsorizat. Nu schimbă scorul.'
+              : 'Sponsorizat. Nu schimbă scorul și nici locul în top.')}
+        </div>
+        <div
+          className={`font-semibold text-[15px] mt-0.5 ${
+            isDrink ? 'text-[#F4EEE2]/90' : 'text-[#3A2418]'
+          }`}
+        >
+          {venue.name}
+        </div>
+        <div
+          className={`text-[12px] ${
+            isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
+          }`}
+        >
+          {venue.shortCategory ?? venue.cuisine},{' '}
+          {venue.shortNeighborhood ?? venue.neighborhood}
+          {isDrink
+            ? `. ${venue.priceRangeLabel}`
+            : `, ${venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}`}
+        </div>
+      </div>
+      <span
+        className={`font-display-regular tabular-nums shrink-0 ${
+          isDrink
+            ? 'text-[22px] text-[#F4EEE2]/65'
+            : 'text-[24px] leading-none text-[#6E5649]'
+        }`}
+      >
+        {formatScore(venue.foodQualityScore)}
+      </span>
+    </button>
+  );
+
+  const renderFoodRow = (venue: Restaurant, rank: number, staggerIdx: number) => (
+    <button
+      key={venue.id}
+      type="button"
+      onClick={() => onSelectRestaurant(venue)}
+      style={{ '--stagger-idx': staggerIdx } as React.CSSProperties}
+      className="venue-row-interactive stagger-fade-in w-full py-3.5 flex items-center justify-between gap-3.5 text-left hover:bg-[#FAF8F5] px-1.5 -mx-1.5 rounded-[4px]"
+    >
+      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+        <span className="font-display text-[26px] leading-none text-[#3A2418] w-5 shrink-0">
+          {rank}
+        </span>
+        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5]">
+          <img
+            src={venue.photoUrl}
+            alt={venue.name}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover object-center venue-photo-zoom"
+          />
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="font-bold text-[17px] text-[#3A2418] leading-snug truncate">
+            {venue.name}
+          </div>
+          <div className="text-[13px] text-[#6E5649] truncate">
+            {venue.shortCategory ?? venue.cuisine},{' '}
+            {venue.shortNeighborhood ?? venue.neighborhood},{' '}
+            {venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}
+          </div>
+          <p className="text-[12px] text-[#6E5649]/90 line-clamp-1">
+            {venue.editorialHeadline}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap pt-0.5">
+            <LocalnicBadge
+              label={`Localnici ${formatScore(venue.localsScore)}`}
+              size="xs"
+            />
+            {venue.whatToOrder[0] && (
+              <span className="text-[11px] text-[#6E5649] truncate">
+                {venue.whatToOrder[0].name}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <span className="font-display text-[34px] sm:text-[38px] leading-none text-[#3A2418] tabular-nums shrink-0">
+        {formatScore(venue.foodQualityScore)}
+      </span>
+    </button>
+  );
 
   // ============================================================================
   // TOPDRINK / TIMIȘOARA VIEW (Page 5 — Sticlă #17382C)
@@ -185,6 +323,35 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             <h1 className="font-display text-[44px] sm:text-[56px] leading-[0.94] text-[#F4EEE2] max-w-xl">
               Unde ieșim în seara asta
             </h1>
+
+            <div className="max-w-lg space-y-1.5">
+              <label
+                htmlFor="food-search-input"
+                className="block text-[13px] font-semibold text-[#F4EEE2]"
+              >
+                Caută un bar, o bere sau un cartier
+              </label>
+              <div className="relative">
+                <input
+                  id="food-search-input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="bere artizanală, jazz, Cetate..."
+                  className="w-full px-3.5 py-2.5 pr-11 rounded-[4px] bg-[#122B22] border border-[#2D5947] text-[15px] text-[#F4EEE2] placeholder:text-current placeholder:opacity-60 focus:outline-none focus:ring-1 focus:ring-[#F2A33A] focus:border-[#F2A33A]"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange('')}
+                    aria-label="Șterge căutarea"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-[#F4EEE2]/70 hover:text-[#F4EEE2]"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* Filter Pills (Chihlimbar #F2A33A active) */}
             <div className="flex flex-wrap items-center gap-2">
@@ -228,19 +395,63 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               aria-label="Topul de vineri"
               className="lg:col-span-7 space-y-3"
             >
-              <div className="flex items-baseline justify-between gap-2 pb-1">
-                <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#F4EEE2]">
-                  Topul de vineri
-                </h2>
-                <span className="text-[13px] text-[#F4EEE2]/65">
-                  plin acum, din raportări
-                </span>
+              <div className="space-y-1.5 pb-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#F4EEE2]">
+                    Topul de vineri
+                  </h2>
+                  <span className="text-[13px] text-[#F4EEE2]/65">
+                    plin acum, din raportări
+                  </span>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowScorOnestInfo((prev) => !prev)}
+                    aria-expanded={showScorOnestInfo}
+                    className="btn-press text-[12px] font-semibold text-[#F2A33A] underline underline-offset-4 hover:opacity-85"
+                  >
+                    Cum calculăm Scorul Onest?
+                  </button>
+
+                  <div className="collapse-grid" data-open={showScorOnestInfo}>
+                    <div className="collapse-inner">
+                      <div className="mt-2 p-3.5 rounded-[4px] bg-[#143025] border border-[#2D5947] text-[12px] text-[#F4EEE2]/85 space-y-1 leading-relaxed">
+                        <p>
+                          <strong className="text-[#F4EEE2]">Localnici verificați (2,0×):</strong>{' '}
+                          contribuția timișorenilor cântărește dublu.
+                        </p>
+                        <p>
+                          <strong className="text-[#F4EEE2]">Turiști (1,0×):</strong>{' '}
+                          nota vizitatorilor este afișată separat pentru a detecta capcanele turistice.
+                        </p>
+                        <p>
+                          <strong className="text-[#F4EEE2]">Influenceri / colaborări plătite (0,2×):</strong>{' '}
+                          impact limitat asupra clasamentului.
+                        </p>
+                        <p>
+                          Localurile cu puține recenzii au media trasă spre media orașului, iar pozițiile{' '}
+                          <strong className="text-[#F4EEE2]">„Sponsorizat”</strong> nu schimbă niciodată scorul sau locul în top.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {filteredDrinkOrganic.length === 0 ? (
-                <div className="py-8 border-t border-[#285443] text-[14px] text-[#F4EEE2]/75">
-                  Niciun bar nu corespunde tuturor filtrelor selectate. Dezactivează
-                  unul dintre filtre pentru a vedea toate localurile.
+                <div className="py-8 border-t border-[#285443] space-y-3">
+                  <p className="text-[14px] text-[#F4EEE2]/75">
+                    Niciun bar nu corespunde căutării sau filtrelor selectate.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResetAll}
+                    className="btn-press px-3.5 py-2 rounded-[4px] bg-[#F2A33A] text-[#17382C] text-[13px] font-bold hover:brightness-105"
+                  >
+                    Resetează filtrele
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -339,6 +550,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                               <img
                                 src={venue.photoUrl}
                                 alt={venue.name}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover object-center venue-photo-zoom"
                               />
                             </div>
@@ -376,32 +589,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               )}
 
               {/* Modest Sponsored Slot (Rule #3: darker/quieter surface, NO photo, smaller muted score, NO coaster) */}
-              {drinkSponsored && (
-                <button
-                  type="button"
-                  onClick={() => onSelectRestaurant(drinkSponsored)}
-                  className="btn-press w-full mt-3 px-4 py-3.5 rounded-[4px] bg-[#1E4335] border border-[#295645] flex items-center justify-between gap-4 text-left hover:border-[#F4EEE2]/30"
-                >
-                  <div className="min-w-0">
-                    <div className="text-[11px] text-[#F4EEE2]/60">
-                      {drinkSponsored.sponsoredNote ??
-                        'Sponsorizat. Nu schimbă scorul.'}
-                    </div>
-                    <div className="font-semibold text-[15px] text-[#F4EEE2]/90 mt-0.5">
-                      {drinkSponsored.name}
-                    </div>
-                    <div className="text-[12px] text-[#F4EEE2]/65">
-                      {drinkSponsored.shortCategory ?? drinkSponsored.cuisine},{' '}
-                      {drinkSponsored.shortNeighborhood ??
-                        drinkSponsored.neighborhood}
-                      . {drinkSponsored.priceRangeLabel}
-                    </div>
-                  </div>
-                  <span className="font-display-regular text-[22px] text-[#F4EEE2]/65 tabular-nums shrink-0">
-                    {formatScore(drinkSponsored.foodQualityScore)}
-                  </span>
-                </button>
-              )}
+              {drinkSponsored && renderSponsoredCard(drinkSponsored)}
             </section>
 
             {/* RIGHT 5 COLUMNS: Weekendul ăsta + Bottom CTA */}
@@ -434,6 +622,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                             <img
                               src={targetVenue.photoUrl}
                               alt={targetVenue.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover object-center venue-photo-zoom"
                             />
                           </div>
@@ -479,18 +669,24 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             onClick={() => setIsVibeModalOpen(false)}
           >
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="vibe-modal-title"
               className="drawer-sheet-enter w-full sm:max-w-md bg-[#17382C] border border-[#2D5947] text-[#F4EEE2] rounded-t-[8px] sm:rounded-[6px] p-5 space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
-                <h3 className="font-display text-[24px] leading-none">
+                <h3
+                  id="vibe-modal-title"
+                  className="font-display text-[24px] leading-none"
+                >
                   Raportează cât e de plin
                 </h3>
                 <button
                   type="button"
                   onClick={() => setIsVibeModalOpen(false)}
                   aria-label="Închide"
-                  className="btn-press p-1 text-[#F4EEE2]/70 hover:text-[#F4EEE2]"
+                  className="btn-press w-11 h-11 flex items-center justify-center -mr-2 rounded-[4px] text-[#F4EEE2]/70 hover:text-[#F4EEE2]"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -591,14 +787,14 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="ciorbă, pizza, Iosefin..."
-              className="w-full px-3.5 py-2.5 pr-9 rounded-[4px] bg-white border border-[#3A2418] text-[15px] text-[#3A2418] placeholder-[#8C7B70] focus:outline-none focus:ring-1 focus:ring-[#3A2418]"
+              className="w-full px-3.5 py-2.5 pr-11 rounded-[4px] bg-white border border-[#3A2418] text-[15px] text-[#3A2418] placeholder-[#8C7B70] focus:outline-none focus:ring-1 focus:ring-[#3A2418]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
                 aria-label="Șterge căutarea"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6E5649] hover:text-[#3A2418]"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-[#6E5649] hover:text-[#3A2418]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -635,23 +831,68 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-7 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
         {/* LEFT 7 COLUMNS: Topul onest */}
         <section aria-label="Topul onest" className="lg:col-span-7 space-y-4">
-          <div className="flex items-baseline justify-between gap-2 pb-1">
-            <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#3A2418]">
-              Topul onest
-            </h2>
-            <span className="text-[13px] text-[#6E5649]">
-              după 4.180 de review-uri
-            </span>
+          <div className="space-y-1.5 pb-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="font-display text-[28px] sm:text-[32px] leading-none text-[#3A2418]">
+                Topul onest
+              </h2>
+              <span className="text-[13px] text-[#6E5649]">
+                după 4.180 de review-uri
+              </span>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowScorOnestInfo((prev) => !prev)}
+                aria-expanded={showScorOnestInfo}
+                className="btn-press text-[12px] font-semibold text-[#6E5649] underline underline-offset-4 hover:text-[#3A2418]"
+              >
+                Cum calculăm Scorul Onest?
+              </button>
+
+              <div className="collapse-grid" data-open={showScorOnestInfo}>
+                <div className="collapse-inner">
+                  <div className="mt-2 p-3.5 rounded-[4px] bg-[#FAF8F5] border border-[#E6DFD5] text-[12px] text-[#3A2418]/85 space-y-1 leading-relaxed">
+                    <p>
+                      <strong className="text-[#3A2418]">Localnici verificați (2,0×):</strong>{' '}
+                      contribuția timișorenilor cântărește dublu.
+                    </p>
+                    <p>
+                      <strong className="text-[#3A2418]">Turiști (1,0×):</strong>{' '}
+                      nota vizitatorilor este afișată separat pentru a detecta capcanele turistice.
+                    </p>
+                    <p>
+                      <strong className="text-[#3A2418]">Influenceri / colaborări plătite (0,2×):</strong>{' '}
+                      impact limitat asupra clasamentului.
+                    </p>
+                    <p>
+                      Localurile cu puține recenzii au media trasă spre media orașului, iar pozițiile{' '}
+                      <strong className="text-[#3A2418]">„Sponsorizat”</strong> nu schimbă niciodată scorul sau locul în top.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {filteredFoodOrganic.length === 0 ? (
-            <div className="py-8 border-t border-[#E6DFD5] space-y-2">
-              <p className="text-[15px] text-[#3A2418] font-semibold">
-                Niciun local nu corespunde căutării.
-              </p>
-              <p className="text-[13px] text-[#6E5649]">
-                Încearcă alt fel de mâncare sau dezactivează filtrele active.
-              </p>
+            <div className="py-8 border-t border-[#E6DFD5] space-y-3">
+              <div className="space-y-1">
+                <p className="text-[15px] text-[#3A2418] font-semibold">
+                  Niciun local nu corespunde căutării.
+                </p>
+                <p className="text-[13px] text-[#6E5649]">
+                  Încearcă alt fel de mâncare sau dezactivează filtrele active.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetAll}
+                className="btn-press px-3.5 py-2 rounded-[4px] bg-[#3A2418] text-white text-[13px] font-semibold hover:opacity-90"
+              >
+                Resetează filtrele
+              </button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -732,143 +973,21 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               {/* Ranks 2–3 (Illustrated Rows) */}
               {compactFirstFoodSlice.length > 0 && (
                 <div className="divide-y divide-[#E6DFD5] border-t border-[#E6DFD5]">
-                  {compactFirstFoodSlice.map((venue, idx) => (
-                    <button
-                      key={venue.id}
-                      type="button"
-                      onClick={() => onSelectRestaurant(venue)}
-                      style={{ '--stagger-idx': idx + 1 } as React.CSSProperties}
-                      className="venue-row-interactive stagger-fade-in w-full py-3.5 flex items-center justify-between gap-3.5 text-left hover:bg-[#FAF8F5] px-1.5 -mx-1.5 rounded-[4px]"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <span className="font-display text-[26px] leading-none text-[#3A2418] w-5 shrink-0">
-                          {idx + 2}
-                        </span>
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5]">
-                          <img
-                            src={venue.photoUrl}
-                            alt={venue.name}
-                            className="w-full h-full object-cover object-center venue-photo-zoom"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="font-bold text-[17px] text-[#3A2418] leading-snug truncate">
-                            {venue.name}
-                          </div>
-                          <div className="text-[13px] text-[#6E5649] truncate">
-                            {venue.shortCategory ?? venue.cuisine},{' '}
-                            {venue.shortNeighborhood ?? venue.neighborhood},{' '}
-                            {venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}
-                          </div>
-                          <p className="text-[12px] text-[#6E5649]/90 line-clamp-1">
-                            {venue.editorialHeadline}
-                          </p>
-                          <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                            <LocalnicBadge
-                              label={`Localnici ${formatScore(venue.localsScore)}`}
-                              size="xs"
-                            />
-                            {venue.whatToOrder[0] && (
-                              <span className="text-[11px] text-[#6E5649] truncate">
-                                {venue.whatToOrder[0].name}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <span className="font-display text-[34px] sm:text-[38px] leading-none text-[#3A2418] tabular-nums shrink-0">
-                        {formatScore(venue.foodQualityScore)}
-                      </span>
-                    </button>
-                  ))}
+                  {compactFirstFoodSlice.map((venue, idx) =>
+                    renderFoodRow(venue, idx + 2, idx + 1)
+                  )}
                 </div>
               )}
 
               {/* Modest Sponsored Slot between #3 and #4 (Rule #3: quieter, NO photo, no rank, smaller score) */}
-              {foodSponsored && (
-                <button
-                  type="button"
-                  onClick={() => onSelectRestaurant(foodSponsored)}
-                  className="btn-press w-full my-2 px-4 py-3.5 rounded-[4px] bg-[#F2EFE9] flex items-center justify-between gap-4 text-left hover:bg-[#EAE5DC]"
-                >
-                  <div className="min-w-0">
-                    <div className="text-[11px] text-[#6E5649]">
-                      {foodSponsored.sponsoredNote ??
-                        'Sponsorizat. Nu schimbă scorul și nici locul în top.'}
-                    </div>
-                    <div className="font-semibold text-[15px] text-[#3A2418] mt-0.5">
-                      {foodSponsored.name}
-                    </div>
-                    <div className="text-[12px] text-[#6E5649]">
-                      {foodSponsored.shortCategory ?? foodSponsored.cuisine},{' '}
-                      {foodSponsored.shortNeighborhood ??
-                        foodSponsored.neighborhood}
-                      ,{' '}
-                      {foodSponsored.priceRangeLabel ??
-                        `~${foodSponsored.avgMealPriceRon} lei`}
-                    </div>
-                  </div>
-                  <span className="font-display-regular text-[24px] leading-none text-[#6E5649] tabular-nums shrink-0">
-                    {formatScore(foodSponsored.foodQualityScore)}
-                  </span>
-                </button>
-              )}
+              {foodSponsored && renderSponsoredCard(foodSponsored)}
 
               {/* Ranks 4+ (Illustrated Rows) */}
               {secondFoodSlice.length > 0 && (
                 <div className="divide-y divide-[#E6DFD5] border-t border-[#E6DFD5]">
-                  {secondFoodSlice.map((venue, idx) => (
-                    <button
-                      key={venue.id}
-                      type="button"
-                      onClick={() => onSelectRestaurant(venue)}
-                      style={{ '--stagger-idx': Math.min(idx + 3, 6) } as React.CSSProperties}
-                      className="venue-row-interactive stagger-fade-in w-full py-3.5 flex items-center justify-between gap-3.5 text-left hover:bg-[#FAF8F5] px-1.5 -mx-1.5 rounded-[4px]"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <span className="font-display text-[26px] leading-none text-[#3A2418] w-5 shrink-0">
-                          {idx + 4}
-                        </span>
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5]">
-                          <img
-                            src={venue.photoUrl}
-                            alt={venue.name}
-                            className="w-full h-full object-cover object-center venue-photo-zoom"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="font-bold text-[17px] text-[#3A2418] leading-snug truncate">
-                            {venue.name}
-                          </div>
-                          <div className="text-[13px] text-[#6E5649] truncate">
-                            {venue.shortCategory ?? venue.cuisine},{' '}
-                            {venue.shortNeighborhood ?? venue.neighborhood},{' '}
-                            {venue.priceRangeLabel ??
-                              `~${venue.avgMealPriceRon} lei`}
-                          </div>
-                          <p className="text-[12px] text-[#6E5649]/90 line-clamp-1">
-                            {venue.editorialHeadline}
-                          </p>
-                          <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                            <LocalnicBadge
-                              label={`Localnici ${formatScore(venue.localsScore)}`}
-                              size="xs"
-                            />
-                            {venue.whatToOrder[0] && (
-                              <span className="text-[11px] text-[#6E5649] truncate">
-                                {venue.whatToOrder[0].name}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <span className="font-display text-[34px] sm:text-[38px] leading-none text-[#3A2418] tabular-nums shrink-0">
-                        {formatScore(venue.foodQualityScore)}
-                      </span>
-                    </button>
-                  ))}
+                  {secondFoodSlice.map((venue, idx) =>
+                    renderFoodRow(venue, idx + 4, Math.min(idx + 3, 6))
+                  )}
                 </div>
               )}
 
@@ -889,7 +1008,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   onClick={onOpenMonthlyTop}
                   className="btn-press text-[14px] font-semibold text-[#3A2418] underline underline-offset-4 hover:text-[#B3261E]"
                 >
-                  Clasamentul lunii noiembrie
+                  Clasamentul lunii
                 </button>
               </div>
             </div>
@@ -927,6 +1046,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                       <img
                         src={trap.photoUrl}
                         alt={trap.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover object-center venue-photo-zoom"
                       />
                     </div>

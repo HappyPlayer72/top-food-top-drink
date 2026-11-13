@@ -41,17 +41,6 @@ export interface UserAccount {
   description: string;
 }
 
-export type SortOption = 'food-desc' | 'trap-asc' | 'gap-desc';
-
-export type QuickFilterId =
-  | 'top-food'
-  | 'zero-trap'
-  | 'budget-gems'
-  | 'splurge'
-  | 'open-now';
-
-export type ActiveTab = 'editorial' | 'map';
-
 export interface SignatureDish {
   name: string;
   priceRon: number;
