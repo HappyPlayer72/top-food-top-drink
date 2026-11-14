@@ -8,7 +8,7 @@
   --color-carou: #B3261E;
   --color-cafea: #3A2418;
   --color-mustar: #E0A526;
-  --color-placuta: #1F4E8C;
+  --color-placuta: #2D5130;
   --color-sticla: #17382C;
   --color-chihlimbar: #F2A33A;
   --color-spuma: #F4EEE2;
@@ -50,7 +50,7 @@
   --color-carou: #B3261E;
   --color-cafea: #3A2418;
   --color-mustar: #E0A526;
-  --color-placuta: #1F4E8C;
+  --color-placuta: #2D5130;
   --color-sticla: #17382C;
   --color-chihlimbar: #F2A33A;
   --color-spuma: #F4EEE2;
@@ -213,12 +213,36 @@
   font-weight: 400;
 }
 
-/* Strictly reserved for "Localnic" street-plate badge */
+/* Localnic = verde-brad (doar pentru localnic), turist = nisip pe contur. Pastel + text închis în modul întunecat. */
+:root {
+  --localnic: #2D5130;
+  --localnic-on: #FFFFFF;
+  --localnic-soft: rgba(45, 81, 48, 0.12);
+  --turist: #6B4F2A;
+  --turist-line: #A78452;
+}
+html.dark {
+  --localnic: #AED3A8;
+  --localnic-on: #132A15;
+  --localnic-soft: rgba(174, 211, 168, 0.16);
+  --turist: #E3CDA6;
+  --turist-line: #E3CDA6;
+}
+
+/* Plăcuța localnicului: plină, cu chenar interior, ca o plăcuță de stradă */
 .badge-placuta {
-  background-color: #1F4E8C;
-  color: #FFFFFF;
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.88);
-  border: 2px solid #1F4E8C;
+  background-color: var(--localnic);
+  color: var(--localnic-on);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--localnic-on) 80%, transparent);
+  border: 2px solid var(--localnic);
+  border-radius: 3px;
+}
+
+/* Insigna turistului: doar contur, mai modestă decât a localnicului */
+.badge-turist {
+  background-color: transparent;
+  color: var(--turist);
+  border: 1.5px solid var(--turist-line);
   border-radius: 3px;
 }
 
@@ -451,6 +475,11 @@
 .collapse-grid[data-open="true"] {
   grid-template-rows: 1fr;
   opacity: 1;
+}
+
+/* Închis are înălțime 0: nu păstrează nici spațiul din space-y-* (altfel rămân goluri sub butoane). */
+.collapse-grid:not([data-open="true"]) {
+  margin-block-end: 0;
 }
 
 .collapse-inner {
@@ -753,17 +782,18 @@ html.dark .bg-\[\#F2A33A\] {
   z-index: -1;
   pointer-events: none;
   background-color: var(--o-fg, currentColor);
-  opacity: 0.055;
+  /* ~5% din culoarea textului în mijloc (sub conținut), ~10% la margini: se vede, dar nu încurcă textul. */
+  opacity: 0.1;
   -webkit-mask-image:
     url(/owner-doodles.svg),
     linear-gradient(
       90deg,
       rgba(0, 0, 0, 1) 0%,
-      rgba(0, 0, 0, 0.55) 12%,
-      rgba(0, 0, 0, 0.16) 26%,
-      rgba(0, 0, 0, 0.12) 50%,
-      rgba(0, 0, 0, 0.16) 74%,
-      rgba(0, 0, 0, 0.55) 88%,
+      rgba(0, 0, 0, 0.8) 14%,
+      rgba(0, 0, 0, 0.55) 30%,
+      rgba(0, 0, 0, 0.5) 50%,
+      rgba(0, 0, 0, 0.55) 70%,
+      rgba(0, 0, 0, 0.8) 86%,
       rgba(0, 0, 0, 1) 100%
     );
   -webkit-mask-position: 0 0, 0 0;
@@ -775,11 +805,11 @@ html.dark .bg-\[\#F2A33A\] {
     linear-gradient(
       90deg,
       rgba(0, 0, 0, 1) 0%,
-      rgba(0, 0, 0, 0.55) 12%,
-      rgba(0, 0, 0, 0.16) 26%,
-      rgba(0, 0, 0, 0.12) 50%,
-      rgba(0, 0, 0, 0.16) 74%,
-      rgba(0, 0, 0, 0.55) 88%,
+      rgba(0, 0, 0, 0.8) 14%,
+      rgba(0, 0, 0, 0.55) 30%,
+      rgba(0, 0, 0, 0.5) 50%,
+      rgba(0, 0, 0, 0.55) 70%,
+      rgba(0, 0, 0, 0.8) 86%,
       rgba(0, 0, 0, 1) 100%
     );
   mask-position: 0 0, 0 0;
@@ -791,24 +821,24 @@ html.dark .bg-\[\#F2A33A\] {
 @media (max-width: 767px) {
   .owner-shell::before,
   .doodle-wallpaper::before {
-    opacity: 0.028;
+    opacity: 0.08;
     -webkit-mask-image:
       url(/owner-doodles.svg),
       linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.75) 0%,
-        rgba(0, 0, 0, 0.25) 18%,
-        rgba(0, 0, 0, 0.25) 82%,
-        rgba(0, 0, 0, 0.75) 100%
+        rgba(0, 0, 0, 1) 0%,
+        rgba(0, 0, 0, 0.6) 18%,
+        rgba(0, 0, 0, 0.6) 82%,
+        rgba(0, 0, 0, 1) 100%
       );
     mask-image:
       url(/owner-doodles.svg),
       linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.75) 0%,
-        rgba(0, 0, 0, 0.25) 18%,
-        rgba(0, 0, 0, 0.25) 82%,
-        rgba(0, 0, 0, 0.75) 100%
+        rgba(0, 0, 0, 1) 0%,
+        rgba(0, 0, 0, 0.6) 18%,
+        rgba(0, 0, 0, 0.6) 82%,
+        rgba(0, 0, 0, 1) 100%
       );
   }
 }

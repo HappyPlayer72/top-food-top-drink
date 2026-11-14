@@ -9,7 +9,7 @@ import {
   formatScore,
 } from '../types';
 import { NEIGHBORHOODS } from '../data/restaurants';
-import { BrandWordmark, CarouStrip, LocalnicBadge } from './BrandPrimitives';
+import { BrandWordmark, CarouStrip, LocalnicBadge, TuristBadge } from './BrandPrimitives';
 import { InterestPicker } from './PreferencesPanel';
 import type { Interest } from '@tftd/scoring/features';
 
@@ -357,15 +357,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 }`}
               >
                 <div className="space-y-1">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[11px] font-semibold ${
-                      isDrink
-                        ? 'border-[#2D5947] text-[#F4EEE2]/85 bg-[#122B22]'
-                        : 'border-[#D6CFC5] text-[#6E5649] bg-white'
-                    }`}
-                  >
-                    Turist / Vizitator
-                  </span>
+                  <TuristBadge label="Turist / Vizitator" size="xs" />
                   <p
                     className={`text-[12px] ${
                       isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
@@ -423,15 +415,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                             size="xs"
                           />
                         ) : (
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[11px] font-semibold ${
-                              isDrink
-                                ? 'border-[#2D5947] text-[#F4EEE2]/80 bg-[#122B22]'
-                                : 'border-[#D6CFC5] text-[#6E5649] bg-[#FAF8F5]'
-                            }`}
-                          >
-                            Turist
-                          </span>
+                          <TuristBadge label="Turist" size="xs" />
                         )}
                       </div>
                       {acc.email && (
@@ -652,7 +636,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                           selectedRole === 'verified-local'
                             ? isDrink
                               ? 'border-[#F2A33A] bg-[#1E4335]'
-                              : 'border-[#1F4E8C] bg-[#FAF8F5]'
+                              : 'border-[var(--localnic)] bg-[#FAF8F5]'
                             : isDrink
                             ? 'border-[#285443] bg-[#122B22]'
                             : 'border-[#E6DFD5] bg-white'
@@ -691,15 +675,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[11px] font-semibold ${
-                              isDrink
-                                ? 'border-[#2D5947] text-[#F4EEE2]/85 bg-[#122B22]'
-                                : 'border-[#D6CFC5] text-[#6E5649] bg-white'
-                            }`}
-                          >
-                            Turist
-                          </span>
+                          <TuristBadge label="Turist" size="xs" />
                           <span className="font-display text-[17px]">1,0×</span>
                         </div>
                         <p
@@ -773,10 +749,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                               gpsVerified
                                 ? isDrink
                                   ? 'border-[#F2A33A] bg-[#1E4335] text-[#F4EEE2]'
-                                  : 'border-[#1F4E8C] bg-[#1F4E8C]/10 text-[#1F4E8C]'
+                                  : 'border-[var(--localnic)] bg-[var(--localnic-soft)] text-[var(--localnic)]'
                                 : isDrink
                                 ? 'border-[#285443] bg-[#122B22] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                                : 'border-[#E6DFD5] bg-white text-[#3A2418] hover:border-[#1F4E8C]'
+                                : 'border-[#E6DFD5] bg-white text-[#3A2418] hover:border-[var(--localnic)]'
                             }`}
                           >
                             <span className="flex items-center gap-1.5 text-left">

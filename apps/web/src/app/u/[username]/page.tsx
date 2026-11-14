@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { CheckCircle2, ChevronLeft, ExternalLink, MapPin, ShieldCheck, Star } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ExternalLink, House, ShieldCheck, Star } from 'lucide-react';
 import { userProfile } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { TOP_LOCAL_REVIEWERS } from '@/data/restaurants';
@@ -95,8 +95,8 @@ export default async function UserProfilePage({ params }: Props) {
 
           <div className="flex flex-wrap gap-2">
             {isLocal && (
-              <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-[#1F4E8C]/12 px-2.5 py-1 text-xs font-bold text-[#1F4E8C]">
-                <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-[var(--localnic-soft)] px-2.5 py-1 text-xs font-bold text-[var(--localnic)]">
+                <House className="h-3.5 w-3.5" aria-hidden="true" />
                 Localnic verificat{profile.local?.neighborhood ? ` · ${profile.local.neighborhood}` : ''} (2,0×)
               </span>
             )}

@@ -606,7 +606,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                     <div
                       className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 ${
                         reviewer.role === 'verified-local'
-                          ? 'bg-[#1F4E8C]/12 text-[#1F4E8C]'
+                          ? 'bg-[var(--localnic-soft)] text-[var(--localnic)]'
                           : 'bg-[#3A2418]/10 text-[#3A2418]'
                       } ${isDrink ? '!bg-[#285443] !text-[#F4EEE2]' : ''}`}
                     >
@@ -689,7 +689,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   isDrink ? 'border-[#2D5947] bg-[#143025]' : 'border-[#E6DFD5] bg-[#FAF8F5]'
                 }`}
               >
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[#1F4E8C]">Localnicul lunii</div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--localnic)]">Localnicul lunii</div>
                 <div className="font-display text-[20px] mt-1 leading-tight">
                   {topLocalAward.username ? (
                     <Link href={`/u/${encodeURIComponent(topLocalAward.username)}`} className="hover:underline">

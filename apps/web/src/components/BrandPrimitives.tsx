@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, Globe, House } from 'lucide-react';
 import { TrapBreakdown, Vertical, formatScore } from '../types';
 
 /**
@@ -253,7 +253,7 @@ export const BrandWordmark: React.FC<{
 };
 
 /**
- * 6. LocalnicBadge — Plăcuță (#1F4E8C), strictly reserved for "Localnic"
+ * 6. LocalnicBadge — plăcuța verde-brad cu căsuță (--localnic), doar pentru „Localnic”. TuristBadge — contur nisip cu glob.
  */
 export const LocalnicBadge: React.FC<{
   label: string;
@@ -261,10 +261,26 @@ export const LocalnicBadge: React.FC<{
   className?: string;
 }> = ({ label, size = 'sm', className = '' }) => (
   <span
-    className={`badge-placuta inline-flex items-center font-semibold leading-none whitespace-nowrap ${
+    className={`badge-placuta inline-flex items-center gap-1 font-semibold leading-none whitespace-nowrap ${
       size === 'xs' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-[12px]'
     } ${className}`}
   >
+    <House className={size === 'xs' ? 'w-3 h-3 shrink-0' : 'w-3.5 h-3.5 shrink-0'} aria-hidden="true" />
+    {label}
+  </span>
+);
+
+export const TuristBadge: React.FC<{
+  label?: string;
+  size?: 'xs' | 'sm';
+  className?: string;
+}> = ({ label = 'Turist', size = 'sm', className = '' }) => (
+  <span
+    className={`badge-turist inline-flex items-center gap-1 font-semibold leading-none whitespace-nowrap ${
+      size === 'xs' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-[12px]'
+    } ${className}`}
+  >
+    <Globe className={size === 'xs' ? 'w-3 h-3 shrink-0' : 'w-3.5 h-3.5 shrink-0'} aria-hidden="true" />
     {label}
   </span>
 );
@@ -473,7 +489,7 @@ export const LocalVsTouristBars: React.FC<{
           }`}
         >
           <div
-            className="h-full bg-[#1F4E8C] bar-scale-fill"
+            className="h-full bg-[var(--localnic)] bar-scale-fill"
             style={{ width: `${Math.min(100, Math.max(4, localsScore * 10))}%` }}
           />
         </div>
@@ -489,13 +505,7 @@ export const LocalVsTouristBars: React.FC<{
       {/* Turiști row */}
       <div className="flex items-center gap-3">
         <div className="w-24 shrink-0">
-          <span
-            className={`text-[13px] font-semibold ${
-              dark ? 'text-[#F4EEE2]/80' : 'text-[#3A2418]'
-            }`}
-          >
-            Turiști
-          </span>
+          <TuristBadge label="Turiști" size="xs" />
         </div>
         <div
           className={`flex-1 h-2 rounded-[2px] overflow-hidden ${
@@ -503,7 +513,7 @@ export const LocalVsTouristBars: React.FC<{
           }`}
         >
           <div
-            className="h-full bg-[#9C8978] bar-scale-fill"
+            className="h-full bg-[var(--turist-line)] bar-scale-fill"
             style={{
               width: `${Math.min(100, Math.max(4, touristsScore * 10))}%`,
               animationDelay: '60ms',

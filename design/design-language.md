@@ -7,7 +7,7 @@
 ## 1. Visual Concept & Two-Face System
 
 TopFood & TopDrink is a single product with two distinct editorial atmospheres:
-- **TopFood** (Daytime, neighborhood dining): Warm paper canvas (`#FBF6EA`), coffee-ink text (`#3A2418`), checkered gingham red (`#B3261E`), mustard warmth (`#E0A526`), and street-sign blue (`#1F4E8C`) for verified locals. Dark mode shifts to Evening Slate (`#22262E`).
+- **TopFood** (Daytime, neighborhood dining): Warm paper canvas (`#FBF6EA`), coffee-ink text (`#3A2418`), checkered gingham red (`#B3261E`), mustard warmth (`#E0A526`), and forest green (`#2D5130`, house icon) for verified locals, with sand-outline badges (`#6B4F2A` on `#A78452`, globe icon) for tourists. Dark mode shifts to Evening Slate (`#22262E`).
 - **TopDrink** (Nightlife, pubs & cocktail bars): Deep bottle-green public surface (`#17382C`), foam-cream ink (`#F4EEE2`), amber-gold accents (`#F2A33A`), and notched cardboard coaster marks (`#B98A5E`).
 
 ---
@@ -20,7 +20,8 @@ TopFood & TopDrink is a single product with two distinct editorial atmospheres:
 | `--color-carou` | `#B3261E` | TopFood primary accent, checkered strip, food danger/active marker |
 | `--color-cafea` | `#3A2418` | TopFood primary ink (light mode) |
 | `--color-mustar` | `#E0A526` | Warm highlight, `Posibilă capcană` (`trapLevel: "possible"`) badge |
-| `--color-placuta` | `#1F4E8C` | `Localnic` verified badge, street-plaque accent (`#7DB4FF` in dark mode) |
+| `--localnic` (`--color-placuta`) | `#2D5130` | **Only** the `Localnic` badge (filled plaque, inner rim, house icon) and the `Localnici` bar; `#AED3A8` with `#132A15` text in dark mode |
+| `--turist` / `--turist-line` | `#6B4F2A` / `#A78452` | `Turist` badge (outline only, globe icon) and the `Turiști` bar; `#E3CDA6` in dark mode |
 | `--color-sticla` | `#17382C` | TopDrink public background, bottle-green brand surface |
 | `--color-chihlimbar` | `#F2A33A` | TopDrink primary accent, rating stars, new-venue highlight |
 | `--color-spuma` | `#F4EEE2` | Light ink on `#17382C` and dark-mode primary ink |
@@ -67,7 +68,7 @@ TopFood & TopDrink is a single product with two distinct editorial atmospheres:
 - **`CarouStrip`**: 6 stepped flex-div cells (`#FAF5F0`, `#E08A84`, `#C94A42`, `#B3261E`) transitioning into a solid `#B3261E` band — signature checkered-tablecloth header strip.
 - **`CarouMark` / `CoasterMark` / `BrandWordmark`**: SVG marks and lockups switching between TopFood and TopDrink identities.
 - **`CoasterScore`**: Scalloped circular coaster badge displaying the honest rating (`0.0–10.0`).
-- **`LocalnicBadge`**, **`InfluencerBadge`**, **`PartnerBadge`**, **`TrapBadge`**: Status pills enforcing visual transparency for local verification (`2.0×`), paid influencer disclosures (`0.2×`), partners, and tourist trap alerts.
+- **`LocalnicBadge`**, **`TuristBadge`**, **`InfluencerBadge`**, **`PartnerBadge`**, **`TrapBadge`**: Status pills enforcing visual transparency for local verification (`2.0×`), paid influencer disclosures (`0.2×`), partners, and tourist trap alerts.
 - **`LocalVsTouristBars`**: Side-by-side horizontal bar comparison illustrating local vs. tourist score divergence.
 - **`AvertizareaCard`**: Explanation callout listing the Romanian `trapReasons` behind a venue's trap index.
 - **`EmployeeEcusonCard`** & **`CrowdMeter`**: Nameplate card for staff/employee-of-the-month honors and 5-level live crowd/vibe indicator.

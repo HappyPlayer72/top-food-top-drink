@@ -13,6 +13,7 @@ import {
   Bookmark,
   Calendar,
   Check,
+  ChevronDown,
   ChevronLeft,
   Clock,
   Film,
@@ -54,6 +55,7 @@ import {
   InfluencerBadge,
   LocalVsTouristBars,
   LocalnicBadge,
+  TuristBadge,
   PartnerBadge,
   TrapBadge,
 } from './BrandPrimitives';
@@ -1359,7 +1361,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             </div>
           </section>
 
-          <div role="status" aria-live="polite">
+          {/* Zona live rămâne în pagină ca anunțul să fie citit; goală, nu adaugă spațiu în plus între secțiuni. */}
+          <div role="status" aria-live="polite" className="empty:mb-0">
+
           {submittedNotice && (
             <div
               className={`px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold flex items-center gap-2 ${
@@ -1442,8 +1446,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               </div>
             )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
+            {/* Pliabilă, închisă implicit; avertizările de deasupra rămân mereu vizibile. */}
+            <details className="group">
+              <summary className="owner-summary cursor-pointer min-h-[44px] flex items-center justify-between gap-2 rounded-[4px]">
                 <h3
                   className={`text-[14px] font-bold ${
                     isDrink ? 'text-[#F2A33A]' : 'text-[#3A2418]'
@@ -1451,7 +1456,13 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 >
                   Facilități și accesibilitate
                 </h3>
-              </div>
+                <span className={`inline-flex items-center gap-1 text-[12px] font-semibold ${isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}`}>
+                  <span className="group-open:hidden">Arată</span>
+                  <span className="hidden group-open:inline">Ascunde</span>
+                  <ChevronDown className="owner-chevron w-4 h-4 shrink-0" aria-hidden="true" />
+                </span>
+              </summary>
+              <div className="pt-2">
               {restaurant.features ? (
                 <VenueFeatures groups={restaurant.features} quick={restaurant.quick} dark={isDrink} />
               ) : (
@@ -1533,7 +1544,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 ))}
               </div>
               )}
-            </div>
+              </div>
+            </details>
           </section>
 
           {/* LOCALNICI VS TURIȘTI BARS + TOURIST TRAP STATUS */}
@@ -1831,13 +1843,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                             />
                           )}
                           {rev.authorRole === 'tourist' && (
-                            <span
-                              className={`text-[12px] ${
-                                isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
-                              }`}
-                            >
-                              Turist
-                            </span>
+                            <TuristBadge size="xs" />
                           )}
                           {rev.isVerifiedVisit && (
                             <span
@@ -2629,15 +2635,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                             size="xs"
                           />
                         ) : (
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[11px] font-semibold ${
-                              isDrink
-                                ? 'border-[#2D5947] text-[#F4EEE2]/80 bg-[#122B22]'
-                                : 'border-[#D6CFC5] text-[#6E5649] bg-white'
-                            }`}
-                          >
-                            Turist / Vizitator
-                          </span>
+                          <TuristBadge label="Turist / Vizitator" size="xs" />
                         )}
                       </div>
                       <p
