@@ -4,7 +4,7 @@
  * Din Google intră direct; adăugat de mână rămâne „în așteptare” până îl aprobă un admin în /admin.
  */
 import { revalidatePath } from 'next/cache';
-import { addFromGoogle, addManually, searchPlaces } from '@tftd/api';
+import { addFromGoogle, addManually, geocodeAddress, searchPlaces } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { errorMessage, getUserId } from '@/lib/server/session';
 import { TIMISOARA_NEIGHBORHOOD_ZONES } from '@/data/timisoaraGeo';
@@ -12,6 +12,8 @@ import type { Result } from './user';
 
 const CITY = 'timisoara';
 const CENTER = { lat: 45.7558, lng: 21.2286 };
+/** Timișoara și împrejurimile (lng/lat min, lng/lat max), pentru geocodare. */
+const CITY_BBOX: [number, number, number, number] = [21.12, 45.69, 21.34, 45.82];
 const hasDb = () => !!process.env.DATABASE_URL;
 const OFFLINE = { ok: false as const, offline: true, error: 'Baza de date nu e disponibilă.' };
 
@@ -63,8 +65,10 @@ export async function addVenueManually(input: {
   if (!hasDb()) return OFFLINE;
   const userId = await getUserId();
   if (!userId) return { ok: false, error: 'Intră în cont ca să adaugi un local.' };
+  // Coordonatele reale din adresă (Geoapify); fără cheie sau fără rezultat sigur, centrul cartierului
   const zone = TIMISOARA_NEIGHBORHOOD_ZONES.find((z) => z.name === input.neighborhood);
-  const [lng, lat] = zone?.center ?? [CENTER.lng, CENTER.lat];
+  const geo = await geocodeAddress(`${input.address.trim()}, ${input.neighborhood}, Timișoara`, CITY_BBOX);
+  const [lng, lat] = geo ? [geo.lng, geo.lat] : (zone?.center ?? [CENTER.lng, CENTER.lat]);
   try {
     const r = await addManually(getDb(), userId, {
       citySlug: CITY,

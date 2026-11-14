@@ -14,5 +14,5 @@ export * as owner from "@tftd/owner";
 export * as moderation from "@tftd/moderation";
 export * as monetization from "@tftd/monetization";
 export * as loyalty from "@tftd/loyalty";
-export { detectPlatform, submitSocialLink, searchPlaces, addFromGoogle, addManually, type SocialAnalysis } from "@tftd/ingestion";
+export { detectPlatform, submitSocialLink, searchPlaces, addFromGoogle, addManually, geocodeAddress, type SocialAnalysis } from "@tftd/ingestion";
 export { createDb, ServiceError, type Db } from "@tftd/db";
