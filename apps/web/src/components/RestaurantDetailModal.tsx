@@ -942,6 +942,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     . Localurile cu puține review-uri sunt trase ușor spre media
                     orașului, ca un singur vot extrem să nu deformeze clasamentul.
                   </p>
+                  {restaurant.scorePriorNote && <p className="mt-2">{restaurant.scorePriorNote}</p>}
                 </div>
               </div>
             </div>

@@ -27,6 +27,8 @@ type CityPage = Awaited<ReturnType<typeof cityPage>>;
 type Leaderboard = Awaited<ReturnType<typeof leaderboardPage>>;
 type ApiReview = VenuePage['reviews'][number];
 
+import { TIMISOARA_NEIGHBORHOOD_ZONES } from '../../data/timisoaraGeo';
+
 const CATEGORY_LABEL: Record<string, string> = {
   romanesc: 'Românesc',
   pizza: 'Pizza',
@@ -51,6 +53,26 @@ const PLACEHOLDER_PHOTO = {
 };
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
+
+/** Punct în poligon (ray casting), pe coordonate [lng, lat]. */
+function inside(lng: number, lat: number, ring: [number, number][]) {
+  let c = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]!, [xj, yj] = ring[j]!;
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+
+/**
+ * Cartierul unui local importat fără cartier: zona în care cade, altfel cea mai apropiată
+ * (aproximativ: harta are doar cartierele centrale).
+ */
+export function neighborhoodAt(lat: number, lng: number): Neighborhood {
+  const zone = TIMISOARA_NEIGHBORHOOD_ZONES.find((z) => z.coordinates.some((ring) => inside(lng, lat, ring)))
+    ?? [...TIMISOARA_NEIGHBORHOOD_ZONES].sort((a, b) => Math.hypot(a.center[0] - lng, a.center[1] - lat) - Math.hypot(b.center[0] - lng, b.center[1] - lat))[0]!;
+  return zone.cameraKey as Neighborhood;
+}
 
 export function trapTier(index: number | null | undefined): TrapTier {
   const i = index ?? 0;
@@ -136,6 +158,14 @@ function aspects(scores: Record<string, number>): AspectScores {
   };
 }
 
+/** Fraza din „Cum se calculează?” despre punctul de pornire al scorului (regula 3). */
+export function priorNote(p?: { cityMean: number; mean: number; external: { rating5: number; count: number } | null }): string | undefined {
+  if (!p) return undefined;
+  const n = (x: number) => x.toLocaleString('ro-RO', { maximumFractionDigits: 1 });
+  if (!p.external) return `Pornește de la media orașului (${n(p.cityMean)}), apoi review-urile analizate îl mută în sus sau în jos.`;
+  return `Pornește de la nota de pe Google Maps (${n(p.external.rating5)}★ din ${p.external.count.toLocaleString('ro-RO')} de note), trasă spre media orașului (${n(p.cityMean)}): ${n(p.mean)}. Apoi review-urile analizate îl corectează.`;
+}
+
 export type MonthlyInfo = { rank: number; score: number; movement: number | null };
 
 /** O pagină de local din backend → `Restaurant` pentru componente. */
@@ -189,7 +219,7 @@ export function toRestaurant(
         : null;
   const google = p.externalRatings.find((x) => x.source === 'google');
   const kitchen = p.blog.find((b) => b.type === 'news');
-  const neighborhood = (v.neighborhood ?? fb?.neighborhood ?? 'Cetate / Piața Unirii') as Neighborhood;
+  const neighborhood = (v.neighborhood ?? fb?.neighborhood ?? neighborhoodAt(v.location.lat, v.location.lng)) as Neighborhood;
 
   return {
     id: v.slug,
@@ -198,7 +228,7 @@ export function toRestaurant(
     name: v.name,
     vertical: v.vertical,
     neighborhood,
-    shortNeighborhood: v.neighborhood ?? fb?.shortNeighborhood,
+    shortNeighborhood: v.neighborhood ?? fb?.shortNeighborhood ?? neighborhood,
     cuisine: label(v.categories[0]) || fb?.cuisine || '',
     shortCategory: label(v.categories[0]) || fb?.shortCategory,
     categories: v.categories.length ? v.categories : fb?.categories,
@@ -234,6 +264,7 @@ export function toRestaurant(
     trapTier: trapTier(s.touristTrapIndex),
     trapReasons: (s.explanation?.trapReasons ?? []).map((r) => r.text),
     verifiedVisitCount: s.explanation?.verifiedVisitCount,
+    scorePriorNote: priorNote(s.explanation?.prior),
     trapBreakdown: {
       touristVsLocalGap: inputs?.localsScore != null && inputs.touristsScore != null ? round1(inputs.touristsScore - inputs.localsScore) : 0,
       touristZoneProximityM: Math.round(inputs?.distanceToTouristZoneM ?? 0),

@@ -388,6 +388,8 @@ export interface Restaurant {
   trapReasons: string[];
   /** Câte review-uri au vizita dovedită (GPS sau bon), cântărite ×1,3. */
   verifiedVisitCount?: number;
+  /** De unde pornește Scorul Onest (nota Google trasă spre media orașului), afișat la „Cum se calculează?”. */
+  scorePriorNote?: string;
   trapBreakdown: TrapBreakdown;
   aspectScores: AspectScores;
 
