@@ -4,7 +4,7 @@
  */
 import { and, asc, avg, count, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import {
-  employeeRatings, employees, forbidden, invalid, leaderboardSnapshots, menuItems, notFound, ownerClaims, posts, reports, reviewReplies, reviews, ServiceError, socialSubmissions, users, venueFacilityDeclarations, venueManagers, venues, type Db,
+  employeeRatings, employees, ensureExtendedSchema, forbidden, invalid, leaderboardSnapshots, menuItems, notFound, ownerClaims, posts, reports, reviewReplies, reviews, ServiceError, socialSubmissions, users, venueFacilityDeclarations, venueManagers, venueScoreSnapshots, venues, venueViewsDaily, type Db,
   type OpeningHours,
 } from "@tftd/db";
 import { QUESTION_BY_KEY, QUESTIONS, type Declaration } from "@tftd/scoring/features";
@@ -331,11 +331,27 @@ export async function employeeRatingsForOwner(db: Db, userId: string, venueId: s
 
 // ---------- Statistici ----------
 
+export async function recordVenueView(db: Db, venueId: string, now = new Date()) {
+  await ensureExtendedSchema(db);
+  const day = now.toISOString().slice(0, 10);
+  await db
+    .insert(venueViewsDaily)
+    .values({ venueId, day, views: 1 })
+    .onConflictDoUpdate({
+      target: [venueViewsDaily.venueId, venueViewsDaily.day],
+      set: { views: sql`${venueViewsDaily.views} + 1` },
+    });
+}
+
 export async function venueStats(db: Db, userId: string, venueId: string, now = new Date()) {
   await assertManager(db, userId, venueId);
+  await ensureExtendedSchema(db);
   const [venue] = await db.select().from(venues).where(eq(venues.id, venueId));
   if (!venue) throw notFound("Localul");
   const since = new Date(now.getTime() - 180 * 86_400_000);
+  const since30Str = new Date(now.getTime() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const since7Str = new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 10);
+  const since90Str = new Date(now.getTime() - 90 * 86_400_000).toISOString().slice(0, 10);
 
   const byMonth = await db
     .select({
@@ -366,6 +382,21 @@ export async function venueStats(db: Db, userId: string, venueId: string, now = 
     .orderBy(desc(reports.createdAt))
     .limit(5);
 
+  const dailyViews = await db
+    .select({ day: venueViewsDaily.day, views: venueViewsDaily.views })
+    .from(venueViewsDaily)
+    .where(and(eq(venueViewsDaily.venueId, venueId), gte(venueViewsDaily.day, since30Str)))
+    .orderBy(asc(venueViewsDaily.day));
+
+  const scoreHistory = await db
+    .select({ day: venueScoreSnapshots.day, score: venueScoreSnapshots.score, reviewCount: venueScoreSnapshots.reviewCount })
+    .from(venueScoreSnapshots)
+    .where(and(eq(venueScoreSnapshots.venueId, venueId), gte(venueScoreSnapshots.day, since90Str)))
+    .orderBy(asc(venueScoreSnapshots.day));
+
+  const total30d = dailyViews.reduce((s, r) => s + r.views, 0);
+  const last7d = dailyViews.filter((r) => r.day >= since7Str).reduce((s, r) => s + r.views, 0);
+
   return {
     scores: {
       honest: venue.honestScore,
@@ -377,6 +408,12 @@ export async function venueStats(db: Db, userId: string, venueId: string, now = 
     byMonth,
     aspects,
     trapAppeals: recentReports,
+    views: {
+      total30d,
+      last7d,
+      daily: dailyViews,
+    },
+    scoreHistory,
   };
 }
 
@@ -419,6 +456,25 @@ export async function pendingInvites(db: Db, userId: string) {
     .from(employees)
     .innerJoin(venues, eq(venues.id, employees.venueId))
     .where(and(eq(employees.userId, userId), eq(employees.accepted, false), eq(employees.active, true)));
+}
+
+/** Toate rolurile de angajat ale userului (invitații în așteptare + echipe active). */
+export async function myEmployments(db: Db, userId: string) {
+  return db
+    .select({
+      employeeId: employees.id,
+      venueId: venues.id,
+      venueName: venues.name,
+      venueSlug: venues.slug,
+      vertical: venues.vertical,
+      firstName: employees.firstName,
+      role: employees.role,
+      accepted: employees.accepted,
+    })
+    .from(employees)
+    .innerJoin(venues, eq(venues.id, employees.venueId))
+    .where(and(eq(employees.userId, userId), eq(employees.active, true)))
+    .orderBy(desc(employees.createdAt));
 }
 
 /** Pentru invitarea unui angajat după numele de utilizator. */

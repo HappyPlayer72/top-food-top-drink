@@ -14,7 +14,12 @@ export type MonthVenue = {
   name: string;
   categories: string[];
   /** Review-urile publicate în luna respectivă. */
-  reviews: (ScoringReview & { servedByEmployeeId?: string | null; authorId?: string | null })[];
+  reviews: (ScoringReview & {
+    servedByEmployeeId?: string | null;
+    authorId?: string | null;
+    authorIsInfluencer?: boolean;
+    authorFollowers?: number;
+  })[];
 };
 
 export type PreviousMonth = {
@@ -92,6 +97,20 @@ export function localOfMonth(venues: MonthVenue[]) {
   }
   const top = [...counts].sort((a, b) => b[1] - a[1])[0];
   return top ? { userId: top[0], reviews: top[1] } : undefined;
+}
+
+/** „Influencerul lunii”: influencerul verificat (≥1.000 urmăritori) cu cele mai multe review-uri în lună. */
+export function influencerOfMonth(venues: MonthVenue[]) {
+  const counts = new Map<string, { reviews: number; followers: number }>();
+  for (const v of venues) {
+    for (const r of v.reviews) {
+      if (!r.authorIsInfluencer || !r.authorId) continue;
+      const cur = counts.get(r.authorId) ?? { reviews: 0, followers: r.authorFollowers ?? 0 };
+      counts.set(r.authorId, { reviews: cur.reviews + 1, followers: Math.max(cur.followers, r.authorFollowers ?? 0) });
+    }
+  }
+  const top = [...counts].sort((a, b) => b[1].reviews - a[1].reviews || b[1].followers - a[1].followers)[0];
+  return top ? { userId: top[0], reviews: top[1].reviews, followers: top[1].followers } : undefined;
 }
 
 /** "2026-11" → "2026-10" */

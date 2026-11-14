@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { AddVenuePanel } from './AddVenuePanel';
 import { DrinkFeaturedCard, DrinkRow, FoodFeaturedCard, FoodRow } from './VenueCards';
 import { ThemeTopList, TopTabs } from './ThematicTops';
 import { orderTops, type TopKey } from '@tftd/scoring/features';
+import { recordAdEventAction } from '@/app/actions/user';
 import { X } from 'lucide-react';
 import {
+  AdBanner,
   DrinkQuickFilter,
   FoodQuickFilter,
   Restaurant,
@@ -36,6 +39,10 @@ export interface EditorialListViewProps {
   vertical: Vertical;
   restaurants: Restaurant[];
   drinkVenues: Restaurant[];
+  ads?: AdBanner[];
+  selectedCategory?: string | null;
+  onClearCategory?: () => void;
+  onSelectCategory?: (cat: string) => void;
   weekendEvents: WeekendEvent[];
   searchQuery: string;
   onSearchChange: (q: string) => void;
@@ -63,6 +70,7 @@ const FOOD_FILTER_PILLS: { id: FoodQuickFilter; label: string }[] = [
   { id: 'fara-capcane', label: 'Fără capcane' },
   { id: 'deschis-acum', label: 'Deschis acum' },
   { id: 'sub-50-lei', label: 'Sub 50 lei' },
+  { id: 'livrare', label: 'Cu livrare' },
 ];
 
 const DRINK_FILTER_PILLS: { id: DrinkQuickFilter; label: string }[] = [
@@ -161,6 +169,9 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   vertical,
   restaurants,
   drinkVenues,
+  ads = [],
+  selectedCategory = null,
+  onClearCategory,
   weekendEvents,
   searchQuery,
   onSearchChange,
@@ -205,7 +216,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // Vibe Check modal state for topdrink
   const [isVibeModalOpen, setIsVibeModalOpen] = useState(false);
   const [vibeVenueId, setVibeVenueId] = useState<string>(
-    drinkVenues[0]?.id ?? 'pivnita-cu-bolta'
+    drinkVenues[0]?.id ?? 'scart-loc-lejer'
   );
   const [vibeSegments, setVibeSegments] = useState<1 | 2 | 3 | 4 | 5>(4);
   const [vibeSubmittedNotice, setVibeSubmittedNotice] = useState<string | null>(
@@ -325,12 +336,33 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
     }
   };
 
+  const activeAd = ads[0] ?? null;
+  const recordedImpressionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeAd || recordedImpressionRef.current === activeAd.id) return;
+    recordedImpressionRef.current = activeAd.id;
+    void recordAdEventAction(activeAd.id, 'impression');
+  }, [activeAd?.id]);
+
+  const matchesSelectedCategory = (r: Restaurant) => {
+    if (!selectedCategory) return true;
+    const target = normalizeRo(selectedCategory.replace(/-/g, ' '));
+    if (r.categories?.some((c) => normalizeRo(c.replace(/-/g, ' ')) === target || c === selectedCategory)) {
+      return true;
+    }
+    return (
+      normalizeRo(r.cuisine).includes(target) ||
+      normalizeRo(r.shortCategory ?? '').includes(target)
+    );
+  };
+
   // Filtered Food Lists
   const filteredFoodOrganic = useMemo(() => {
     const q = normalizeRo(searchQuery.trim());
     return restaurants
       .filter((r) => !r.isSponsored && r.touristTrapIndex < 60)
       .filter((r) => {
+        if (!matchesSelectedCategory(r)) return false;
         if (foodFilters.includes('fara-capcane') && r.touristTrapIndex > 25) {
           return false;
         }
@@ -340,18 +372,24 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         if (foodFilters.includes('sub-50-lei') && r.avgMealPriceRon > 50) {
           return false;
         }
+        if (foodFilters.includes('livrare') && !r.delivery?.available) {
+          return false;
+        }
         if (q) {
+          const deliveryHay = r.delivery?.available
+            ? `livrare delivery ${r.delivery.platforms?.join(' ') ?? ''}`
+            : 'doar in local fara livrare';
           const hay = normalizeRo(
             `${r.name} ${r.shortCategory ?? r.cuisine} ${
               r.shortNeighborhood ?? r.neighborhood
-            } ${r.whatToOrder.map((d) => d.name).join(' ')}`
+            } ${r.whatToOrder.map((d) => d.name).join(' ')} ${deliveryHay}`
           );
           if (!hay.includes(q)) return false;
         }
         return true;
       })
       .sort((a, b) => b.foodQualityScore - a.foodQualityScore);
-  }, [restaurants, searchQuery, foodFilters]);
+  }, [restaurants, searchQuery, foodFilters, selectedCategory]);
 
   const foodSponsored = useMemo(
     () => restaurants.find((r) => r.isSponsored && r.touristTrapIndex < 80),
@@ -365,10 +403,13 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       .filter((r) => r.touristTrapIndex >= 60)
       .filter((r) => {
         if (q) {
+          const deliveryHay = r.delivery?.available
+            ? `livrare delivery ${r.delivery.platforms?.join(' ') ?? ''}`
+            : 'doar in local fara livrare';
           const hay = normalizeRo(
             `${r.name} ${r.shortCategory ?? r.cuisine} ${
               r.shortNeighborhood ?? r.neighborhood
-            } ${r.whatToOrder.map((d) => d.name).join(' ')}`
+            } ${r.whatToOrder.map((d) => d.name).join(' ')} ${deliveryHay}`
           );
           if (!hay.includes(q)) return false;
         }
@@ -409,6 +450,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
     return drinkVenues
       .filter((r) => !r.isSponsored)
       .filter((r) => {
+        if (!matchesSelectedCategory(r)) return false;
         for (const f of drinkFilters) {
           if (!r.drinkTags?.includes(f)) return false;
         }
@@ -423,7 +465,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         return true;
       })
       .sort((a, b) => b.foodQualityScore - a.foodQualityScore);
-  }, [drinkVenues, drinkFilters, searchQuery]);
+  }, [drinkVenues, drinkFilters, searchQuery, selectedCategory]);
 
   const handleResetAll = () => {
     onSearchChange('');
@@ -655,6 +697,20 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               </div>
 
               {topTabs}
+              {!activeTheme && selectedCategory && (
+                <div className="flex items-center justify-between gap-2 rounded-[4px] border border-[#2D5947] bg-[#143025] px-3 py-2 text-[13px] text-[#F4EEE2]">
+                  <span>
+                    Categorie: <strong className="capitalize text-[#F2A33A]">{selectedCategory.replace(/-/g, ' ')}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onClearCategory?.()}
+                    className="inline-flex items-center gap-1 font-semibold text-[#F4EEE2]/80 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" /> Toate categoriile
+                  </button>
+                </div>
+              )}
               {activeTheme ? (
                 <ThemeTopList top={activeTheme} venues={drinkVenues} onSelect={openBySlug} dark />
               ) : filteredDrinkOrganic.length === 0 ? (
@@ -704,6 +760,26 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
 
               {/* Modest Sponsored Slot (Rule #3: darker/quieter surface, NO photo, smaller muted score, NO coaster) */}
               {!activeTheme && drinkSponsored && renderSponsoredCard(drinkSponsored)}
+
+              {!activeTheme && activeAd && (
+                <a
+                  href={activeAd.linkUrl}
+                  target={activeAd.linkUrl.startsWith('http') ? '_blank' : undefined}
+                  rel={activeAd.linkUrl.startsWith('http') ? 'noopener noreferrer sponsored' : undefined}
+                  onClick={() => void recordAdEventAction(activeAd.id, 'click')}
+                  className="block rounded-[6px] border border-[#285443] bg-[#122B22] p-3 transition-colors hover:border-[#F2A33A]/60"
+                >
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-[#F4EEE2]/60">
+                    <span>Reclamă · {activeAd.advertiser}</span>
+                    <span>Nu influențează scorul</span>
+                  </div>
+                  <img
+                    src={activeAd.creativeUrl}
+                    alt={`Reclamă ${activeAd.advertiser}`}
+                    className="max-h-32 w-full rounded-[4px] object-cover"
+                  />
+                </a>
+              )}
             </section>
 
             {/* RIGHT 5 COLUMNS: Weekendul ăsta + Bottom CTA */}
@@ -712,9 +788,19 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               className="lg:col-span-5 space-y-6"
             >
               <div className="space-y-4">
-                <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#F4EEE2]">
-                  Weekendul ăsta
-                </h2>
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#F4EEE2]">
+                    <Link href="/topdrink/timisoara/weekend" className="hover:text-[#F2A33A] transition-colors">
+                      Weekendul ăsta
+                    </Link>
+                  </h2>
+                  <Link
+                    href="/topdrink/timisoara/weekend"
+                    className="text-[12px] font-semibold text-[#F2A33A] hover:underline"
+                  >
+                    Tot programul →
+                  </Link>
+                </div>
 
                 <div className="divide-y divide-[#285443] border-t border-[#285443]">
                   {weekendEvents.map((evt, idx) => {
@@ -1014,6 +1100,21 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 </div>
               </div>
             </div>
+
+            {!activeTheme && selectedCategory && (
+              <div className="flex items-center justify-between gap-2 rounded-[4px] border border-[#E6DFD5] bg-[#FAF8F5] px-3 py-2 text-[13px] text-[#3A2418]">
+                <span>
+                  Categorie: <strong className="capitalize text-[#B3261E]">{selectedCategory.replace(/-/g, ' ')}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onClearCategory?.()}
+                  className="inline-flex items-center gap-1 font-semibold text-[#6E5649] hover:text-[#3A2418]"
+                >
+                  <X className="h-3.5 w-3.5" /> Toate categoriile
+                </button>
+              </div>
+            )}
           </div>
 
           {topTabs}
@@ -1099,6 +1200,25 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   Clasamentul lunii
                 </button>
               </div>
+              {activeAd && (
+                <a
+                  href={activeAd.linkUrl}
+                  target={activeAd.linkUrl.startsWith('http') ? '_blank' : undefined}
+                  rel={activeAd.linkUrl.startsWith('http') ? 'noopener noreferrer sponsored' : undefined}
+                  onClick={() => void recordAdEventAction(activeAd.id, 'click')}
+                  className="mt-4 block rounded-[6px] border border-[#E6DFD5] bg-[#FAF8F5] p-3 transition-colors hover:border-[#3A2418]/40"
+                >
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-[#6E5649]">
+                    <span>Reclamă · {activeAd.advertiser}</span>
+                    <span>Nu influențează scorul</span>
+                  </div>
+                  <img
+                    src={activeAd.creativeUrl}
+                    alt={`Reclamă ${activeAd.advertiser}`}
+                    className="max-h-32 w-full rounded-[4px] object-cover"
+                  />
+                </a>
+              )}
             </div>
           )}
         </section>

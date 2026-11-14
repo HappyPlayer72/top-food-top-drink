@@ -1,101 +1,74 @@
-# TOP FOOD / TOP DRINK — Design Language & Graphical Elements
+# TopFood & TopDrink — Design Language Specification
 
-This document captures the current visual identity and graphical primitives implemented in [globals.css](file:///c:/Users/Serban/Documents/Antigravity/Unihack%2026/apps/web/src/app/globals.css), [BrandPrimitives.tsx](file:///c:/Users/Serban/Documents/Antigravity/Unihack%2026/apps/web/src/components/BrandPrimitives.tsx), and [design/README.md](file:///c:/Users/Serban/Documents/Antigravity/Unihack%2026/design/README.md).
-
----
-
-## 1. Core Visual Metaphors
-
-- **TOP FOOD**: Red gingham tablecloth (*fața de masă în carouri roșii*) from a neighborhood eatery.
-- **TOP DRINK**: Beer coaster & mug (*suportul de bere*) resting on bottle green (*verdele unei sticle*).
-- **Localnic**: Blue street-name plaque (*plăcuța albastră de stradă*) bearing the neighborhood name (e.g., *„Localnic din Iosefin”*).
-- **Capcană turistică**: Street warning triangle (`!` = confirmed trap, `?` = possible trap).
+> Canonical reference matching [`apps/web/src/app/globals.css`](../apps/web/src/app/globals.css), [`apps/web/src/app/layout.tsx`](../apps/web/src/app/layout.tsx), and [`apps/web/src/components/BrandPrimitives.tsx`](../apps/web/src/components/BrandPrimitives.tsx). See [`design/README.md`](README.md) for the Romanian summary.
 
 ---
 
-## 2. Color Palette & Tokens
+## 1. Visual Concept & Two-Face System
+
+TopFood & TopDrink is a single product with two distinct editorial atmospheres:
+- **TopFood** (Daytime, neighborhood dining): Warm paper canvas (`#FBF6EA`), coffee-ink text (`#3A2418`), checkered gingham red (`#B3261E`), mustard warmth (`#E0A526`), and street-sign blue (`#1F4E8C`) for verified locals. Dark mode shifts to Evening Slate (`#22262E`).
+- **TopDrink** (Nightlife, pubs & cocktail bars): Deep bottle-green public surface (`#17382C`), foam-cream ink (`#F4EEE2`), amber-gold accents (`#F2A33A`), and notched cardboard coaster marks (`#B98A5E`).
+
+---
+
+## 2. Color Tokens (`@theme` in `globals.css`)
 
 ### Core 8 Identity Tokens
+| CSS Token | Hex | Semantic Role |
+|---|---|---|
+| `--color-carou` | `#B3261E` | TopFood primary accent, checkered strip, food danger/active marker |
+| `--color-cafea` | `#3A2418` | TopFood primary ink (light mode) |
+| `--color-mustar` | `#E0A526` | Warm highlight, `Posibilă capcană` (`trapLevel: "possible"`) badge |
+| `--color-placuta` | `#1F4E8C` | `Localnic` verified badge, street-plaque accent (`#7DB4FF` in dark mode) |
+| `--color-sticla` | `#17382C` | TopDrink public background, bottle-green brand surface |
+| `--color-chihlimbar` | `#F2A33A` | TopDrink primary accent, rating stars, new-venue highlight |
+| `--color-spuma` | `#F4EEE2` | Light ink on `#17382C` and dark-mode primary ink |
+| `--color-carton` | `#B98A5E` | Coaster/cork accent and warm secondary border |
 
-| Token | Name | Hex | Usage | Contrast |
-| --- | --- | --- | --- | --- |
-| `--color-carou` | **Carou** | `#B3261E` | Food mark, primary buttons, trap badges, light-mode focus ring | 6.5:1 with white |
-| `--color-cafea` | **Cafea** | `#3A2418` | Primary text on paper, active states, `InfluencerBadge` | 14:1 on white |
-| `--color-mustar` | **Muștar** | `#E0A526` | Background only (with Cafea text), *„Posibilă capcană”* | 6.7:1 with Cafea |
-| `--color-placuta` | **Plăcuță** | `#1F4E8C` | **Strictly** `LocalnicBadge` & `LocalVsTouristBars` (`#7DB4FF` in dark mode) | 8:1 with white |
-| `--color-sticla` | **Sticlă** | `#17382C` | TOP DRINK dark background; TOP DRINK ink on `#F6F3EB` in light mode | — |
-| `--color-chihlimbar` | **Chihlimbar** | `#F2A33A` | Drink accent, buttons, `CrowdMeter`, focus ring on Sticlă & dark mode | 6:1 on Sticlă |
-| `--color-spuma` | **Spumă** | `#F4EEE2` | Primary text on Sticlă, `CoasterScore` / `CoasterMark` fill | 11:1 on Sticlă |
-| `--color-carton` | **Carton** | `#B98A5E` | Beer coaster & mug outline (`CoasterMark`, `CoasterScore`) | Decorative |
-
-### Quiet Structural Surfaces
-
-| Token | Hex | Usage |
-| --- | --- | --- |
-| `--color-paper` | `#FFFFFF` | Light-mode page surface |
-| `--color-sponsored-food` | `#F2EFE9` | Modest sponsored card surface (Food) |
-| `--color-sponsored-drink` | `#1E4335` | Modest sponsored card surface (Drink) |
-| `--color-hairline` | `#E6DFD5` | Subtle dividers and borders |
-| `--color-muted-cafea` | `#6E5649` | Secondary meta text & explanations |
-
----
-
-## 3. Typography
-
-A single variable font family: **Archivo** (Google Fonts, variable width axis `wdth` `62–125`).
-
-| Role | Setting | Class |
-| --- | --- | --- |
-| Logo, headings, scores, ranks | `font-stretch: 62%`, weight `800–850` | `font-display` |
-| Logo city suffix (`/timișoara`) | `font-stretch: 62%`, weight `300` | `font-display-light` |
-| Body & UI copy | Normal width (`100`), weight `400` / `600`, `14–17px` | `font-sans` |
-| Aligned numerals (scores, prices, weights) | `tabular-nums` | — |
-
-> [!NOTE]
-> Scores use the Romanian decimal comma (e.g., `9,1`), and the score is always the largest number on screen.
+### Structural & Mode Surfaces
+- **TopFood Light (`html:not(.dark)`)**:
+  - `--color-paper`: `#FBF6EA` (note: `.bg-white` is intentionally remapped to `#FBF6EA` in light mode)
+  - Elevated / soft surface: `#F5EFE2`
+  - Muted ink (`--color-muted-cafea`): `#6E5649`
+  - Hairline border (`--color-hairline`): `#E6DFD5`
+  - Sponsored card (`--color-sponsored-food`): `#F2EFE9`
+- **TopFood Dark (`html.dark`)**:
+  - Base background: `#22262E`
+  - Cards & elevated layers: `#2B303A` / `#313743`
+  - Primary ink: `#F4EEE2` | Muted ink: `#B6BAC4`
+- **TopDrink Public ([`TopFoodShell.tsx`](../apps/web/src/components/TopFoodShell.tsx))**:
+  - Always renders on `#17382C` (`--color-sticla`) with `#F4EEE2` text and `--color-sponsored-drink` (`#1E4335`) for sponsored items.
+- **Owner Portal (`.owner-shell` `--o-*` tokens in `globals.css`)**:
+  - Light food: `--o-bg: #FBF6EA`, `--o-fg: #3A2418`, `--o-card: #F5EFE2`, `--o-accent: #B3261E`, `--o-quiet: #F2EFE9`
+  - Dark food: `--o-bg: #22262E`, `--o-fg: #F4EEE2`, `--o-card: #2B303A`
+  - Light drink (`[data-vertical="drink"]`): `--o-bg: #F6F3EB`, `--o-fg: #17382C`, `--o-card: #FBF9F3`, `--o-accent: #17382C`
+  - Dark drink (`html.dark [data-vertical="drink"]`): `--o-bg: #17382C`, `--o-fg: #F4EEE2`, `--o-card: #143025`, `--o-accent: #F2A33A`
 
 ---
 
-## 4. Graphical Elements (`BrandPrimitives.tsx`)
+## 3. Typography & Motion
 
-### Marks & Dividers
-
-1. **`CarouMark`** — 32×32 rounded-square gingham icon (`#B3261E` border, `#D96B63` / `#C44037` / `#B3261E` 2×2 weave) used for the `topfood` wordmark.
-2. **`CarouStrip`** — Horizontal tablecloth bar (default `10px` height) with a 2-row gingham weave on the left (`#FAF5F0`, `#E08A84`, `#C94A42`, `#B3261E`) extending into solid Carou. Appears **at most once per screen** (hero divider or under score).
-   ```css
-   background-color: #FFFFFF;
-   background-image:
-     linear-gradient(90deg, rgba(179,38,30,.55) 50%, transparent 50%),
-     linear-gradient(rgba(179,38,30,.55) 50%, transparent 50%);
-   background-size: 12px 12px;
-   ```
-3. **`CoasterMark`** — 32×32 beer mug SVG (`#F2A33A` Chihlimbar body, `#B98A5E` Carton handle & outline, `#F4EEE2` Spumă foam head, `#17382C` subtle flutes) used for the `topdrink` wordmark.
-4. **`CoasterScore`** — Circular beer coaster (`#F4EEE2` Spumă fill, `#B98A5E` Carton border, `#17382C` Sticlă numerals) displaying the venue score (`md` or `lg`).
-5. **`BrandWordmark`** — Combines `CarouMark` or `CoasterMark` with `topfood` / `topdrink` (`font-display`) and `/timișoara` (`font-display-light`).
-
-### Badges & Trust Signals
-
-6. **`LocalnicBadge`** — Blue street-plaque pill (`#1F4E8C` Plăcuță background, white text) reserved **exclusively** for verified local residents (e.g., *„Localnic din Iosefin”*).
-7. **`InfluencerBadge`** — Cafea (`#3A2418`) badge indicating influencer/creator reviews.
-8. **`PartnerBadge`** — Modest partner indicator.
-9. **`TrapBadge`** — Street warning triangle combining **shape + text + color**:
-   - Confirmed trap: solid `#B3261E` Carou triangle with `!`.
-   - Possible trap: `#E0A526` Muștar triangle with `?` and Cafea text.
-
-### Data & Editorial Cards
-
-10. **`EmployeeEcusonCard`** — Staff/employee verification badge card (*ecuson*).
-11. **`LocalVsTouristBars`** — Horizontal comparison bars contrasting local (`#1F4E8C` Plăcuță) vs. tourist sentiment.
-12. **`AvertizareaCard`** — Detailed tourist-trap breakdown card (`TrapBreakdown`).
-13. **`CrowdMeter`** — Chihlimbar (`#F2A33A`) live/typical crowd level indicator for venues.
+- **Single variable font**: `Archivo` loaded via Google Fonts (`wdth: 62..125`, `wght: 100..900`) in `apps/web/src/app/layout.tsx`.
+  - `.font-display`: `font-variation-settings: "wdth" 62; font-weight: 800;`
+  - `.font-display-light`: `font-variation-settings: "wdth" 62; font-weight: 300;`
+  - `.font-display-regular`: `font-variation-settings: "wdth" 62; font-weight: 400;`
+  - Body default: `"wdth" 100`, `line-height: 1.5`.
+- **Easing curves (`:root` in `globals.css`)**:
+  - `--ease-out`: `cubic-bezier(0.23, 1, 0.32, 1)`
+  - `--ease-in-out`: `cubic-bezier(0.77, 0, 0.175, 1)`
+  - `--ease-drawer`: `cubic-bezier(0.32, 0.72, 0, 1)`
+  - Respect `@media (prefers-reduced-motion: reduce)`.
 
 ---
 
-## 5. Design & Accessibility Rules
+## 4. Brand Primitives (`apps/web/src/components/BrandPrimitives.tsx`)
 
-1. **Single-occurrence rule**: `CarouStrip` and coaster motifs appear at most once per screen, never as a full-page background.
-2. **Color-meaning lock**: Plăcuță blue (`#1F4E8C`) means **only** *„localnic”*.
-3. **Modest sponsorship**: Paid placements use muted gray/green surfaces (`#F2EFE9` / `#1E4335`) with *„Sponsorizat. Nu schimbă scorul.”*
-4. **Shape + Color**: Tourist traps are always identifiable by triangle shape (`!` / `?`), not color alone.
-5. **Restraint**: No all-caps labels, no monospace fonts, no identical drop-shadowed cards.
-6. **WCAG AA & Focus**: Contrast ≥ 4.5:1 in both light and dark (`#22262E` / `#17382C`) modes; `2px` `:focus-visible` rings in `#B3261E` (light), `#17382C` (`topdrink` light), and `#F2A33A` (`html.dark` and on `#17382C`).
+- **`CarouStrip`**: 6 stepped flex-div cells (`#FAF5F0`, `#E08A84`, `#C94A42`, `#B3261E`) transitioning into a solid `#B3261E` band — signature checkered-tablecloth header strip.
+- **`CarouMark` / `CoasterMark` / `BrandWordmark`**: SVG marks and lockups switching between TopFood and TopDrink identities.
+- **`CoasterScore`**: Scalloped circular coaster badge displaying the honest rating (`0.0–10.0`).
+- **`LocalnicBadge`**, **`InfluencerBadge`**, **`PartnerBadge`**, **`TrapBadge`**: Status pills enforcing visual transparency for local verification (`2.0×`), paid influencer disclosures (`0.2×`), partners, and tourist trap alerts.
+- **`LocalVsTouristBars`**: Side-by-side horizontal bar comparison illustrating local vs. tourist score divergence.
+- **`AvertizareaCard`**: Explanation callout listing the Romanian `trapReasons` behind a venue's trap index.
+- **`EmployeeEcusonCard`** & **`CrowdMeter`**: Nameplate card for staff/employee-of-the-month honors and 5-level live crowd/vibe indicator.
+- **`.doodle-wallpaper`**: Subtle SVG mask pattern (`/owner-doodles.svg`) fading toward center, tinted dynamically via `var(--o-fg, currentColor)`.

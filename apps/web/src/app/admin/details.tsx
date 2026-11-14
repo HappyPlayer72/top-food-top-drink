@@ -42,3 +42,26 @@ export function ClaimDetails({ claim }: { claim: Queue['claims'][number] }) {
     <p><strong>CUI:</strong> {value(claim.cui)}</p><p><strong>Document justificativ:</strong> Indisponibil în sistem.</p>
   </div>;
 }
+
+export function ReceiptDetails({ receipt }: { receipt: Queue['receipts'][number] }) {
+  return <div className="space-y-2">
+    <p><strong>Local:</strong> {value(receipt.venue.name)} · {value(receipt.venue.address)}</p>
+    <p><strong>Autor:</strong> {value(receipt.author?.displayName)}{receipt.author?.username ? ` (@${receipt.author.username})` : ''} · <strong>Notă:</strong> {receipt.rating}/10 · <strong>Trimis la:</strong> {date(receipt.postedAt)}</p>
+    <p><strong>Review:</strong> {value(receipt.text)}</p>
+    {receipt.receiptPhotoUrl ? (
+      <div className="mt-2">
+        <img src={receipt.receiptPhotoUrl} alt={`Bon fiscal pentru ${receipt.venue.name}`} className="max-h-64 rounded border border-cafea/20 object-contain" />
+      </div>
+    ) : null}
+  </div>;
+}
+
+export function SuspiciousAccountDetails({ account }: { account: Queue['suspiciousAccounts'][number] }) {
+  return <div className="space-y-2">
+    <p><strong>Cont:</strong> {value(account.displayName)} (@{account.username})</p>
+    <p><strong>Review-uri analizate:</strong> {account.reviewCount} · <strong>Probabilitate medie falsă:</strong> {Math.round(account.avgFakeProbability * 100)}%</p>
+    <ul className="list-disc pl-6">
+      {account.reasons.map((reason, i) => <li key={i}>{reason}</li>)}
+    </ul>
+  </div>;
+}

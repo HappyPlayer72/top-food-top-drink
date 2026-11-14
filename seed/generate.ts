@@ -169,7 +169,7 @@ export function generate(venues: SeedVenue[], now: Date) {
         postedAt,
         visitWeekendNight: weekend,
         verifiedVisit: rand() < 0.4,
-        servedBy: v.slug === "ciorba-lui-sandu" && rand() < 0.6 ? "Ioana" : null,
+        servedBy: v.slug === "restaurant-nora" && rand() < 0.6 ? "Ioana" : null,
       });
       // Check-in-uri: localnicii fideli revin (mai multe zile la același local)
       const visits = rating >= 8 ? 2 + Math.floor(rand() * 3) : 1;
@@ -225,16 +225,16 @@ export function generate(venues: SeedVenue[], now: Date) {
     }
   }
 
-  // Influencer cu colaborare plătită declarată la Bistro Bega
+  // Influencer cu colaborare plătită declarată la Vinto Gastro Wine Bar
   reviews.push({
-    venueSlug: "bistro-bega",
+    venueSlug: "vinto-gastro-wine-bar",
     source: "native",
     externalId: null,
     authorKey: "influencer",
     externalAuthor: null,
     originalRating: 10,
     originalScale: 10,
-    text: "Cel mai elegant bistro din Timișoara, meniu nou de toamnă. #colaborare",
+    text: "Cel mai elegant wine bar & bistro din Timișoara, meniu nou de toamnă. #colaborare",
     postedAt: new Date(now.getTime() - 5 * DAY),
     visitWeekendNight: null,
     verifiedVisit: true,

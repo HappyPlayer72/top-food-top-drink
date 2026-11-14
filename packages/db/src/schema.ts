@@ -342,6 +342,8 @@ export const reviews = pgTable(
     aspects: jsonb().$type<Record<string, number>>(),
     isPaid: boolean().notNull().default(false),
     verifiedVisit: boolean().notNull().default(false),
+    receiptPhotoUrl: text(),
+    receiptStatus: text(),
     fakeProbability: real().notNull().default(0),
     fakeSignals: jsonb().$type<string[]>().notNull().default([]),
     /** Ponderea finală (modulul D). */
@@ -602,6 +604,56 @@ export const reports = pgTable(
   (t) => [index().on(t.status, t.createdAt)],
 );
 
+export const savedVenues = pgTable(
+  "saved_venues",
+  {
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    venueSlug: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.venueSlug] })],
+);
+
+export const venueViewsDaily = pgTable(
+  "venue_views_daily",
+  {
+    venueId: uuid()
+      .notNull()
+      .references(() => venues.id, { onDelete: "cascade" }),
+    day: date().notNull(),
+    views: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.venueId, t.day] })],
+);
+
+export const venueScoreSnapshots = pgTable(
+  "venue_score_snapshots",
+  {
+    venueId: uuid()
+      .notNull()
+      .references(() => venues.id, { onDelete: "cascade" }),
+    day: date().notNull(),
+    score: real().notNull(),
+    reviewCount: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.venueId, t.day] })],
+);
+
+export const moderationDecisions = pgTable(
+  "moderation_decisions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    targetType: text().notNull(),
+    targetId: text().notNull(),
+    decision: text().notNull(),
+    decidedBy: uuid().references(() => users.id),
+    decidedAt: createdAt(),
+  },
+  (t) => [index().on(t.targetType, t.targetId)],
+);
+
 // ---------- Tipuri JSON ----------
 
 export type CityPrices = {
@@ -653,6 +705,7 @@ export type LeaderboardAwards = {
   revelation?: { venueId: string; from: number; to: number };
   employee?: { employeeId: string; venueId: string; mentions: number };
   local?: { userId: string; reviews: number };
+  influencer?: { userId: string; reviews: number; followers: number };
 };
 
 /** Sondaj public de ieșire; opțiunile sunt slug-urile localurilor active la creare. */

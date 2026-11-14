@@ -465,13 +465,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={handleSwitchVertical}
-              className={`btn-press min-h-[44px] inline-flex items-center text-[14px] font-semibold px-3 py-1.5 rounded-[4px] border ${
+              aria-label={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
+              title={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
+              className={`btn-press min-w-[44px] min-h-[44px] inline-flex items-center justify-center px-2.5 rounded-[4px] border ${
                 isDrink
-                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
-                  : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                  ? 'border-[#2D5947] hover:border-[#F2A33A] hover:bg-[#1E4335]'
+                  : 'border-[#D6CFC5] hover:border-[#3A2418] hover:bg-[#FAF8F5]'
               }`}
             >
-              {isDrink ? 'topfood' : 'topdrink'}
+              {isDrink ? <CarouMark size={22} /> : <CoasterMark size={22} />}
             </button>
           </nav>
 
@@ -664,14 +666,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={handleSwitchVertical}
-            className={`btn-press min-w-0 w-full px-0.5 overflow-hidden flex flex-col items-center justify-center gap-0.5 text-[10px] min-[375px]:text-[11px] font-semibold ${
-              isDrink ? 'text-[#F4EEE2]/85' : 'text-[#3A2418]'
-            }`}
+            aria-label={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
+            title={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
+            className="btn-press min-w-0 w-full px-0.5 overflow-hidden flex items-center justify-center"
           >
-            {isDrink ? <CarouMark size={16} /> : <CoasterMark size={16} />}
-            <span className="leading-none max-w-full truncate">
-              {isDrink ? 'topfood' : 'topdrink'}
-            </span>
+            {isDrink ? <CarouMark size={22} /> : <CoasterMark size={22} />}
           </button>
         </div>
       </nav>

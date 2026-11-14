@@ -17,20 +17,20 @@ const ok = (label: string, cond: boolean, detail = "") => {
 
 const food = await cityPage(db, { citySlug: "timisoara", vertical: "food" });
 ok("cityPage food: 20 locale", food.top.length === 20, `primul: ${food.top[0]?.name} ${food.top[0]?.honestScore}`);
-ok("Sponsorizatul e separat de top", food.sponsored.some((s) => s.slug === "bistro-bega"), food.sponsored.map((s) => s.name).join(", "));
+ok("Sponsorizatul e separat de top", food.sponsored.some((s) => s.slug === "vinto-gastro-wine-bar"), food.sponsored.map((s) => s.name).join(", "));
 ok("capcanele au motive", food.traps.length > 0 && food.traps[0]!.reasons.length > 0, food.traps.map((t) => `${t.name} ${t.index}`).join(", "));
 const noTraps = await cityPage(db, { citySlug: "timisoara", vertical: "food", noTraps: true });
 ok("filtrul „fără capcane”", !noTraps.top.some((v) => v.trapLevel !== "none"), `${noTraps.top.length} locale`);
 
-const sandu = await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "ciorba-lui-sandu" });
+const sandu = await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "restaurant-nora" });
 ok("venuePage: review-uri de la localnici", sandu.reviews.length > 0 && sandu.reviews.every((r) => r.authorType === "local"), `${sandu.reviewCounts.local} localnici, ${sandu.reviewCounts.tourist} turiști`);
 ok("venuePage: echipa și blogul", sandu.team.length === 3 && sandu.blog.length === 1, sandu.team.map((t) => `${t.firstName}:${t.mentionsThisMonth}`).join(", "));
 
-const bega = await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "bistro-bega", reviews: "influencer" });
+const bega = await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "vinto-gastro-wine-bar", reviews: "influencer" });
 ok("review-ul influencerului e marcat plătit", bega.reviews.some((r) => r.isPaid), `${bega.reviews.length} review-uri de influenceri`);
-ok("Bistro Bega e partener", bega.isPartner);
+ok("Vinto Gastro Wine Bar e partener", bega.isPartner);
 
-const depou = await venuePage(db, { citySlug: "timisoara", vertical: "drink", slug: "depoul-de-tramvaie" });
+const depou = await venuePage(db, { citySlug: "timisoara", vertical: "drink", slug: "the-80s-pub" });
 const byTime = (depou.scores as { byTime?: { weekendNight: number; weekday: number } }).byTime;
 ok("drink: scor vineri noaptea > în timpul săptămânii", !!byTime && byTime.weekendNight > byTime.weekday, JSON.stringify(byTime));
 ok("drink: vibe check", depou.vibe?.level === 5, JSON.stringify(depou.vibe));
@@ -55,23 +55,23 @@ await submitVibe(db, user.id, depou.venue.id, 3);
 const ownerUser = await accounts.login(db, { login: "sandu.proprietar", password: "x" }).catch(() => null);
 ok("owner fără parolă nu se poate loga", ownerUser === null);
 await owner.replyToReview(db, (await db.query.users.findFirst({ where: (u, { eq }) => eq(u.username, "sandu.proprietar") }))!.id, review.id, "Mulțumim, te mai așteptăm!");
-const after = await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "ciorba-lui-sandu", reviews: "all" });
+const after = await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "restaurant-nora", reviews: "all" });
 ok("răspunsul owner-ului apare sub review", after.reviews.find((r) => r.id === review.id)?.replies.length === 1);
 
 // Dashboard-ul owner-ului: citirile de care are nevoie /owner
 const sanduOwnerId = await owner.userIdByUsername(db, "sandu.proprietar");
 ok("userIdByUsername", !!sanduOwnerId && (await owner.userIdByUsername(db, "nu-exista-deloc")) === null);
 const mine = await owner.managedVenues(db, sanduOwnerId!);
-ok("owner: localele mele", mine.some((v) => v.slug === "ciorba-lui-sandu" && v.role === "owner"), mine.map((v) => `${v.slug}:${v.role}`).join(", "));
+ok("owner: localele mele", mine.some((v) => v.slug === "restaurant-nora" && v.role === "owner"), mine.map((v) => `${v.slug}:${v.role}`).join(", "));
 await owner.inviteEmployee(db, sanduOwnerId!, sandu.venue.id, { firstName: "Test", role: "ospătar", userId: user.id });
 const team = await owner.employeesForOwner(db, sanduOwnerId!, sandu.venue.id);
 ok("owner: echipa include invitația neacceptată", team.length === 4 && team.some((e) => e.userId === user.id && !e.accepted), team.map((e) => `${e.firstName}:${e.accepted}`).join(", "));
 const invites = await owner.pendingInvites(db, user.id);
-ok("angajat: vede invitația", invites.some((i) => i.venueName === "Ciorba lui Sandu" && i.role === "ospătar"), JSON.stringify(invites));
+ok("angajat: vede invitația", invites.some((i) => i.venueName === "Restaurant Nora" && i.role === "ospătar"), JSON.stringify(invites));
 const tomorrow = new Date(Date.now() + 86_400_000);
 const scheduled = await owner.createPost(db, sanduOwnerId!, sandu.venue.id, { type: "offer", title: "Ofertă de mâine", body: "Ciorbă la jumătate de preț.", publishAt: tomorrow });
 const ownerPosts = await owner.postsForOwner(db, sanduOwnerId!, sandu.venue.id);
-const publicBlog = (await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "ciorba-lui-sandu" })).blog;
+const publicBlog = (await venuePage(db, { citySlug: "timisoara", vertical: "food", slug: "restaurant-nora" })).blog;
 ok("postarea programată: la owner da, public nu", ownerPosts.find((p) => p.id === scheduled.id)?.scheduled === true && !publicBlog.some((p) => p.id === scheduled.id));
 const denied = await owner.employeesForOwner(db, user.id, sandu.venue.id).then(() => null, (e: unknown) => e);
 ok("alt user nu vede echipa altui local", denied instanceof ServiceError && denied.code === "forbidden");
@@ -174,9 +174,9 @@ const wallet = await loyalty.myCards(db, user.id);
 ok("portofelul are cardul localului și pe cel personal", wallet.length === 2, wallet.map((c) => `${c.venueName} ${c.stamps}/${c.stampsRequired}`).join(", "));
 
 // ---------- Căutare și localuri adăugate de useri ----------
-const found = await searchPlaces(db, { citySlug: "timisoara", vertical: "food", query: "ciorba" });
-ok("căutarea găsește localul la noi", found.onPlatform.some((v) => v.slug === "ciorba-lui-sandu"), `internet căutat: ${found.internetSearched}`);
-const dup = await addManually(db, user.id, { citySlug: "timisoara", vertical: "food", name: "Restaurant Ciorba lui Sandu", address: "Str. Exemplu, Iosefin", lat: 45.74891, lng: 21.20872 });
+const found = await searchPlaces(db, { citySlug: "timisoara", vertical: "food", query: "nora" });
+ok("căutarea găsește localul la noi", found.onPlatform.some((v) => v.slug === "restaurant-nora"), `internet căutat: ${found.internetSearched}`);
+const dup = await addManually(db, user.id, { citySlug: "timisoara", vertical: "food", name: "Restaurant Nora", address: "Bd. Dâmbovița nr. 40, Timișoara", lat: 45.74181, lng: 21.20462 });
 ok("un duplicat nu se adaugă de două ori", dup.outcome === "already-exists");
 const added = await addManually(db, user.id, { citySlug: "timisoara", vertical: "food", name: `Bistro Test ${suffix}`, address: "Str. Test 1, Fratelia", lat: 45.731, lng: 21.219, categories: ["bistro"] });
 ok("local nou adăugat de mână → în așteptare", added.outcome === "pending-review");
@@ -201,7 +201,7 @@ for (const email of ["andreea@e-uvt.ro", "luca@visit.ro"]) {
 }
 const programs = await loyalty.cityPrograms(db, "timisoara");
 ok("programele de fidelitate din oraș", programs.length >= 2 && programs.every((p) => !("stampSecret" in p)), programs.map((p) => p.venueName).join(", "));
-const demoCode = await loyalty.demoStampCode(db, programs.find((p) => p.venueSlug === "pivnita-cu-bolta")!.id);
+const demoCode = await loyalty.demoStampCode(db, programs.find((p) => p.venueSlug === "scart-loc-lejer")!.id);
 const demoScan = await loyalty.scanCode(db, user.id, demoCode);
 ok("codul demo (ca la tejghea) pune ștampila", demoScan.action === "stamped", demoScan.message);
 

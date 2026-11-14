@@ -14,26 +14,128 @@ export const TOO_MANY_ATTEMPTS = "Prea multe încercări greșite. Cere un cod n
  * Leagă un cont social de profil. `verified` vine DOAR din fluxul OAuth al platformei (dovada că e al lui);
  * un link adăugat de mână rămâne neverificat.
  */
+export type SocialPlatform = "tiktok" | "instagram" | "facebook" | "youtube";
+
+const PLATFORM_HOSTS: Record<SocialPlatform, RegExp> = {
+  tiktok: /^https?:\/\/(www\.|vm\.)?tiktok\.com\//i,
+  instagram: /^https?:\/\/(www\.)?instagram\.com\//i,
+  facebook: /^https?:\/\/(www\.|m\.)?(facebook|fb)\.com\//i,
+  youtube: /^https?:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//i,
+};
+
+/** Generează codul unic de verificare pus de creator în bio-ul profilului său social. */
+export function socialVerificationCode(userId: string, platform: SocialPlatform) {
+  return `TFTD-${hashCode(`social:${userId}:${platform}`).slice(0, 6).toUpperCase()}`;
+}
+
+export async function getSocialLinks(db: Db, userId: string) {
+  return db
+    .select({
+      platform: userSocialLinks.platform,
+      url: userSocialLinks.url,
+      verified: userSocialLinks.verified,
+      followers: userSocialLinks.followers,
+    })
+    .from(userSocialLinks)
+    .where(eq(userSocialLinks.userId, userId));
+}
+
 export async function linkSocialAccount(
   db: Db,
   userId: string,
-  input: { platform: "tiktok" | "instagram" | "facebook" | "youtube"; url: string; verified?: boolean; followers?: number },
+  input: { platform: SocialPlatform; url: string; verified?: boolean; followers?: number },
 ) {
+  const url = input.url.trim();
+  if (!/^https?:\/\//i.test(url)) throw invalid("Linkul contului trebuie să înceapă cu https://.");
+  if (!PLATFORM_HOSTS[input.platform].test(url)) {
+    throw invalid(`Linkul nu pare a fi de pe ${input.platform}.`);
+  }
+  const followers = input.followers != null ? Math.max(0, Math.round(input.followers)) : null;
   await db
     .insert(userSocialLinks)
-    .values({ userId, platform: input.platform, url: input.url, verified: !!input.verified, followers: input.followers ?? null })
+    .values({ userId, platform: input.platform, url, verified: !!input.verified, followers })
     .onConflictDoUpdate({
       target: [userSocialLinks.userId, userSocialLinks.platform],
-      set: { url: input.url, verified: !!input.verified, followers: input.followers ?? null },
+      set: { url, verified: !!input.verified, followers },
     });
-  if (input.verified && (input.followers ?? 0) >= INFLUENCER_MIN_FOLLOWERS) {
+  if (input.verified && (followers ?? 0) >= INFLUENCER_MIN_FOLLOWERS) {
     await db
       .update(users)
-      .set({ followers: input.followers, roles: sql`(SELECT array_agg(DISTINCT r) FROM unnest(${users.roles} || '{influencer}'::user_role[]) r)` })
+      .set({ followers, roles: sql`(SELECT array_agg(DISTINCT r) FROM unnest(${users.roles} || '{influencer}'::user_role[]) r)` })
       .where(eq(users.id, userId));
     return { influencer: true };
   }
   return { influencer: false };
+}
+
+/**
+ * Pasul 1 al verificării contului social (fără OAuth extern): salvează linkul ca neverificat
+ * și întoarce codul `TFTD-XXXXXX` de adăugat temporar în bio-ul contului.
+ */
+export async function startSocialVerification(
+  db: Db,
+  userId: string,
+  input: { platform: SocialPlatform; url: string; followers?: number },
+) {
+  await linkSocialAccount(db, userId, { ...input, verified: false });
+  const code = socialVerificationCode(userId, input.platform);
+  return {
+    code,
+    platform: input.platform,
+    instruction: `Adaugă codul ${code} în descrierea (bio) profilului tău și apasă Confirmă verificarea.`,
+  };
+}
+
+/**
+ * Pasul 2 al verificării: verifică prezența codului `TFTD-XXXXXX` în bio-ul trimis spre confirmare
+ * și, dacă are ≥ 1000 urmăritori, acordă automat rolul `influencer`.
+ */
+export async function confirmSocialVerification(
+  db: Db,
+  userId: string,
+  input: { platform: SocialPlatform; bioSnippet: string; followers?: number },
+) {
+  const [link] = await db
+    .select()
+    .from(userSocialLinks)
+    .where(and(eq(userSocialLinks.userId, userId), eq(userSocialLinks.platform, input.platform)));
+  if (!link) throw notFound("Contul social");
+  const expected = socialVerificationCode(userId, input.platform);
+  const snippet = (input.bioSnippet ?? "").toUpperCase();
+  if (!snippet.includes(expected)) {
+    throw invalid(`Codul ${expected} nu a fost găsit în textul din bio introdus.`);
+  }
+  const followers = input.followers != null ? Math.max(0, Math.round(input.followers)) : (link.followers ?? 0);
+  return linkSocialAccount(db, userId, {
+    platform: input.platform,
+    url: link.url,
+    verified: true,
+    followers,
+  });
+}
+
+export async function unlinkSocialAccount(
+  db: Db,
+  userId: string,
+  platform: SocialPlatform,
+) {
+  await db.delete(userSocialLinks).where(and(eq(userSocialLinks.userId, userId), eq(userSocialLinks.platform, platform)));
+  const remaining = await getSocialLinks(db, userId);
+  const qualified = remaining
+    .filter((s) => s.verified && (s.followers ?? 0) >= INFLUENCER_MIN_FOLLOWERS)
+    .sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0))[0];
+  if (!qualified) {
+    await db
+      .update(users)
+      .set({
+        followers: remaining.reduce((m, s) => Math.max(m, s.followers ?? 0), 0) || null,
+        roles: sql`array_remove(${users.roles}, 'influencer'::user_role)`,
+      })
+      .where(eq(users.id, userId));
+  } else {
+    await db.update(users).set({ followers: qualified.followers }).where(eq(users.id, userId));
+  }
+  return { remaining };
 }
 
 /**

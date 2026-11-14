@@ -1,81 +1,54 @@
-# Demo — 5 minute
+# Ghid Demo (3–5 minute)
 
-Scenariul de prezentare, pe datele din seed (30 de locale inventate). Fiecare pas: ce arăți și ce spui.
+Scenariul parcurge punctele esențiale ale aplicației folosind datele deterministe din `timisoara` (`npm run seed -- --reset`).
 
-## Înainte de demo (2 minute)
+---
+
+## Pregătire înainte de prezentare
 
 ```bash
-npm run db:up                 # Postgres în Docker
+npm run db:up
 npm run db:migrate
-npm run seed -- --reset       # date curate (șterge și ce am adăugat la teste)
-npm run dev -w @topfood/web   # http://localhost:3000
+npm run seed -- --reset
+npm exec -- tsx --env-file-if-exists=.env seed/test-accounts.ts   # creează test.user, test.owner, test.admin
+npm run dev -w @topfood/web
 ```
 
-Conturi (parola pentru toate: `demo1234`, sau ce e în `DEMO_PASSWORD`):
+Deschide în browser: **[http://localhost:3000/topfood/timisoara](http://localhost:3000/topfood/timisoara)**.
 
-| Cine | Unde intri | Cont |
-| --- | --- | --- |
-| Andreea, localnic verificat din Iosefin | butonul „Acces rapid” de pe ecranul de login | andreea@e-uvt.ro |
-| Luca, turist | butonul „Acces rapid” | luca@visit.ro |
-| Sandu, proprietarul de la Ciorba lui Sandu | `/owner` | sandu.proprietar |
-| Admin | `/admin` | admin |
+### Conturi disponibile după seed
 
-Deschide din timp două taburi: `/topfood/timisoara` și `/owner` (logat ca Sandu, în alt browser sau în fereastră privată, pentru că sesiunea e una per browser).
+| Rol | Username | Parolă | Utilizare demo |
+|---|---|---|---|
+| Patron verificat | `sandu.proprietar` | valoarea `DEMO_PASSWORD` din `.env` | Dashboard `/owner` pentru *Ciorba lui Sandu* |
+| Utilizator test | `test.user` | `TestUser2026!` | Scriere review, check-in, carduri fidelitate |
+| Patron test | `test.owner` | `TestOwner2026!` | Flux revendicare local (`DEMO_CLAIM_CODE`, implicit `123456`) |
+| Admin / Moderator | `test.admin` | `TestAdmin2026!` | Panoul `/admin` (rapoarte, bonuri, potriviri, parteneriate, reclame) |
 
-## 1. Problema (30 s) — `/topfood/timisoara`
+> **Notă**: Dacă rulezi aplicația fără Postgres pornit, UI-ul comută automat pe setul static din [`apps/web/src/data/restaurants.ts`](../apps/web/src/data/restaurants.ts). Pentru demo-ul complet cu persistență (review nou, claim, bon, QR fidelitate), folosește baza de date.
 
-- Arată **Terasa Grand Unirii**: turiștii îi dau **8,3**, localnicii doar **6,3**, deci **capcană turistică 84/100**.
-- Deschide „De ce?”: prețuri mult peste medie, la câțiva metri de Piața Unirii, majoritatea review-urilor în limbi străine.
-- *„Google amestecă turiștii cu localnicii. Noi îi separăm și îți spunem de ce un loc e capcană.”*
+---
 
-## 2. Topul onest (30 s)
+## Scenariul de 4 minute
 
-- Locul 1: **Ciorba lui Sandu**, 8,9 (localnici 8,9), în Iosefin, departe de centru, fără semne de capcană.
-- **Bistro Bega** apare în caruselul „Sponsorizat”, dar în top rămâne la mijloc (scor 7,8), exact unde îl pune scorul.
-- *„Restaurantele pot plăti pentru vizibilitate. Niciodată pentru scor sau loc în top — și avem un test automat care verifică asta.”*
+### 1. Descoperire & Capcane turistice — `/topfood/timisoara` (60s)
+- Arată lista **TopFood Timișoara**: pe primul loc este **Ciorba lui Sandu** (Iosefin, favorit al localnicilor, scor onest ~9.4).
+- Arată banda **Sponsorizat** deasupra/separat: **Bistro Bega** este etichetat clar `"Sponsorizat"`, fără să modifice clasamentul organic.
+- Comută filtrul **„Fără capcane”** și arată cum localurile marcate ca **Capcană turistică** (ex. **Terasa Grand Unirii**, unde localnicii dau ~4.9 și turiștii ~8.6, în Piața Unirii cu prețuri ridicate) sunt identificate cu motive explicite în română.
+- Deschide harta interactivă (`Harta`) și compară zona Cetate vs. cartierele rezidențiale.
 
-## 3. Review-urile false nu mută scorul (30 s)
+### 2. Pagina de local, transparență și review-uri — `/topfood/timisoara/ciorba-lui-sandu` (60s)
+- Arată defalcarea pe aspecte (`Mâncare`, `Servire`, `Preț/Calitate`, `Atmosferă`), programul deschis/închis în timp real (`Europe/Bucharest`) și echipa localului.
+- Arată filtrul de review-uri: **Localnici**, **Turiști**, **Influenceri** — la **Bistro Bega** (`/topfood/timisoara/bistro-bega`), review-ul de influencer are badge vizibil `"Parteneriat plătit"` și pondere redusă (`0.2×`).
+- Arată **Grill Nou Freidorf** (`/topfood/timisoara/grill-nou-freidorf`) pentru detecția rafalei de review-uri false (`fake_probability` ridicat).
 
-- **Grill Nou Freidorf**: a primit 20 de review-uri de 10 în ultimele 24 de ore, de la conturi noi, cu texte ca „Super! Recomand!”.
-- Scorul lui e tot **7,4**: detectorul le-a dat probabilitate mare de fals, deci aproape zero pondere.
+### 3. TopDrink, vibe în timp real & Scârnavii — `/topdrink/timisoara` (60s)
+- Comută pe **TopDrink** (`/topdrink/timisoara`) — întreaga temă trece pe verde sticlă (`#17382C`) cu accente chihlimbar (`#F2A33A`).
+- Deschide **Depoul de Tramvaie** (`/topdrink/timisoara/depoul-de-tramvaie`): scorul este defalcat între **Weekend noaptea** (~9.1) și **În cursul săptămânii** (~6.0), cu **Vibe Check** live (expiră la 2 ore).
+- Vizitează **`/topdrink/timisoara/weekend`** pentru evenimentele viitoare și **`/scarnavii`** pentru cele 6 jocuri de masă/recomandare în grup.
 
-## 4. Localnicul contează dublu (60 s) — momentul „wow”
-
-- „Intră în cont” → „Acces rapid” → **Andreea M. (Localnic din Iosefin)**.
-- Deschide Ciorba lui Sandu → „Scrie un review” → nota 9 + câteva cuvinte concrete → Publică.
-- Apare: *„Review publicat. Pondere ×2,0. Ești localnic verificat, nota ta contează dublu. Scorul localului s-a recalculat.”*
-- Review-ul ei e primul în listă, cu insigna „Localnic din Iosefin”. Apasă „Util” pe alt review: numărul vine din baza de date.
-
-## 5. Owner-ul (45 s) — tabul `/owner`
-
-- Sandu vede statisticile, review-urile și răspunde la unul. **Nu are buton de ștergere** — poate doar să răspundă sau să raporteze; decide un admin.
-- Secțiunea **Fidelitate**: codul QR al localului, care **se schimbă la fiecare minut**.
-
-## 6. Fidelitate (45 s) — `/fidelitate` (Andreea)
-
-- Cardul „O ciorbă din partea casei, 6 ștampile”. „Scanează la casă” → **+1 ștampilă**.
-- Mai apasă o dată: *„Ai primit deja ștampila de azi la acest local. Revino mâine.”*
-- *„O poză făcută codului nu ajută: codul expiră într-un minut și ai maxim o ștampilă pe zi.”*
-
-## 7. Local nou (30 s)
-
-- Caută „Bufetul lui Nea Gică” → nu există → „Adaugă localul” → stradă + cartier → trimis.
-- `/admin` (cont admin): apare în coadă → aprobat → apare în listă. Cu cheie Google, butonul „Caută și pe internet” îl găsește direct.
-
-## 7b. Devino localnic (opțional, 30 s)
-
-- „Acces rapid” → **Luca (turist)** → iconița de profil → „Devino localnic verificat”.
-- Email `luca@e-uvt.ro` → „Trimite cod” → în demo codul apare pe ecran → Confirmă → insigna de localnic, pondere 2,0×.
-- *„Din GPS păstrăm doar ziua, nu traseul. Sau emailul de la facultate.”*
-
-## 8. TOP DRINK (30 s) — `/topdrink/timisoara`
-
-- **Depoul de Tramvaie**: vineri noaptea **8,5**, în timpul săptămânii **7,1** — același club, altă seară.
-- „Cât e de plin acum”: raportări de la oamenii aflați acolo, expiră în 2 ore.
-
-## Dacă te întreabă
-
-- **De unde vin review-urile?** API-uri oficiale (Google Places, Tripadvisor) + linkuri TikTok/Instagram trimise de useri. Fără scraping.
-- **Cum știți că e localnic?** Check-in în oraș în 5 zile diferite din 30, email universitar (UVT, UPT) sau garanția a 2 localnici. Din GPS păstrăm doar ziua, nu traseul.
-- **Cum faceți bani?** Parteneriate pentru restaurante (blog, statistici, fidelitate, Sponsorizat) + reclame. Nimic din ele nu intră în scor.
-- **Datele din demo?** Localurile și review-urile sunt inventate; cu cheia Google se aduc localurile reale din Timișoara.
+### 4. Fidelitate QR, Patron & Moderare — `/fidelitate`, `/owner`, `/admin` (60s)
+- **`/fidelitate`**: arată cardurile de ștampile și codul QR rotativ la 60 de secunde (semnat HMAC).
+- **`/owner`** (logat cu `sandu.proprietar`): arată statisticile zilnice, invitațiile de echipă, postările/ofertele și regula nr. 2 — proprietarul poate **răspunde** public la review-uri sau le poate **raporta**, dar **nu le poate șterge sau ascunde**.
+- **`/admin`** (logat cu `test.admin`): arată coada de rapoarte, aprobarea bonurilor de casă (care oferă multiplicator `×1.3`), candidații de potrivire și gestionarea parteneriatelor/reclamelor (unde o capcană turistică cu `trap >= 80` este respinsă automat).
+- Bonus vizual: **`/topfood/timisoara/top-luna`** și exportul vertical 9:16 de share (`/api/share/top-luna?vertical=food`).

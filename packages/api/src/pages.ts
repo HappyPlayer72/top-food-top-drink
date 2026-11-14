@@ -4,11 +4,12 @@
  */
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import {
-  cities, employees, leaderboardSnapshots, menuItems, notFound, posts, reviewReplies, reviews, socialSubmissions, userSocialLinks, users, venueSources,
+  cities, employees, ensureExtendedSchema, leaderboardSnapshots, menuItems, notFound, posts, reviewReplies, reviews, socialSubmissions, userSocialLinks, users, venueSources,
   venues, vibeChecks, type Db,
 } from "@tftd/db";
 import { venueProgram } from "@tftd/loyalty";
-import { activePartnership, sponsoredSlots } from "@tftd/monetization";
+import { activePartnership, adsFor, sponsoredSlots } from "@tftd/monetization";
+import { recordVenueView } from "@tftd/owner";
 import { formatHours, openStatus } from "./hours.ts";
 import { venueFeatureData, venueFeatures, venueQuickData } from "./features.ts";
 import { activeThemes, featureStatus, rankTheme, themeQuestions, type Theme, type ThemeCandidate } from "@tftd/scoring/features";
@@ -82,6 +83,7 @@ export async function cityPage(
     sponsored: await sponsoredSlots(db, q.citySlug, q.vertical, now, q.category),
     // Topurile tematice se calculează separat de sponsorizări: thematicTops nu le citește.
     themes: await thematicTops(db, { citySlug: q.citySlug, vertical: q.vertical }, now),
+    ads: await adsFor(db, q.citySlug, q.vertical, "city_banner", now),
     traps: traps.map((t) => ({ ...t, level: trapLevel(t.index), reasons: t.explanation?.trapReasons ?? [] })),
   };
 }
@@ -127,7 +129,7 @@ export type ReviewFilter = "local" | "tourist" | "influencer" | "all";
 /** Pagina localului: topfood/{oras}/{slug}. */
 export async function venuePage(
   db: Db,
-  q: { citySlug: string; vertical: Vertical; slug: string; reviews?: ReviewFilter; limit?: number },
+  q: { citySlug: string; vertical: Vertical; slug: string; reviews?: ReviewFilter; limit?: number; trackView?: boolean },
   now = new Date(),
 ) {
   const [venue] = await db
@@ -135,12 +137,16 @@ export async function venuePage(
     .from(venues)
     .where(and(eq(venues.citySlug, q.citySlug), eq(venues.vertical, q.vertical), eq(venues.slug, q.slug)));
   if (!venue) throw notFound("Localul");
+  if (q.trackView) {
+    await recordVenueView(db, venue.id, now);
+  }
 
   const filter = q.reviews ?? "local";
   const reviewRows = await db
     .select({
       id: reviews.id,
       source: reviews.source,
+      authorId: reviews.authorId,
       rating: reviews.rating,
       text: reviews.text,
       language: reviews.language,
@@ -328,13 +334,19 @@ export async function leaderboardPage(db: Db, q: { citySlug: string; vertical: V
     );
   if (!snapshot) return { month, months, snapshot: null };
 
-  // Nume pentru premii (angajat, localnic)
+  // Nume pentru premii (revelație, angajat, localnic, influencer)
   const awards = snapshot.awards;
+  const [revelationVenue] = awards.revelation
+    ? await db.select({ slug: venues.slug, neighborhood: venues.neighborhood }).from(venues).where(eq(venues.id, awards.revelation.venueId))
+    : [];
   const [employee] = awards.employee
-    ? await db.select({ firstName: employees.firstName, venue: venues.name }).from(employees).innerJoin(venues, eq(venues.id, employees.venueId)).where(eq(employees.id, awards.employee.employeeId))
+    ? await db.select({ firstName: employees.firstName, venue: venues.name, venueSlug: venues.slug }).from(employees).innerJoin(venues, eq(venues.id, employees.venueId)).where(eq(employees.id, awards.employee.employeeId))
     : [];
   const [local] = awards.local
-    ? await db.select({ displayName: users.displayName, neighborhood: users.localNeighborhood }).from(users).where(eq(users.id, awards.local.userId))
+    ? await db.select({ username: users.username, displayName: users.displayName, neighborhood: users.localNeighborhood }).from(users).where(eq(users.id, awards.local.userId))
+    : [];
+  const [influencer] = awards.influencer
+    ? await db.select({ username: users.username, displayName: users.displayName, followers: users.followers }).from(users).where(eq(users.id, awards.influencer.userId))
     : [];
   return {
     month,
@@ -343,9 +355,12 @@ export async function leaderboardPage(db: Db, q: { citySlug: string; vertical: V
       entries: snapshot.entries,
       frozenAt: snapshot.frozenAt,
       awards: {
-        revelation: awards.revelation ? { ...awards.revelation, name: snapshot.entries.find((e) => e.venueId === awards.revelation!.venueId)?.name } : null,
+        revelation: awards.revelation
+          ? { ...awards.revelation, name: snapshot.entries.find((e) => e.venueId === awards.revelation!.venueId)?.name, slug: revelationVenue?.slug, neighborhood: revelationVenue?.neighborhood }
+          : null,
         employee: awards.employee && employee ? { ...awards.employee, ...employee } : null,
         local: awards.local && local ? { ...awards.local, ...local } : null,
+        influencer: awards.influencer && influencer ? { ...awards.influencer, ...influencer } : null,
       },
     },
   };
@@ -358,7 +373,21 @@ export async function weekendEvents(db: Db, citySlug: string, now = new Date()) 
   const start = day === 0 || day === 6 ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) : friday;
   const end = new Date(friday.getTime() + 3 * 86_400_000);
   return db
-    .select({ id: posts.id, title: posts.title, body: posts.body, eventAt: posts.eventAt, venue: { name: venues.name, slug: venues.slug, vertical: venues.vertical } })
+    .select({
+      id: posts.id,
+      title: posts.title,
+      body: posts.body,
+      eventAt: posts.eventAt,
+      venue: {
+        name: venues.name,
+        slug: venues.slug,
+        vertical: venues.vertical,
+        neighborhood: venues.neighborhood,
+        address: venues.address,
+        categories: venues.categories,
+        photo: sql<string | null>`${venues.photos}[1]`,
+      },
+    })
     .from(posts)
     .innerJoin(venues, eq(venues.id, posts.venueId))
     .where(and(eq(venues.citySlug, citySlug), eq(posts.type, "event"), gte(posts.eventAt, start), lt(posts.eventAt, end)))

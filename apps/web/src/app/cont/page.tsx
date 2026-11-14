@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
-import { Bookmark, ChevronLeft, MessageSquareText, ShieldCheck, SlidersHorizontal, UserRound, Volume1, Vote, type LucideIcon } from 'lucide-react';
+import { Bookmark, ChevronLeft, Link2, MessageSquareText, ShieldCheck, SlidersHorizontal, UserRound, Volume1, Vote, type LucideIcon } from 'lucide-react';
 import { myQuickVotes, userProfile } from '@tftd/api';
 import { users, venues } from '@tftd/db';
 import { NOISE_LEVELS } from '@tftd/scoring/features';
 import { LocalnicBadge } from '@/components/BrandPrimitives';
-import { AccountActions, PreferencesSection, SavedVenues, VerificationSection } from '@/components/account/AccountClient';
+import { AccountActions, PreferencesSection, SavedVenues, SocialAndTeamSection, VerificationSection } from '@/components/account/AccountClient';
 import { HeroArt } from '@/components/owner/Doodles';
 import { ThemeToggle } from '@/components/owner/ThemeToggle';
 import { Avatar, EmptyState, StatStrip, Tag } from '@/components/owner/ui';
@@ -24,6 +24,7 @@ const SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'preferinte', label: 'Preferințe', icon: SlidersHorizontal },
   { id: 'activitate', label: 'Voturi și review-uri', icon: Vote },
   { id: 'salvate', label: 'Localuri salvate', icon: Bookmark },
+  { id: 'linkuri', label: 'Linkuri și echipă', icon: Link2 },
   { id: 'cont', label: 'Cont', icon: ShieldCheck },
 ];
 
@@ -193,8 +194,12 @@ export default async function AccountPage() {
             )}
           </Card>
 
-          <Card id="salvate" title="Localuri salvate" icon={Bookmark} note="Lista ta de localuri, păstrată în acest browser.">
-            <SavedVenues venues={saved} />
+          <Card id="salvate" title="Localuri salvate" icon={Bookmark} note="Lista ta de localuri, salvată în cont.">
+            <SavedVenues venues={saved} serverSlugs={user.savedVenueSlugs} />
+          </Card>
+
+          <Card id="linkuri" title="Linkuri și echipă" icon={Link2} note="Conturile sociale verificate și invitațiile de la localurile unde lucrezi.">
+            <SocialAndTeamSection user={user} />
           </Card>
 
           <Card id="cont" title="Cont" icon={ShieldCheck} note={user.email ? `Conectat ca ${user.email}.` : 'Conectat.'}>

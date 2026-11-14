@@ -1,54 +1,77 @@
-# TOP FOOD / TOP DRINK
+# TopFood & TopDrink — Ghidul localnicilor
 
-`topfood/timisoara` arată unde mănânci bine după localnici, nu după turiști sau review-uri cumpărate. `topdrink/timisoara` face același lucru pentru baruri și cluburi.
+Descoperă unde mănâncă și unde ies localnicii din Timișoara, fără capcane turistice și fără review-uri cumpărate.
 
-Arhitectura completă (reguli, module, formule de scor, model de date, MVP): [`docs/ARHITECTURA.md`](docs/ARHITECTURA.md).
+Un singur produs cu două fețe: **TopFood** (unde mănânci) și **TopDrink** (unde bei), ordonate după **scorul onest** — ratingul recenzorilor din oraș ponderează mult mai mult decât cel al turiștilor, iar fiecare scor este însoțit de **indicele de capcană turistică** și **motivele** lui.
 
-## Echipa și branch-uri
+---
 
-Fiecare membru lucrează pe branch-ul lui și deschide Pull Request spre `main`.
+## Pornire rapidă (Windows PowerShell / bash)
 
-| Membru | Branch | Rol (din arhitectură) |
-| --- | --- | --- |
-| Oli | `oli` | Project manager |
-| Serban | `serban` | Impersoneaza alti serbani |
-| Adi | `adi` | Backend + Date / AI (vezi [`docs/BACKEND.md`](docs/BACKEND.md)) |
-| Alex | `alex` | tasteaza pe pisici |
+Cerințe: **Node.js ≥ 20**, **Docker Desktop** (pentru PostgreSQL + pgvector).
 
-Rolurile propuse: **Frontend** (F + UI pentru E, G) · **Backend** (E, G, H, J + modelul de date) · **Date / AI** (A, B, C, D, I) · **Design / Produs / Pitch** (identitate, seed, demo). Completați coloana de mai sus după ce vă împărțiți.
-
-## Structura repo-ului
-
-```
-apps/
-  web/                Next.js — pagini publice, /owner, /admin           (F, UI pentru E, G)  Frontend
-  worker/             coadă + cron: cele 5 joburi programate                                Date/AI
-packages/
-  db/                 schema PostgreSQL + PostGIS + pgvector — PRIMUL livrabil             Backend
-  ingestion/          A. Ingestie (Google Places, Tripadvisor, linkuri trimise)            Date/AI
-  matching/           B. Potrivire locale între platforme                                   Date/AI
-  review-analysis/    C. Analiză review (limbă, local/turist, sentiment, fals, plătit)     Date/AI
-  scoring/            D. Scor Onest, Localnici/Turiști, Tourist Trap Index                  Date/AI
-  leaderboard/        I. Leaderboard lunar înghețat                                         Date/AI
-  accounts/           E. Conturi, roluri, localnic verificat, revendicare owner             Backend
-  owner/              G. Mini-blog, angajați, răspunsuri, statistici                        Backend
-  monetization/       H. Parteneriate, sloturi Sponsorizat, reclame                         Backend
-  moderation/         J. Moderare / Admin                                                   Backend
-config/cities/        un fișier per oraș (oraș nou = doar config)
-seed/                 30 de locale seed din Timișoara (20 food, 10 drink)                   Design/Produs
-design/               identitate vizuală, tokens, machete                                   Design/Produs
-docs/                 arhitectura
+```bash
+cp .env.example .env
+npm install
+npm run db:up
+npm run db:migrate
+npm run seed
+npm exec -- tsx --env-file-if-exists=.env seed/test-accounts.ts   # opțional: test.user / test.owner / test.admin
+npm run dev -w @topfood/web
 ```
 
-**Regula tehnică nr. 1:** `packages/scoring` și `packages/leaderboard` nu importă niciodată din `packages/monetization`. Plata nu schimbă scorul și nici poziția în clasament.
+Deschide [http://localhost:3000](http://localhost:3000) (`TopFood`), [http://localhost:3000/topdrink/timisoara](http://localhost:3000/topdrink/timisoara) (`TopDrink`), [http://localhost:3000/owner](http://localhost:3000/owner) (`Owner`) sau [http://localhost:3000/admin](http://localhost:3000/admin) (`Admin`).
 
-## Ordinea de start
+> **Mod offline / fără PostgreSQL**: Dacă `DATABASE_URL` lipsește sau PostgreSQL nu răspunde, aplicația web (`apps/web`) face automat fallback pe setul static din [`apps/web/src/data/restaurants.ts`](apps/web/src/data/restaurants.ts), iar autentificarea demo client-side folosește parola configurată în UI. Pentru fluxuri complete cu bază de date (review-uri persistente, fidelitate QR, claim owner, moderare), pornește Postgres.
 
-1. Backend livrează schema în `packages/db`.
-2. Restul în paralel: Date/AI pe scoring + seed, Frontend pe pagini, Design pe machete (gata până la jumătatea hackathon-ului).
+---
 
-Vezi lista MVP în [`docs/ARHITECTURA.md`](docs/ARHITECTURA.md#împărțirea-pe-echipă-și-mvp-ul-de-hackathon) și fluxul de lucru în [`CONTRIBUTING.md`](CONTRIBUTING.md).
+## Comenzi principale
 
-## Configurare locală
+| Comandă | Ce face |
+|---|---|
+| `npm run db:up` | Pornește PostgreSQL 16 + `pgvector` în Docker (`topfood` pe portul `5432`) |
+| `npm run db:down` | Oprește containerul Docker |
+| `npm run db:generate` | Generează migrări Drizzle din [`packages/db/src/schema.ts`](packages/db/src/schema.ts) |
+| `npm run db:migrate` | Aplică migrările în baza de date |
+| `npm run seed` | Încarcă Timișoara: 30 de localuri (20 food + 10 drink), utilizatori, review-uri, scoruri, clasament lunar, premii (`-- --reset` șterge și reîncarcă) |
+| `npm exec -- tsx --env-file-if-exists=.env seed/smoke.ts` | Rulează smoke testul cap-coadă pe `@tftd/api` cu DB-ul cu seed |
+| `npm run dev -w @topfood/web` | Pornește aplicația web Next.js (`@topfood/web`) |
+| `npm run build:web` | Compilează aplicația Next.js pentru producție |
+| `npm run dev -w @tftd/worker` | Pornește worker-ul cu cele 6 task-uri programate (cron) |
+| `npm test` | Rulează suita completă de teste Vitest |
+| `npm run typecheck` | Verifică tipurile TypeScript în workspace |
 
-Copiază `.env.example` în `.env` și completează cheile. Nu face commit la `.env`.
+---
+
+## Structura proiectului
+
+| Zonă | Pachet / Path | Rol |
+|---|---|---|
+| Frontend Next.js 15 | [`apps/web`](apps/web/README.md) (`@topfood/web`) | Pagini publice TopFood/TopDrink, Fidelitate QR, Scârnavii, profil `/u/[username]`, `/owner`, `/admin`, API OG/share |
+| Worker programat | [`apps/worker`](apps/worker/README.md) (`@tftd/worker`) | 6 joburi `croner` (TZ `Europe/Bucharest`): ingestie, procesare linkuri, recalcul scoruri, clasament lunar |
+| Contract API | [`packages/api`](packages/api/README.md) (`@tftd/api`) | Strat unic între `@topfood/web` / `@tftd/worker` și pachetele de domeniu |
+| Bază de date | [`packages/db`](packages/db/README.md) (`@tftd/db`) | Drizzle ORM, 32 tabele (`schema.ts` + `ensure.ts`), Docker PostgreSQL + `pgvector` |
+| Conturi & localnici | [`packages/accounts`](packages/accounts/README.md) (`@tftd/accounts`) | Auth cookie HMAC, verificare localnic (email univ / GPS / vouch), claim owner, verificare bio influencer |
+| Ingestie externă | [`packages/ingestion`](packages/ingestion/README.md) (`@tftd/ingestion`) | Google Places, TripAdvisor, linkuri TikTok/Instagram/Facebook/YouTube, propuneri manuale |
+| Deduplicare | [`packages/matching`](packages/matching/README.md) (`@tftd/matching`) | Potrivire surse externe pe localuri existente (Levenshtein + distanță + telefon) |
+| Analiză review-uri | [`packages/review-analysis`](packages/review-analysis/README.md) (`@tftd/review-analysis`) | Limbă, 6 semnale de falsitate, cosine `pgvector(384)` / Jaccard, aspecte (Claude Haiku 5.5 sau cuvinte-cheie) |
+| Scoruri & capcane | [`packages/scoring`](packages/scoring/README.md) (`@tftd/scoring`) | Scor onest Bayesian cu înjumătățire la 180 zile, indice capcană turistică, defalcare food/drink |
+| Clasament lunar | [`packages/leaderboard`](packages/leaderboard/README.md) (`@tftd/leaderboard`) | Top 10 localnicii lunii, Top 10 food/drink, angajatul și localul nou al lunii |
+| Dashboard patron | [`packages/owner`](packages/owner/README.md) (`@tftd/owner`) | Statistici zilnice, răspunsuri la review-uri, blog/oferte, echipă, videouri, checklist profil |
+| Fidelitate QR | [`packages/loyalty`](packages/loyalty/README.md) (`@tftd/loyalty`) | Programe de ștampile, QR rotativ la 60s semnat HMAC, carduri personale |
+| Monetizare & reclame | [`packages/monetization`](packages/monetization/README.md) (`@tftd/monetization`) | Parteneriate, locuri sponsorizate separate de top (max 3/oră, interzise capcanelor ≥ 80), sloturi `ad_slots` |
+| Moderare & audit | [`packages/moderation`](packages/moderation/README.md) (`@tftd/moderation`) | Coadă rapoarte, bonuri de casă (`×1.3`), conturi suspecte, candidați potrivire |
+| Date demo | [`seed`](seed/README.md) | Generare deterministă (`timisoara`, 30 localuri, conturi demo și conturi de test) |
+| Identitate vizuală | [`design`](design/README.md) | Paletă, tipografie `Archivo`, tokeni `globals.css`, componente `BrandPrimitives` |
+
+---
+
+## Documentație
+
+- [Arhitectură și reguli de produs](docs/ARHITECTURA.md) — viziunea, cele 6 reguli nenegociabile, modelul de date (32 tabele) și fluxurile de sistem
+- [Backend — ghid de integrare](docs/BACKEND.md) — funcțiile `@tftd/api` folosite de frontend și worker, format răspunsuri și erori
+- [Ghid demo (3–5 minute)](docs/DEMO.md) — scenariu pas cu pas cu conturi și URL-uri reale
+- [Deploy în producție](docs/DEPLOY.md) — PostgreSQL + `pgvector`, Next.js, worker `croner`, checklist producție
+- [Limbaj vizual & UI](design/README.md) — ghid în română (+ [Design Language Spec](design/design-language.md) în engleză)
+- [Ghid de contribuție](CONTRIBUTING.md) și [CLAUDE.md](CLAUDE.md) — convenții de cod, testare și structură

@@ -34,6 +34,21 @@ function ScoreLabel({ dark, children }: { themed?: boolean; dark?: boolean; chil
 
 const stagger = (i: number) => ({ '--stagger-idx': i }) as React.CSSProperties;
 
+/** Livrare (serban): „Livrare: Glovo, Tazz” sau „Doar în local”. Doar în topul General. */
+function DeliveryBadge({ venue, featured }: { venue: Restaurant; featured?: boolean }) {
+  if (!venue.delivery) return null;
+  const on = venue.delivery.available;
+  return (
+    <span
+      className={`${featured ? 'inline-flex items-center text-[11px] font-medium px-2 py-1' : 'text-[11px] font-medium px-1.5 py-0.5'} rounded-[3px] border shrink-0 ${
+        on ? 'bg-[#EEF6F0] border-[#CFE3D5] text-[#1E6B43]' : `${featured ? 'bg-white' : 'bg-[#FAF7F2]'} border-[#E6DFD5] text-[#6E5649]`
+      }`}
+    >
+      {on ? `Livrare: ${venue.delivery.platforms?.slice(0, 2).join(', ') || 'Disponibilă'}` : 'Doar în local'}
+    </span>
+  );
+}
+
 export function FoodFeaturedCard({ venue, onSelect, badge, themed, children }: CardProps) {
   return (
     <button
@@ -73,11 +88,16 @@ export function FoodFeaturedCard({ venue, onSelect, badge, themed, children }: C
         {children ?? <p className="text-[13px] text-[#3A2418]/85 line-clamp-2 leading-snug">{venue.editorialHeadline}</p>}
 
         <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
-          {!children && venue.whatToOrder[0] ? (
-            <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-white border border-[#E6DFD5] text-[#3A2418]">
-              <span className="text-[#B3261E] font-semibold shrink-0">Recomandat:</span>
-              <span className="min-w-0 truncate">{venue.whatToOrder[0].name}</span>
-              <span className="shrink-0 font-semibold tabular-nums">· {venue.whatToOrder[0].priceRon} lei</span>
+          {!children && (venue.whatToOrder[0] || venue.delivery) ? (
+            <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
+              {venue.whatToOrder[0] && (
+                <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-white border border-[#E6DFD5] text-[#3A2418]">
+                  <span className="text-[#B3261E] font-semibold shrink-0">Recomandat:</span>
+                  <span className="min-w-0 truncate">{venue.whatToOrder[0].name}</span>
+                  <span className="shrink-0 font-semibold tabular-nums">· {venue.whatToOrder[0].priceRon} lei</span>
+                </div>
+              )}
+              <DeliveryBadge venue={venue} featured />
             </div>
           ) : (
             <span />
@@ -121,6 +141,7 @@ export function FoodRow({ venue, onSelect, rank, staggerIdx, themed, children }:
               <p className="text-[12px] text-[#6E5649]/90 line-clamp-1">{venue.editorialHeadline}</p>
               <div className="flex items-center gap-2 flex-wrap pt-0.5">
                 <LocalnicBadge label={`Localnici ${formatScore(venue.localsScore)}`} size="xs" />
+                <DeliveryBadge venue={venue} />
                 {venue.whatToOrder[0] && <span className="text-[11px] text-[#6E5649] truncate max-w-full">{venue.whatToOrder[0].name}</span>}
               </div>
             </>

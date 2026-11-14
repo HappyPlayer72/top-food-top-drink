@@ -14,7 +14,7 @@ import { TeamPanel } from '@/components/owner/TeamPanel';
 import { SocialLinks } from '@/components/SocialLinks';
 import { getDb } from '@/lib/server/db';
 import { buttonClass } from '@/components/owner/ui-classes';
-import { INITIAL_RESTAURANTS } from '@/data/restaurants';
+import { DRINK_VENUES, INITIAL_RESTAURANTS } from '@/data/restaurants';
 import { getUserId } from '@/lib/server/session';
 
 const SECTIONS = [
@@ -47,7 +47,7 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
   if (!venue) notFound();
   const otherVenues = managed.filter((v) => v.id !== venue.id).map((v) => ({ id: v.id, name: v.name }));
   const isDrink = venue.vertical === 'drink';
-  const known = INITIAL_RESTAURANTS.find((r) => r.slug === venue.slug);
+  const known = [...INITIAL_RESTAURANTS, ...DRINK_VENUES].find((r) => r.slug === venue.slug);
   const photo = known?.photoUrl ?? PLACEHOLDER_PHOTO[venue.vertical];
   const meta = known ? `${known.cuisine}, ${known.neighborhood}` : null;
   let content: React.ReactNode;

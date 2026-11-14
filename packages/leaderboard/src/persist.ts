@@ -1,7 +1,7 @@
 /** Jobul `leaderboard-lunar`: calculează luna trecută și o îngheață în DB. */
 import { and, eq, gte, inArray, lt } from "drizzle-orm";
-import { cities, employees, leaderboardSnapshots, reviews, users, venues, type Db } from "@tftd/db";
-import { employeeOfMonth, localOfMonth, monthRange, previousMonth, rankMonth, revelation, type MonthVenue, type PreviousMonth } from "./compute.ts";
+import { cities, employees, leaderboardSnapshots, reviews, users, userSocialLinks, venues, type Db } from "@tftd/db";
+import { employeeOfMonth, influencerOfMonth, localOfMonth, monthRange, previousMonth, rankMonth, revelation, type MonthVenue, type PreviousMonth } from "./compute.ts";
 
 export async function freezeMonth(db: Db, citySlug: string, vertical: "food" | "drink", month: string) {
   const { start, end } = monthRange(month);
@@ -29,6 +29,7 @@ export async function freezeMonth(db: Db, citySlug: string, vertical: "food" | "
       servedByEmployeeId: reviews.servedByEmployeeId,
       localCitySlug: users.localCitySlug,
       localUntil: users.localUntil,
+      authorRoles: users.roles,
     })
     .from(reviews)
     .leftJoin(users, eq(users.id, reviews.authorId))
@@ -36,6 +37,16 @@ export async function freezeMonth(db: Db, citySlug: string, vertical: "food" | "
 
   const authorCounts = new Map<string, number>();
   for (const r of rows) if (r.authorId) authorCounts.set(r.authorId, (authorCounts.get(r.authorId) ?? 0) + 1);
+  const authorIds = [...authorCounts.keys()];
+  const influencerFollowers = new Map<string, number>();
+  if (authorIds.length) {
+    for (const s of await db
+      .select({ userId: userSocialLinks.userId, followers: userSocialLinks.followers, verified: userSocialLinks.verified })
+      .from(userSocialLinks)
+      .where(and(inArray(userSocialLinks.userId, authorIds), eq(userSocialLinks.verified, true)))) {
+      influencerFollowers.set(s.userId, Math.max(influencerFollowers.get(s.userId) ?? 0, s.followers ?? 0));
+    }
+  }
 
   const monthVenues: MonthVenue[] = venueRows.map((v) => ({
     venueId: v.id,
@@ -47,6 +58,8 @@ export async function freezeMonth(db: Db, citySlug: string, vertical: "food" | "
         rating: r.rating,
         authorType: r.authorType,
         authorIsVerifiedLocal: r.localCitySlug === citySlug && !!r.localUntil && r.localUntil >= start,
+        authorIsInfluencer: !!r.authorRoles?.includes("influencer"),
+        authorFollowers: r.authorId ? (influencerFollowers.get(r.authorId) ?? 0) : 0,
         authorReviewCount: r.authorId ? (authorCounts.get(r.authorId) ?? 1) : (r.externalAuthor?.reviewCount ?? 1),
         verifiedVisit: r.verifiedVisit,
         fakeProbability: r.fakeProbability,
@@ -81,7 +94,12 @@ export async function freezeMonth(db: Db, citySlug: string, vertical: "food" | "
     const entries = rankMonth(monthVenues, city.meanScore[vertical], previous, asOf, category);
     const awards =
       category === "all"
-        ? { revelation: revelation(entries, previous), employee: employeeOfMonth(monthVenues, accepted), local: localOfMonth(monthVenues) }
+        ? {
+            revelation: revelation(entries, previous),
+            employee: employeeOfMonth(monthVenues, accepted),
+            local: localOfMonth(monthVenues),
+            influencer: influencerOfMonth(monthVenues),
+          }
         : { revelation: revelation(entries, previous) };
 
     // Înghețat: dacă luna e deja calculată, nu o mai rescriem

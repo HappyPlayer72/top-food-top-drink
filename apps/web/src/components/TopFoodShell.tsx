@@ -2,11 +2,27 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { castQuickVote, loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, voteHelpful } from '@/app/actions/user';
+import {
+  castQuickVote,
+  deleteReviewAction,
+  loginDemo,
+  loginUser,
+  logoutUser,
+  registerUser,
+  reportCrowd,
+  submitReview,
+  submitVenueVideoAction,
+  toggleSavedVenueAction,
+  trackVenueViewAction,
+  updateReviewAction,
+  voteHelpful,
+} from '@/app/actions/user';
 import { X } from 'lucide-react';
 import {
+  AdBanner,
   DrinkQuickFilter,
   FoodQuickFilter,
+  MonthlyAwards,
   NavSection,
   Restaurant,
   QuickKind,
@@ -23,6 +39,8 @@ import {
   TOURIST_ZONES,
   WEEKEND_EVENTS,
   recalculateRestaurantWithReview,
+  recalculateRestaurantWithUpdatedReview,
+  recalculateRestaurantWithoutReview,
 } from '../data/restaurants';
 import { LoginScreen } from './LoginScreen';
 import { Navbar } from './Navbar';
@@ -63,19 +81,28 @@ function buildUrlForState(
   vertical: Vertical,
   navSection: NavSection,
   venueSlugOrId: string | null,
-  showLogin = false
+  showLogin = false,
+  selectedCategory: string | null = null,
+  selectedMonth: string | null = null
 ): string {
   const basePath =
     vertical === 'drink' ? '/topdrink/timisoara' : '/topfood/timisoara';
   const params = new URLSearchParams();
-  if (navSection !== 'top') {
-    params.set('section', navSection);
-  }
   if (showLogin) {
     params.set('login', '1');
   }
-  // Localul deschis are URL propriu (/topfood/timisoara/{slug}), bun pentru Google și pentru partajat
-  const path = venueSlugOrId ? `${basePath}/${encodeURIComponent(venueSlugOrId)}` : basePath;
+  let path = basePath;
+  if (venueSlugOrId) {
+    path = `${basePath}/${encodeURIComponent(venueSlugOrId)}`;
+  } else if (navSection === 'monthly') {
+    path = selectedMonth
+      ? `${basePath}/top-luna/${encodeURIComponent(selectedMonth)}`
+      : `${basePath}/top-luna`;
+  } else if (navSection === 'top' && selectedCategory) {
+    path = `${basePath}/categorie/${encodeURIComponent(selectedCategory)}`;
+  } else if (navSection !== 'top') {
+    params.set('section', navSection);
+  }
   const qs = params.toString();
   return qs ? `${path}?${qs}` : path;
 }
@@ -83,11 +110,17 @@ function buildUrlForState(
 export interface TopFoodShellProps {
   initialVertical?: Vertical;
   initialSection?: NavSection;
+  initialCategory?: string | null;
+  initialMonth?: string | null;
   initialFoodHeroIndex?: number;
   initialDrinkHeroIndex?: number;
   /** Date din backend (src/lib/backend/load.ts); lipsă = datele statice din src/data */
   foodRestaurants?: Restaurant[];
   drinkVenues?: Restaurant[];
+  foodAds?: AdBanner[];
+  drinkAds?: AdBanner[];
+  foodAwards?: MonthlyAwards;
+  drinkAwards?: MonthlyAwards;
   weekendEvents?: WeekendEvent[];
   topReviewers?: TopReviewer[];
   /** true când datele vin din DB: login, review-uri, „util” merg pe backend */
@@ -103,10 +136,16 @@ export interface TopFoodShellProps {
 export function TopFoodShell({
   initialVertical = 'food',
   initialSection = 'top',
+  initialCategory = null,
+  initialMonth = null,
   initialFoodHeroIndex = 0,
   initialDrinkHeroIndex = 0,
   foodRestaurants: initialFood = INITIAL_RESTAURANTS,
   drinkVenues: initialDrink = DRINK_VENUES,
+  foodAds = [],
+  drinkAds = [],
+  foodAwards,
+  drinkAwards,
   weekendEvents = WEEKEND_EVENTS,
   topReviewers,
   backendOnline = false,
@@ -122,6 +161,8 @@ export function TopFoodShell({
   const router = useRouter();
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
   const [navSection, setNavSection] = useState<NavSection>(initialSection);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(initialMonth);
 
   const [foodRestaurants, setFoodRestaurants] =
     useState<Restaurant[]>(initialFood);
@@ -138,7 +179,7 @@ export function TopFoodShell({
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
     string | null
   >(null);
-  const [savedIds, setSavedIds] = useState<string[]>(['ciorba-lui-sandu']);
+  const [savedIds, setSavedIds] = useState<string[]>(['restaurant-nora']);
   const [accounts, setAccounts] = useState<UserAccount[]>(USER_ACCOUNTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLoginScreen, setShowLoginScreen] = useState<boolean>(false);
@@ -154,6 +195,7 @@ export function TopFoodShell({
     useState<boolean>(false);
 
   const urlReadyRef = useRef<boolean>(false);
+  const lastTrackedVenueIdRef = useRef<string | null>(null);
   const hamsterKeyBufferRef = useRef<string>('');
   const hamsterSearchTriggeredRef = useRef<boolean>(false);
   const scrollPositionsRef = useRef<Partial<Record<NavSection, number>>>({});
@@ -230,6 +272,9 @@ export function TopFoodShell({
       // înlocuim și varianta veche (ex. turist → localnic verificat după router.refresh())
       setAccounts((prev) => [...prev.filter((a) => a.id !== initialUser.id), initialUser]);
       setCurrentUserId(initialUser.id);
+      if (initialUser.savedVenueSlugs) {
+        setSavedIds(initialUser.savedVenueSlugs);
+      }
     } else {
       setCurrentUserId(null);
     }
@@ -283,21 +328,29 @@ export function TopFoodShell({
         : initialVertical;
 
       const rawSection = params.get('section');
+      const monthMatch = /^\/top(food|drink)\/[^/]+\/top-luna(?:\/([^/?#]+))?/.exec(pathname);
+      const categoryMatch = /^\/top(food|drink)\/[^/]+\/categorie\/([^/?#]+)/.exec(pathname);
       const nextSection: NavSection =
         rawSection === 'map' ||
         rawSection === 'monthly' ||
         rawSection === 'scarnavii' ||
         rawSection === 'fidelitate'
           ? rawSection
+          : monthMatch
+          ? 'monthly'
           : pathname.startsWith('/fidelitate')
           ? 'fidelitate'
           : pathname.startsWith('/scarnavii')
           ? 'scarnavii'
           : initialSection;
 
-      // /topfood/timisoara/{slug} sau vechiul ?venue={slug}
+      const nextCategory = categoryMatch ? decodeURIComponent(categoryMatch[2]!) : null;
+      const nextMonth = monthMatch?.[2] ? decodeURIComponent(monthMatch[2]) : null;
+
+      // /topfood/timisoara/{slug} sau vechiul ?venue={slug}, evitând subrutele rezervate
       const pathSlug = /^\/top(food|drink)\/[^/]+\/([^/?#]+)/.exec(pathname)?.[2];
-      const venueParam = params.get('venue') ?? (pathSlug ? decodeURIComponent(pathSlug) : null);
+      const reserved = pathSlug && ['top-luna', 'categorie', 'weekend'].includes(pathSlug);
+      const venueParam = params.get('venue') ?? (pathSlug && !reserved ? decodeURIComponent(pathSlug) : null);
       const matchedVenue = venueParam
         ? initialFood.concat(initialDrink).find(
             (r) => r.slug === venueParam || r.id === venueParam
@@ -314,6 +367,8 @@ export function TopFoodShell({
       };
       setVertical(nextVertical);
       setNavSection(nextSection);
+      setSelectedCategory(nextCategory);
+      setSelectedMonth(nextMonth);
       setSelectedRestaurantId(nextVenueId);
       setShowLoginScreen(nextShowLogin);
     };
@@ -476,6 +531,9 @@ export function TopFoodShell({
     setSavedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
+    if (backendOnline && currentUser) {
+      void toggleSavedVenueAction(id, !isAlreadySaved);
+    }
     if (isAlreadySaved) {
       setStatusMessage(
         venueName ? `Scos din salvate: ${venueName}` : 'Local scos din salvate'
@@ -492,6 +550,13 @@ export function TopFoodShell({
     if (!selectedRestaurantId) return null;
     return allVenues.find((r) => r.id === selectedRestaurantId) ?? null;
   }, [allVenues, selectedRestaurantId]);
+
+  useEffect(() => {
+    if (!backendOnline || !selectedRestaurant?.venueId) return;
+    if (lastTrackedVenueIdRef.current === selectedRestaurant.venueId) return;
+    lastTrackedVenueIdRef.current = selectedRestaurant.venueId;
+    void trackVenueViewAction(selectedRestaurant.venueId);
+  }, [backendOnline, selectedRestaurant?.venueId]);
 
   useEffect(() => {
     const pageVertical = selectedRestaurant?.vertical ?? vertical;
@@ -520,13 +585,15 @@ export function TopFoodShell({
       pageVertical,
       navSection,
       venueKey,
-      showLoginScreen
+      showLoginScreen,
+      selectedCategory,
+      selectedMonth
     );
     const currentUrl = `${window.location.pathname}${window.location.search}`;
     if (nextUrl !== currentUrl) {
       window.history.pushState(null, '', nextUrl);
     }
-  }, [vertical, navSection, selectedRestaurantId, selectedRestaurant, showLoginScreen]);
+  }, [vertical, navSection, selectedRestaurantId, selectedRestaurant, showLoginScreen, selectedCategory, selectedMonth]);
 
   const savedRestaurants = useMemo(
     () => allVenues.filter((r) => savedIds.includes(r.id)),
@@ -535,7 +602,7 @@ export function TopFoodShell({
 
   const handleAddReview = async (
     restaurantId: string,
-    newReview: Review
+    newReview: Review & { receiptPhotoUrl?: string }
   ): Promise<{ ok: boolean; message?: string; error?: string }> => {
     const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
     if (backendOnline && venue?.venueId) {
@@ -546,6 +613,7 @@ export function TopFoodShell({
         answers: newReview.answers,
         weekendNight:
           venue.vertical === 'drink' ? drinkFilters.includes('vineri-noaptea') : undefined,
+        receiptPhotoUrl: newReview.receiptPhotoUrl,
       });
       if (res.ok) {
         router.refresh();
@@ -577,6 +645,66 @@ export function TopFoodShell({
         return res;
       }
     : undefined;
+  const handleEditReview = async (
+    restaurantId: string,
+    reviewId: string,
+    updates: { foodScore: number; text: string }
+  ): Promise<{ ok: boolean; message?: string; error?: string }> => {
+    const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
+    if (backendOnline && venue?.venueId && !reviewId.startsWith('local-rev-')) {
+      const res = await updateReviewAction({
+        reviewId,
+        rating: updates.foodScore,
+        text: updates.text,
+      });
+      if (res.ok) {
+        router.refresh();
+        return { ok: true, message: res.message };
+      }
+      if (!res.offline) return { ok: false, error: res.error };
+    }
+    setFoodRestaurants((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId
+          ? recalculateRestaurantWithUpdatedReview(r, reviewId, updates)
+          : r
+      )
+    );
+    setDrinkVenues((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId
+          ? recalculateRestaurantWithUpdatedReview(r, reviewId, updates)
+          : r
+      )
+    );
+    return { ok: true, message: 'Review-ul a fost actualizat.' };
+  };
+
+  const handleDeleteReview = async (
+    restaurantId: string,
+    reviewId: string
+  ): Promise<{ ok: boolean; message?: string; error?: string }> => {
+    const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
+    if (backendOnline && venue?.venueId && !reviewId.startsWith('local-rev-')) {
+      const res = await deleteReviewAction(reviewId);
+      if (res.ok) {
+        router.refresh();
+        return { ok: true, message: res.message };
+      }
+      if (!res.offline) return { ok: false, error: res.error };
+    }
+    setFoodRestaurants((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId ? recalculateRestaurantWithoutReview(r, reviewId) : r
+      )
+    );
+    setDrinkVenues((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId ? recalculateRestaurantWithoutReview(r, reviewId) : r
+      )
+    );
+    return { ok: true, message: 'Review-ul a fost șters.' };
+  };
 
   /** „Util” pe backend; undefined = fără backend (modalul numără local) */
   const handleVoteHelpful = backendOnline
@@ -628,11 +756,33 @@ export function TopFoodShell({
     navigateToSection('map');
   };
 
+  const handleSubmitVideo = async (
+    restaurantId: string,
+    url: string
+  ): Promise<{ ok: boolean; error?: string }> => {
+    const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
+    if (!backendOnline || !venue?.venueId) {
+      return { ok: false, error: 'Trimiterea linkurilor video este disponibilă cu baza de date pornită.' };
+    }
+    const res = await submitVenueVideoAction({ venueId: venue.venueId, url });
+    if (!res.ok) return { ok: false, error: res.error };
+    if (res.video) {
+      const addVid = (list: Restaurant[]) =>
+        list.map((r) => (r.id === restaurantId ? { ...r, videos: [res.video!, ...(r.videos ?? [])] } : r));
+      setFoodRestaurants(addVid);
+      setDrinkVenues(addVid);
+    }
+    setStatusMessage('Video analizat și adăugat la local.');
+    router.refresh();
+    return { ok: true };
+  };
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setFoodFilters([]);
     setDrinkFilters([]);
     setSelectedNeighborhood('all');
+    setSelectedCategory(null);
   };
 
   const isDrink = vertical === 'drink';
@@ -743,6 +893,10 @@ export function TopFoodShell({
             vertical={vertical}
             restaurants={foodRestaurants}
             drinkVenues={drinkVenues}
+            ads={isDrink ? drinkAds : foodAds}
+            selectedCategory={selectedCategory}
+            onClearCategory={() => setSelectedCategory(null)}
+            onSelectCategory={(cat) => setSelectedCategory(cat)}
             weekendEvents={weekendEvents}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -780,6 +934,9 @@ export function TopFoodShell({
             vertical={vertical}
             restaurants={activeVerticalVenues}
             topReviewers={topReviewers}
+            awards={isDrink ? drinkAwards : foodAwards}
+            selectedMonth={selectedMonth}
+            onSelectMonth={(m) => setSelectedMonth(m)}
             onBack={() => navigateToSection('top')}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
           />
@@ -813,6 +970,8 @@ export function TopFoodShell({
         onConsumeInitialReviewOpen={() => setOpenReviewOnMount(false)}
         onClose={() => setSelectedRestaurantId(null)}
         onAddReview={handleAddReview}
+        onEditReview={handleEditReview}
+        onDeleteReview={handleDeleteReview}
         onVoteHelpful={handleVoteHelpful}
         myQuickVote={selectedRestaurant?.venueId ? myQuickVotes[selectedRestaurant.venueId] : undefined}
         onQuickVote={
@@ -820,6 +979,7 @@ export function TopFoodShell({
             ? (kind, value) => handleQuickVote(selectedRestaurant.venueId!, kind, value)
             : undefined
         }
+        onSubmitVideo={backendOnline ? handleSubmitVideo : undefined}
         onRequireLogin={handleOpenLogin}
         onLocateOnMap={handleSwitchToMap}
         isSaved={

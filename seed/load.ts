@@ -1,5 +1,5 @@
 /**
- * Încarcă datele de demo în DB: orașul din config, 30 de locale inventate, useri, review-uri,
+ * Încarcă datele de demo în DB: orașul din config, 30 de locale reale din Timișoara, useri, review-uri,
  * apoi rulează analiza, scorurile și topul lunii trecute.
  *
  *   npm run db:up && npm run db:migrate && npm run seed
@@ -109,6 +109,7 @@ async function main() {
       .values({
         citySlug: CITY, vertical: v.vertical, name: v.name, slug: v.slug, categories: v.categories,
         location: { x: v.lng, y: v.lat }, address: v.address, neighborhood: v.neighborhood,
+        photos: v.photos ?? [],
         priceMinLei: v.priceMinLei ?? null, priceMaxLei: v.priceMaxLei ?? null, drinkPrices: v.drinkPrices ?? null,
       })
       .returning({ id: venues.id });
@@ -116,22 +117,23 @@ async function main() {
   }
 
   // ---------- Owner, angajați, blog, evenimente ----------
-  const sandu = venueIds.get("ciorba-lui-sandu")!;
+  const nora = venueIds.get("restaurant-nora")!;
   const ownerId = userIds.get("owner-sandu")!;
-  await db.insert(venueManagers).values({ venueId: sandu, userId: ownerId, role: "owner" });
+  await db.insert(venueManagers).values({ venueId: nora, userId: ownerId, role: "owner" });
   const staff = await db
     .insert(employees)
     .values([
-      { venueId: sandu, firstName: "Ioana", role: "ospătar", accepted: true },
-      { venueId: sandu, firstName: "Sandu", role: "bucătar-șef", accepted: true, userId: ownerId },
-      { venueId: sandu, firstName: "Mihai", role: "bucătar", accepted: true },
+      { venueId: nora, firstName: "Ioana", role: "ospătar", accepted: true },
+      { venueId: nora, firstName: "Sandu", role: "bucătar-șef", accepted: true, userId: ownerId },
+      { venueId: nora, firstName: "Mihai", role: "bucătar", accepted: true },
     ])
     .returning({ id: employees.id, firstName: employees.firstName });
   const employeeIds = new Map(staff.map((s) => [s.firstName, s.id]));
   await db.insert(posts).values({
-    venueId: sandu, authorId: ownerId, type: "news",
-    title: "De ce avem ciorbă de burtă doar marțea și vinerea",
-    body: "O fierbem de la zero, șase ore. Nu putem face asta zilnic, deci nu o vindem zilnic.",
+    venueId: nora, authorId: ownerId, type: "news",
+    title: "De ce fierbem ciorba de burtă de la zero în fiecare dimineață",
+    body: "Stocul de oase fierbe șase ore la foc mic. Când se termină oala de prânz, nu completăm din congelator.",
+    photos: ["https://restaurantnora.ro/wp-content/uploads/2024/03/Sarmalute.webp"],
     publishAt: new Date(now.getTime() - 3 * DAY),
   });
   // Evenimentele cad mereu în weekendul curent sau următor, după ora de acum (pagina ascunde ce a trecut)
@@ -141,8 +143,8 @@ async function main() {
   const bluesAt = upcoming(new Date(fri.getTime() + 19 * 3_600_000), 1); // vineri 21:00 ora României
   const vinylAt = upcoming(new Date(fri.getTime() + DAY + 21 * 3_600_000), 2); // sâmbătă 23:00
   await db.insert(posts).values([
-    { venueId: venueIds.get("pivnita-cu-bolta")!, authorId: ownerId, type: "event", title: "Concert de blues", body: "De la 21:00. Intrare liberă.", eventAt: bluesAt },
-    { venueId: venueIds.get("depoul-de-tramvaie")!, authorId: ownerId, type: "event", title: "Noaptea de vinil", body: "De la 23:00. 30 lei.", eventAt: vinylAt },
+    { venueId: venueIds.get("scart-loc-lejer")!, authorId: ownerId, type: "event", title: "Concert de blues", body: "De la 21:00. Intrare liberă.", eventAt: bluesAt },
+    { venueId: venueIds.get("the-80s-pub")!, authorId: ownerId, type: "event", title: "Noaptea de vinil", body: "De la 23:00. 30 lei.", eventAt: vinylAt },
   ]);
 
   // ---------- Program, meniu, prezentare ----------
@@ -152,24 +154,24 @@ async function main() {
     await db.update(venues).set({ openingHours: v.vertical === "food" ? foodHours : barHours }).where(sql`${venues.id} = ${venueIds.get(v.slug)!}`);
   }
   await db.update(venues).set({
-    editorialHeadline: "Ciorba de burtă pentru care vin localnicii din tot Iosefinul",
+    editorialHeadline: "Mâncare românească gătită cinstit, pentru care vin localnicii din tot orașul",
     editorialWriteup: [
-      "Local de cartier deschis de Sandu acum opt ani. Meniul e scurt și se schimbă după piață.",
-      "Ciorba de burtă se face doar marțea și vinerea, de la zero. La prânz e plin, sună înainte.",
+      "Restaurant de cartier pe Bd. Dâmbovița cu bucătărie bănățeană clasică, porții generoase și clienți fideli de ani de zile.",
+      "Ciorba de burtă și micii la grătar sunt vedetele casei; la prânz e aglomerat, merită rezervat sau comandat prin livrare.",
     ],
-    occasionTags: ["prânz rapid", "cu familia", "buget mic"],
-  }).where(sql`${venues.id} = ${sandu}`);
+    occasionTags: ["prânz rapid", "cu familia", "livrare proprie"],
+  }).where(sql`${venues.id} = ${nora}`);
   await db.insert(menuItems).values([
-    { venueId: sandu, name: "Ciorbă de burtă", priceLei: 24, description: "Doar marțea și vinerea", mustOrder: true, position: 0 },
-    { venueId: sandu, name: "Sarmale cu mămăligă", priceLei: 32, mustOrder: true, position: 1 },
-    { venueId: sandu, name: "Papanași", priceLei: 18, position: 2 },
+    { venueId: nora, name: "Ciorbă de burtă", priceLei: 26, description: "Cu smântână și ardei iute", mustOrder: true, position: 0 },
+    { venueId: nora, name: "Mici de casă (4 buc.)", priceLei: 28, description: "La grătar cu muștar și chiflă", mustOrder: true, position: 1 },
+    { venueId: nora, name: "Papanași cu dulceață de afine", priceLei: 24, position: 2 },
   ]);
-  await db.update(venues).set({ drinkTags: ["muzica-live"] }).where(sql`${venues.slug} in ('jazz-in-pivnita', 'pivnita-cu-bolta')`);
+  await db.update(venues).set({ drinkTags: ["muzica-live"] }).where(sql`${venues.slug} in ('manufactura-pub', 'scart-loc-lejer')`);
 
   // ---------- Fidelitate ----------
   await db.insert(loyaltyPrograms).values([
-    { venueId: sandu, createdBy: ownerId, rewardTitle: "O ciorbă din partea casei", stampsRequired: 6, icon: "soup", accentColor: "#0B7A53", stampSecret: randomBytes(32).toString("base64url") },
-    { venueId: venueIds.get("pivnita-cu-bolta")!, createdBy: ownerId, rewardTitle: "A cincea bere e gratis", stampsRequired: 5, icon: "beer", accentColor: "#F2A33A", stampSecret: randomBytes(32).toString("base64url") },
+    { venueId: nora, createdBy: ownerId, rewardTitle: "O ciorbă din partea casei", stampsRequired: 6, icon: "soup", accentColor: "#0B7A53", stampSecret: randomBytes(32).toString("base64url") },
+    { venueId: venueIds.get("scart-loc-lejer")!, createdBy: ownerId, rewardTitle: "A cincea bere e gratis", stampsRequired: 5, icon: "beer", accentColor: "#F2A33A", stampSecret: randomBytes(32).toString("base64url") },
   ]);
 
   // ---------- Review-uri și check-in-uri ----------
@@ -205,10 +207,10 @@ async function main() {
 
   // ---------- Sponsorizat (NU influențează scorul) și vibe check ----------
   await db.insert(partnerships).values([
-    { venueId: venueIds.get("bistro-bega")!, plan: "highlight", startsAt: new Date(now.getTime() - 10 * DAY), endsAt: new Date(now.getTime() + 20 * DAY), paymentStatus: "paid" },
-    { venueId: venueIds.get("terasa-de-pe-bega")!, plan: "highlight", startsAt: new Date(now.getTime() - 10 * DAY), endsAt: new Date(now.getTime() + 20 * DAY), paymentStatus: "paid" },
+    { venueId: venueIds.get("vinto-gastro-wine-bar")!, plan: "highlight", startsAt: new Date(now.getTime() - 10 * DAY), endsAt: new Date(now.getTime() + 20 * DAY), paymentStatus: "paid" },
+    { venueId: venueIds.get("darc-pe-mal")!, plan: "highlight", startsAt: new Date(now.getTime() - 10 * DAY), endsAt: new Date(now.getTime() + 20 * DAY), paymentStatus: "paid" },
   ]);
-  const vibes: [string, number, number][] = [["pivnita-cu-bolta", 4, 12], ["bar-elisabetin", 2, 30], ["depoul-de-tramvaie", 5, 5]];
+  const vibes: [string, number, number][] = [["scart-loc-lejer", 4, 12], ["aethernativ-cafe", 2, 30], ["the-80s-pub", 5, 5]];
   await db.insert(vibeChecks).values(
     vibes.map(([slug, level, minAgo]) => ({
       venueId: venueIds.get(slug)!, level,

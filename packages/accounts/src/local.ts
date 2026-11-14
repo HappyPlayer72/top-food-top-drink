@@ -4,8 +4,8 @@
  * GDPR: din GPS păstrăm doar ziua și orașul/localul; coordonatele nu se salvează.
  */
 import { createHash, randomInt } from "node:crypto";
-import { and, count, countDistinct, eq, gte, sql } from "drizzle-orm";
-import { checkins, cities, forbidden, invalid, localVerifications, notFound, touristZones, users, venues, vouches, type Db } from "@tftd/db";
+import { and, count, countDistinct, desc, eq, gte, sql } from "drizzle-orm";
+import { checkins, cities, ensureExtendedSchema, forbidden, invalid, localVerifications, notFound, savedVenues, touristZones, users, venues, vouches, type Db } from "@tftd/db";
 
 export const LOCAL_RULES = { gpsDays: 5, windowDays: 30, vouchesNeeded: 2, validMonths: 12, cityRadiusKm: 15, venueRadiusM: 60 } as const;
 
@@ -125,3 +125,38 @@ export async function setNeighborhood(db: Db, userId: string, neighborhood: stri
 
 const addMonths = (d: Date) => new Date(d.getTime() + LOCAL_RULES.validMonths * 30 * DAY);
 export const hashCode = (code: string) => createHash("sha256").update(code).digest("hex");
+
+/** Locale salvate („vreau să merg”) pentru un utilizator autentificat. */
+export async function getSavedVenueSlugs(db: Db, userId: string): Promise<string[]> {
+  await ensureExtendedSchema(db);
+  const rows = await db
+    .select({ slug: savedVenues.venueSlug })
+    .from(savedVenues)
+    .where(eq(savedVenues.userId, userId))
+    .orderBy(desc(savedVenues.createdAt));
+  return rows.map((r) => r.slug);
+}
+
+/** Salvează sau elimină un local din lista „vreau să merg” a utilizatorului. */
+export async function toggleSavedVenueSlug(
+  db: Db,
+  userId: string,
+  venueSlug: string,
+  desired?: boolean,
+): Promise<{ saved: boolean; savedSlugs: string[] }> {
+  await ensureExtendedSchema(db);
+  const slug = venueSlug.trim();
+  if (!slug) throw invalid("Localul nu există.");
+  const [existing] = await db
+    .select({ slug: savedVenues.venueSlug })
+    .from(savedVenues)
+    .where(and(eq(savedVenues.userId, userId), eq(savedVenues.venueSlug, slug)));
+  const nextSaved = desired ?? !existing;
+  if (nextSaved && !existing) {
+    await db.insert(savedVenues).values({ userId, venueSlug: slug }).onConflictDoNothing();
+  } else if (!nextSaved && existing) {
+    await db.delete(savedVenues).where(and(eq(savedVenues.userId, userId), eq(savedVenues.venueSlug, slug)));
+  }
+  const savedSlugs = await getSavedVenueSlugs(db, userId);
+  return { saved: nextSaved, savedSlugs };
+}

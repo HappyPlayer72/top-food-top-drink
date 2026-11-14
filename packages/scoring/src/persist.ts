@@ -3,12 +3,13 @@
  * Regula 1: aici nu se citește NIMIC din tabelele de monetizare (verificat de rule1.test.ts).
  */
 import { and, count, countDistinct, eq, inArray, isNotNull } from "drizzle-orm";
-import { checkins, cities, reviews, touristZones, users, venues, type Db } from "@tftd/db";
+import { checkins, cities, ensureExtendedSchema, reviews, touristZones, users, venueScoreSnapshots, venues, type Db } from "@tftd/db";
 import { cityMean } from "./honest.ts";
 import { aggregateAspects, distanceToNearestZone, priceRatio, scoreVenue, type VenueReview } from "./venue.ts";
 import { reviewWeight } from "./weights.ts";
 
 export async function recalculateCity(db: Db, citySlug: string, vertical: "food" | "drink", now = new Date()) {
+  await ensureExtendedSchema(db);
   const [city] = await db.select().from(cities).where(eq(cities.slug, citySlug));
   if (!city) throw new Error(`Orașul ${citySlug} nu există.`);
 
@@ -84,6 +85,7 @@ export async function recalculateCity(db: Db, citySlug: string, vertical: "food"
 
   const scored = rows.map((r) => ({ row: r, s: toScoring(r) }));
   const mean = cityMean(scored.map((x) => x.s), city.meanScore[vertical], now);
+  const day = now.toISOString().slice(0, 10);
 
   await db.transaction(async (tx) => {
     await tx.update(cities).set({ meanScore: { ...city.meanScore, [vertical]: mean }, updatedAt: now }).where(eq(cities.slug, citySlug));
@@ -115,6 +117,13 @@ export async function recalculateCity(db: Db, citySlug: string, vertical: "food"
           scoreUpdatedAt: now,
         })
         .where(eq(venues.id, v.id));
+      await tx
+        .insert(venueScoreSnapshots)
+        .values({ venueId: v.id, day, score: result.overall.score, reviewCount: own.length })
+        .onConflictDoUpdate({
+          target: [venueScoreSnapshots.venueId, venueScoreSnapshots.day],
+          set: { score: result.overall.score, reviewCount: own.length },
+        });
       for (const x of own) {
         await tx.update(reviews).set({ weight: reviewWeight(x.s, now) }).where(eq(reviews.id, x.row.id));
       }

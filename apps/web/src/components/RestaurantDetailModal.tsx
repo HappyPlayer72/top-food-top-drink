@@ -4,22 +4,29 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NOISE_LEVELS, quickButtonsFor, quickWarnings, type Answer, type QuickKind } from '@tftd/scoring/features';
 import { ReviewQuestions } from './ReviewQuestions';
 import { VenueFeatures } from './VenueFeatures';
+import Link from 'next/link';
+import { embedSrc } from '@/lib/embed';
 import {
   Accessibility,
   AlertTriangle,
   BookOpen,
   Bookmark,
   Calendar,
+  Camera,
   Check,
   ChevronLeft,
   Clock,
+  Film,
   MapPin,
+  Pencil,
   Plug,
   Scale,
   ShieldAlert,
   ShieldCheck,
   Sun,
   ThumbsUp,
+  Trash2,
+  Truck,
   Volume2,
   X,
 } from 'lucide-react';
@@ -58,13 +65,26 @@ export interface RestaurantDetailModalProps {
   onClose: () => void;
   onAddReview: (
     restaurantId: string,
-    review: Review
+    review: Review & { receiptPhotoUrl?: string }
   ) => void | Promise<{ ok: boolean; message?: string; error?: string }>;
+  onEditReview?: (
+    restaurantId: string,
+    reviewId: string,
+    updates: { foodScore: number; text: string }
+  ) => Promise<{ ok: boolean; message?: string; error?: string }>;
+  onDeleteReview?: (
+    restaurantId: string,
+    reviewId: string
+  ) => Promise<{ ok: boolean; message?: string; error?: string }>;
   /** Cu backend: votul „util” se salvează și întoarce numărul real */
   onVoteHelpful?: (
     reviewId: string
   ) => Promise<{ ok: true; voted: boolean; helpfulCount: number } | { ok: false; error: string }>;
   onRequireLogin?: (opts?: { openReview?: boolean }) => void;
+  onSubmitVideo?: (
+    restaurantId: string,
+    url: string
+  ) => Promise<{ ok: boolean; error?: string }>;
   onLocateOnMap?: (restaurant: Restaurant) => void;
   isSaved?: boolean;
   onToggleSave?: (restaurantId: string) => void;
@@ -120,7 +140,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   currentUser,
   onClose,
   onAddReview,
+  onEditReview,
+  onDeleteReview,
   onVoteHelpful,
+  onSubmitVideo,
   onRequireLogin,
   onLocateOnMap,
   isSaved = false,
@@ -151,10 +174,22 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [noiseLevel, setNoiseLevel] = useState<NoiseLevel | null>(null);
   const [praisedEmployee, setPraisedEmployee] = useState<string>('');
   const [reviewText, setReviewText] = useState('');
+  const [receiptPhotoUrl, setReceiptPhotoUrl] = useState<string | null>(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const [videoUrlInput, setVideoUrlInput] = useState('');
+  const [videoStatus, setVideoStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const [videoBusy, setVideoBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
   /** Întrebările structurate din review (Da / Nu / Nu am observat), trimise odată cu review-ul. */
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [editingReviewKey, setEditingReviewKey] = useState<string | null>(null);
+  const [editScoreText, setEditScoreText] = useState<string>('9');
+  const [editText, setEditText] = useState<string>('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
+  const [isDeletingKey, setIsDeletingKey] = useState<string | null>(null);
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
   const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
   const [drawerEntered, setDrawerEntered] = useState(false);
@@ -185,6 +220,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setHelpfulVotedKeys({});
     setPraisedEmployee('');
     setReviewText('');
+    setReceiptPhotoUrl(null);
+    setVideoUrlInput('');
+    setVideoStatus(null);
     const initialGrade = Math.min(
       10,
       Math.max(1, Math.round(restaurant.foodQualityScore))
@@ -442,9 +480,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       return;
     }
 
-    const reviewId = `rev-${Date.now()}`;
+    const reviewId = `local-rev-${Date.now()}`;
     const newReview: Review = {
       id: reviewId,
+      authorId: currentUser.id,
       authorName: currentUser.name,
       authorRole: currentUser.role as AuthorRole,
       authorNeighborhood:
@@ -469,7 +508,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       answers: Object.keys(answers).length ? answers : undefined,
     };
 
-    const result = await onAddReview(restaurant.id, newReview);
+    const result = await onAddReview(restaurant.id, {
+      ...newReview,
+      ...(receiptPhotoUrl ? { receiptPhotoUrl } : {}),
+    });
     if (result && !result.ok) {
       setFormError(result.error ?? 'Review-ul nu s-a putut publica. Încearcă din nou.');
       return;
@@ -477,6 +519,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewFilter(currentUser.role);
     setIsReviewDrawerOpen(false);
     setReviewText('');
+    setReceiptPhotoUrl(null);
     setPraisedEmployee('');
     setMarkAsTrap(false);
     // Butoanele rapide revin la voturile salvate (sau goale, fără backend).
@@ -532,6 +575,55 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       return;
     }
     setHelpfulVotedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleStartEdit = (reviewKey: string, rev: Review) => {
+    setConfirmDeleteKey(null);
+    setEditingReviewKey(reviewKey);
+    setEditScoreText(String(Math.round(rev.foodScore)));
+    setEditText(rev.text);
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async (reviewId: string) => {
+    if (!onEditReview || !restaurant) return;
+    const parsed = Number(editScoreText.replace(',', '.'));
+    if (Number.isNaN(parsed) || parsed < 1 || parsed > 10 || !Number.isInteger(parsed)) {
+      setEditError('Nota trebuie să fie un număr întreg de la 1 la 10.');
+      return;
+    }
+    const trimmed = editText.trim();
+    if (trimmed.length < 20) {
+      setEditError('Scrie cel puțin 20 de caractere în review.');
+      return;
+    }
+    setIsSavingEdit(true);
+    setEditError(null);
+    const res = await onEditReview(restaurant.id, reviewId, {
+      foodScore: parsed,
+      text: trimmed,
+    });
+    setIsSavingEdit(false);
+    if (!res.ok) {
+      setEditError(res.error ?? 'Nu am putut actualiza review-ul.');
+      return;
+    }
+    setEditingReviewKey(null);
+    if (res.message) setSubmittedNotice(res.message);
+  };
+
+  const handleConfirmDelete = async (reviewKey: string, reviewId: string) => {
+    if (!onDeleteReview || !restaurant) return;
+    setIsDeletingKey(reviewKey);
+    const res = await onDeleteReview(restaurant.id, reviewId);
+    setIsDeletingKey(null);
+    setConfirmDeleteKey(null);
+    if (!res.ok) {
+      setSubmittedNotice(res.error ?? 'Nu am putut șterge review-ul.');
+      return;
+    }
+    if (editingReviewKey === reviewKey) setEditingReviewKey(null);
+    if (res.message) setSubmittedNotice(res.message);
   };
 
   const resetDrawerDrag = () => {
@@ -697,6 +789,31 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   >
                     {restaurant.openNow ? 'Deschis acum' : 'Închis acum'}
                   </span>
+                  {restaurant.delivery && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span
+                        className={`inline-flex items-center gap-1 font-semibold ${
+                          restaurant.delivery.available
+                            ? isDrink
+                              ? 'text-[#6EE7B7]'
+                              : 'text-[#1E6B43]'
+                            : isDrink
+                            ? 'text-[#F4EEE2]/70'
+                            : 'text-[#6E5649]'
+                        }`}
+                      >
+                        <Truck className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          {restaurant.delivery.available
+                            ? restaurant.delivery.platforms?.length
+                              ? `Livrare (${restaurant.delivery.platforms.join(', ')})`
+                              : 'Livrare disponibilă'
+                            : 'Doar în local'}
+                        </span>
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 {(restaurant.isPartner || restaurant.isSponsored) && (
@@ -867,6 +984,64 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         Ultima actualizare: <strong>{lastUpdated}</strong>
                       </span>
                     </div>
+
+                    {restaurant.delivery && (
+                      <div
+                        className={`rounded-[4px] border px-3.5 py-2.5 text-[12px] flex flex-wrap items-center justify-between gap-2 ${
+                          isDrink
+                            ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85'
+                            : 'bg-[#FAF7F2] border-[#E6DFD5] text-[#3A2418]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Truck
+                            className={`w-4 h-4 shrink-0 ${
+                              isDrink ? 'text-[#E0A526]' : 'text-[#B3261E]'
+                            }`}
+                          />
+                          <span className="font-semibold">
+                            {restaurant.delivery.available
+                              ? 'Livrare la domiciliu:'
+                              : 'Fără livrare (doar în local)'}
+                          </span>
+                          {restaurant.delivery.available &&
+                            restaurant.delivery.platforms &&
+                            restaurant.delivery.platforms.length > 0 && (
+                              <span>
+                                {restaurant.delivery.platforms.join(', ')}
+                              </span>
+                            )}
+                          {restaurant.delivery.ownDelivery && (
+                            <span
+                              className={`text-[11px] px-1.5 py-0.5 rounded-[3px] font-medium ${
+                                isDrink
+                                  ? 'bg-[#1F4A3A] text-[#6EE7B7]'
+                                  : 'bg-[#E9F3EC] text-[#1E6B43]'
+                              }`}
+                            >
+                              Livrare proprie
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className={`flex items-center gap-2 flex-wrap text-[11px] ${
+                            isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
+                          }`}
+                        >
+                          {restaurant.delivery.minimumOrderRon != null && (
+                            <span>
+                              Comandă minimă: {restaurant.delivery.minimumOrderRon} lei
+                            </span>
+                          )}
+                          {restaurant.delivery.estimatedTime && (
+                            <span>· {restaurant.delivery.estimatedTime}</span>
+                          )}
+                          {restaurant.delivery.note && (
+                            <span>· {restaurant.delivery.note}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-4">
                       {menuCategories.map((category) => (
@@ -1280,6 +1455,24 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   </span>
                 )}
 
+                {restaurant.delivery && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-[4px] border ${
+                      isDrink
+                        ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85'
+                        : 'bg-white border-[#E6DFD5] text-[#3A2418]'
+                    }`}
+                  >
+                    <Truck className="w-3 h-3 shrink-0 opacity-75" />
+                    <span>
+                      {restaurant.delivery.available
+                        ? restaurant.delivery.platforms?.length
+                          ? `Livrare: ${restaurant.delivery.platforms.join(', ')}`
+                          : 'Livrare disponibilă'
+                        : 'Fără livrare (doar în local)'}
+                    </span>
+                  </span>
+                )}
                 {venueFacilities.otherFacilities?.map((fac) => (
                   <span
                     key={fac}
@@ -1529,6 +1722,15 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   const helpfulTotal = server
                     ? server.count
                     : (rev.helpfulCount ?? 0) + (isHelpfulVoted ? 1 : 0);
+                  const isOwnReview = Boolean(
+                    currentUser &&
+                      rev.id &&
+                      (rev.authorId
+                        ? rev.authorId === currentUser.id
+                        : rev.authorName === currentUser.name)
+                  );
+                  const isEditingThis = editingReviewKey === reviewKey;
+                  const isConfirmingDelete = confirmDeleteKey === reviewKey;
 
                   return (
                     <article
@@ -1539,8 +1741,29 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 flex-wrap">
                           <span className="font-bold text-[15px]">
-                            {rev.authorName}
+                            {rev.authorUsername ? (
+                              <Link
+                                href={`/u/${encodeURIComponent(rev.authorUsername)}`}
+                                className="hover:underline"
+                              >
+                                {rev.authorName}
+                              </Link>
+                            ) : (
+                              rev.authorName
+                            )}
                           </span>
+                          {rev.isVerifiedVisit && (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[11px] font-semibold ${
+                                isDrink
+                                  ? 'bg-[#285443] text-[#F4EEE2]'
+                                  : 'bg-patrunjel/12 text-patrunjel'
+                              }`}
+                            >
+                              <ShieldCheck className="w-3 h-3" aria-hidden="true" />
+                              Vizită verificată
+                            </span>
+                          )}
                           {(rev.authorRole === 'verified-local' ||
                             rev.authorRole === 'regular') && (
                             <LocalnicBadge
@@ -1586,7 +1809,89 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         </span>
                       </div>
 
-                      <p className="text-[15px] leading-[1.55]">{rev.text}</p>
+                      {isEditingThis && rev.id ? (
+                        <div
+                          className={`rounded-[4px] border p-3.5 space-y-3 ${
+                            isDrink
+                              ? 'bg-[#143025] border-[#2D5947]'
+                              : 'bg-[#FAF8F5] border-[#E6DFD5]'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center gap-3">
+                            <label
+                              htmlFor={`edit-score-${reviewKey}`}
+                              className="text-[12px] font-bold"
+                            >
+                              Notă (1–10):
+                            </label>
+                            <input
+                              id={`edit-score-${reviewKey}`}
+                              type="number"
+                              min={1}
+                              max={10}
+                              step={1}
+                              value={editScoreText}
+                              onChange={(e) => setEditScoreText(e.target.value)}
+                              className={`w-20 px-2.5 py-1.5 rounded-[4px] border text-[14px] font-bold tabular-nums focus:outline-none ${
+                                isDrink
+                                  ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] focus:border-[#F2A33A]'
+                                  : 'bg-white border-[#D6CFC5] text-[#3A2418] focus:border-[#3A2418]'
+                              }`}
+                            />
+                          </div>
+
+                          <textarea
+                            rows={3}
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            aria-label="Text review editat"
+                            className={`w-full px-3 py-2 rounded-[4px] border text-[14px] leading-relaxed focus:outline-none ${
+                              isDrink
+                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] focus:border-[#F2A33A]'
+                                : 'bg-white border-[#D6CFC5] text-[#3A2418] focus:border-[#3A2418]'
+                            }`}
+                          />
+
+                          {editError && (
+                            <p className="text-[12px] font-semibold text-[#B3261E]">
+                              {editError}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={isSavingEdit}
+                              onClick={() => handleSaveEdit(rev.id!)}
+                              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] text-[12px] font-bold disabled:opacity-50 ${
+                                isDrink
+                                  ? 'bg-[#F2A33A] text-[#17382C]'
+                                  : 'bg-[#B3261E] text-white'
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>{isSavingEdit ? 'Se salvează...' : 'Salvează modificările'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSavingEdit}
+                              onClick={() => {
+                                setEditingReviewKey(null);
+                                setEditError(null);
+                              }}
+                              className={`btn-press px-3 py-2 rounded-[4px] border text-[12px] font-semibold ${
+                                isDrink
+                                  ? 'border-[#2D5947] text-[#F4EEE2]/80'
+                                  : 'border-[#D6CFC5] text-[#6E5649]'
+                              }`}
+                            >
+                              Anulează
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[15px] leading-[1.55]">{rev.text}</p>
+                      )}
 
                       {(rev.safetyScore !== undefined ||
                         rev.noiseLevel !== undefined) && (
@@ -1630,25 +1935,88 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                             : ''}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleToggleHelpful(reviewKey, rev.id)}
-                          aria-pressed={isHelpfulVoted}
-                          className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
-                            isHelpfulVoted
-                              ? isDrink
-                                ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                                : 'bg-[#3A2418] text-white border-[#3A2418]'
-                              : isDrink
-                              ? 'border-[#285443] text-[#F4EEE2]/80 hover:border-[#F2A33A]'
-                              : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
-                          }`}
-                        >
-                          <ThumbsUp className="w-3 h-3" />
-                          <span>
-                            Util{helpfulTotal > 0 ? ` · ${helpfulTotal}` : ''}
-                          </span>
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {isOwnReview && !isEditingThis && !isConfirmingDelete && (
+                            <>
+                              {onEditReview && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(reviewKey, rev)}
+                                  className={`btn-press inline-flex items-center gap-1 min-h-[44px] px-2.5 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                                    isDrink
+                                      ? 'border-[#285443] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                                      : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
+                                  }`}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  <span>Editează</span>
+                                </button>
+                              )}
+                              {onDeleteReview && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingReviewKey(null);
+                                    setConfirmDeleteKey(reviewKey);
+                                  }}
+                                  className={`btn-press inline-flex items-center gap-1 min-h-[44px] px-2.5 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                                    isDrink
+                                      ? 'border-[#285443] text-[#FFB4AC] hover:border-[#FFB4AC]'
+                                      : 'border-[#E6DFD5] text-[#B3261E] hover:border-[#B3261E]'
+                                  }`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Șterge</span>
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {isConfirmingDelete && rev.id && (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={isDeletingKey === reviewKey}
+                                onClick={() => handleConfirmDelete(reviewKey, rev.id!)}
+                                className="btn-press min-h-[44px] px-3 py-1.5 rounded-[3px] bg-[#B3261E] text-white text-[12px] font-bold disabled:opacity-50"
+                              >
+                                {isDeletingKey === reviewKey ? 'Se șterge...' : 'Confirmă ștergerea'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isDeletingKey === reviewKey}
+                                onClick={() => setConfirmDeleteKey(null)}
+                                className={`btn-press min-h-[44px] px-2.5 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                                  isDrink
+                                    ? 'border-[#285443] text-[#F4EEE2]/80'
+                                    : 'border-[#E6DFD5] text-[#6E5649]'
+                                }`}
+                              >
+                                Anulează
+                              </button>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleHelpful(reviewKey, rev.id)}
+                            aria-pressed={isHelpfulVoted}
+                            className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                              isHelpfulVoted
+                                ? isDrink
+                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
+                                : isDrink
+                                ? 'border-[#285443] text-[#F4EEE2]/80 hover:border-[#F2A33A]'
+                                : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
+                            }`}
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                            <span>
+                              Util{helpfulTotal > 0 ? ` · ${helpfulTotal}` : ''}
+                            </span>
+                          </button>
+                        </div>
                       </div>
 
                       {rev.ownerReply && (
@@ -1758,6 +2126,127 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 >
                   {employeeOfMonth.name} a fost lăudată pe nume în{' '}
                   {employeeOfMonth.positiveMentions} de review-uri luna asta.
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* VIDEOURI DIN COMUNITATE (Item 2: embed TikTok/IG/YouTube + „Lipește un link”) */}
+          {((restaurant.videos && restaurant.videos.length > 0) || onSubmitVideo) && (
+            <section
+              aria-label="Videouri din comunitate"
+              className={`pt-5 border-t space-y-3.5 ${
+                isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Film className="w-5 h-5 opacity-75" aria-hidden="true" />
+                <h2 className="font-display text-[28px] sm:text-[32px] leading-none">
+                  Videouri din comunitate
+                </h2>
+              </div>
+
+              {restaurant.videos && restaurant.videos.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {restaurant.videos.map((vid) => {
+                    const src = embedSrc(vid.url);
+                    return (
+                      <div
+                        key={vid.url}
+                        className={`rounded-[6px] border p-3 space-y-2 ${
+                          isDrink ? 'border-[#285443] bg-[#143025]' : 'border-[#E6DFD5] bg-[#FAF8F5]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider">
+                          <span>{vid.platform}</span>
+                          {(vid.isPaid || vid.adSignal !== 'organic') && (
+                            <span className="rounded bg-[#B3261E]/15 px-1.5 py-0.5 text-[#B3261E]">
+                              {vid.adSignal === 'marcat_reclama' ? 'Marcat reclamă' : 'Posibil reclamă'}
+                            </span>
+                          )}
+                        </div>
+                        {src ? (
+                          <div className="aspect-video w-full overflow-hidden rounded-[4px] bg-black/20">
+                            <iframe
+                              src={src}
+                              title={`Video ${restaurant.name} (${vid.platform})`}
+                              className="h-full w-full border-0"
+                              allowFullScreen
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : (
+                          <a
+                            href={vid.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block truncate text-[13px] font-semibold underline"
+                          >
+                            Deschide clipul pe {vid.platform} →
+                          </a>
+                        )}
+                        {(vid.dishes.length > 0 || vid.prices.length > 0) && (
+                          <p className={`text-[12px] ${isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}`}>
+                            {vid.dishes.length > 0 && <>Menționat: {vid.dishes.join(', ')}</>}
+                            {vid.prices.length > 0 && (
+                              <> · Prețuri: {vid.prices.map((p) => `${p.item} ${p.priceLei} lei`).join(', ')}</>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={`text-[13px] ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
+                  Încă nu există videouri adăugate pentru acest local.
+                </p>
+              )}
+
+              {onSubmitVideo && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (videoBusy || !videoUrlInput.trim()) return;
+                    setVideoBusy(true);
+                    setVideoStatus(null);
+                    const res = await onSubmitVideo(restaurant.id, videoUrlInput.trim());
+                    setVideoBusy(false);
+                    if (!res.ok) {
+                      setVideoStatus({ text: res.error ?? 'Link invalid.', error: true });
+                      return;
+                    }
+                    setVideoUrlInput('');
+                    setVideoStatus({ text: 'Video adăugat și analizat.', error: false });
+                  }}
+                  className="flex flex-wrap gap-2"
+                >
+                  <input
+                    type="url"
+                    value={videoUrlInput}
+                    onChange={(e) => setVideoUrlInput(e.target.value)}
+                    placeholder="Lipește un link TikTok, Instagram, YouTube sau Facebook"
+                    aria-label="Link video TikTok, Instagram, YouTube sau Facebook"
+                    className={`min-w-[220px] flex-1 rounded-[4px] border px-3 py-2 text-[13px] ${
+                      isDrink
+                        ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder:text-[#F4EEE2]/60'
+                        : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder:text-[#6E5649]'
+                    }`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={videoBusy || !videoUrlInput.trim()}
+                    className={`btn-press rounded-[4px] px-3.5 py-2 text-[13px] font-bold disabled:opacity-50 ${
+                      isDrink ? 'bg-[#F2A33A] text-[#17382C]' : 'bg-[#3A2418] text-white'
+                    }`}
+                  >
+                    {videoBusy ? 'Se procesează…' : 'Adaugă video'}
+                  </button>
+                </form>
+              )}
+              {videoStatus && (
+                <p className={`text-[12px] font-semibold ${videoStatus.error ? 'text-[#B3261E]' : 'text-patrunjel'}`}>
+                  {videoStatus.text}
                 </p>
               )}
             </section>
@@ -2291,6 +2780,51 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   }
                   dark={isDrink}
                 />
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="rev-receipt"
+                    className="flex items-center gap-1.5 text-[12px] font-semibold"
+                  >
+                    <Camera className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Fotografie bon fiscal (opțional — după aprobare primești ×1,3)</span>
+                  </label>
+                  <input
+                    id="rev-receipt"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={receiptBusy}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) {
+                        setReceiptPhotoUrl(null);
+                        return;
+                      }
+                      setReceiptBusy(true);
+                      setFormError(null);
+                      try {
+                        const compressed = await compressReceiptFile(file);
+                        setReceiptPhotoUrl(compressed);
+                      } catch {
+                        setFormError('Nu am putut procesa fotografia bonului. Încearcă un JPG/PNG mai mic.');
+                      } finally {
+                        setReceiptBusy(false);
+                      }
+                    }}
+                    className="block w-full text-[12px]"
+                  />
+                  {receiptPhotoUrl && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <img src={receiptPhotoUrl} alt="Previzualizare bon fiscal" className="h-14 w-14 rounded border object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setReceiptPhotoUrl(null)}
+                        className="text-[12px] font-semibold underline"
+                      >
+                        Scoate bonul
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {formError && (
                   <p
@@ -2327,3 +2861,31 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 };
 
 export default RestaurantDetailModal;
+
+async function compressReceiptFile(file: File): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('read_failed'));
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('decode_failed'));
+    el.src = dataUrl;
+  });
+  const maxDim = 960;
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height, 1));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  for (const quality of [0.78, 0.62, 0.48]) {
+    const out = canvas.toDataURL('image/jpeg', quality);
+    if (out.length <= 380_000) return out;
+  }
+  throw new Error('too_large');
+}

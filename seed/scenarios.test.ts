@@ -56,19 +56,19 @@ const scoreOf = (slug: string, mean: number) => {
 describe("scenariile de demo pe datele de seed", () => {
   const foodMean = cityMean(SEED_VENUES.filter((v) => v.vertical === "food").flatMap((v) => analyzed(v.slug)), 7, now);
 
-  it("1. Terasa Grand Unirii e semnalată drept capcană, cu motive", () => {
-    const s = scoreOf("terasa-grand-unirii", foodMean);
+  it("1. Miorița (Piața Unirii) e semnalată drept capcană, cu motive", () => {
+    const s = scoreOf("restaurant-miorita-unirii", foodMean);
     expect(s.trap.level).not.toBe("none");
     expect(s.trap.index).toBeGreaterThanOrEqual(60);
     expect(s.locals.score).toBeLessThan(s.tourists.score);
   });
 
-  it("Ciorba lui Sandu e pe primul loc la food", () => {
+  it("Restaurant Nora e pe primul loc la food", () => {
     const ranked = SEED_VENUES.filter((v) => v.vertical === "food")
       .map((v) => ({ slug: v.slug, score: scoreOf(v.slug, foodMean).overall.score }))
       .sort((a, b) => b.score - a.score);
-    expect(ranked[0]?.slug).toBe("ciorba-lui-sandu");
-    expect(scoreOf("ciorba-lui-sandu", foodMean).trap.level).toBe("none");
+    expect(ranked[0]?.slug).toBe("restaurant-nora");
+    expect(scoreOf("restaurant-nora", foodMean).trap.level).toBe("none");
   });
 
 
@@ -103,7 +103,7 @@ describe("scenariile de demo pe datele de seed", () => {
     db.select = (() => (++selection === 2 ? { from: () => ({ where: async () => [{ slug: "timisoara" }] }) } : select())) as Db["select"];
     expect(await tryVerifyByGps(db, "user", "timisoara", now)).toBe(true);
     expect(local).toBe(true);
-    const base = { ...analyzed("ciorba-lui-sandu")[0]!, authorReviewCount: 5, authorIsVerifiedLocal: false, authorType: "unknown" as const };
+    const base = { ...analyzed("restaurant-nora")[0]!, authorReviewCount: 5, authorIsVerifiedLocal: false, authorType: "unknown" as const };
     const verified = { ...base, authorIsVerifiedLocal: local, authorType: classifyAuthor({ isVerifiedLocal: local, language: base.language }) };
     expect(reviewWeight(verified, now)).toBeCloseTo(2 * reviewWeight(base, now));
     expect(splitScores([base], foodMean, now).locals.reviewCount).toBe(0);
@@ -111,17 +111,17 @@ describe("scenariile de demo pe datele de seed", () => {
   });
 
   it("scenariul de demo 5: scorurile drink diferă și vibe check-ul arată aglomerația", async () => {
-    const drink = analyzed("depoul-de-tramvaie");
+    const drink = analyzed("the-80s-pub");
     const scores = drinkTimeScores(drink, 7, now);
     expect(scores.weekendNight.reviewCount).toBeGreaterThan(0);
     expect(scores.weekday.reviewCount).toBeGreaterThan(0);
     expect(scores.weekendNight.score).not.toBe(scores.weekday.score);
     const db = { select: () => ({ from: () => ({ where: () => ({ orderBy: async () => [{ level: 4, createdAt: now }] }) }) }) } as unknown as Db;
-    expect(await currentVibe(db, "depou", now)).toMatchObject({ level: 4, label: "Aproape plin" });
+    expect(await currentVibe(db, "80s-pub", now)).toMatchObject({ level: 4, label: "Aproape plin" });
   });
 
-  it("3. cele 20 de review-uri false abia mișcă scorul lui Grill Nou Freidorf", () => {
-    const all = analyzed("grill-nou-freidorf");
+  it("3. cele 20 de review-uri false abia mișcă scorul lui Harold's", () => {
+    const all = analyzed("harolds-restaurant");
     const withoutFakes = all.filter((r) => r.authorReviewCount > 1 || r.rating < 10);
     const mean = foodMean;
     const a = scoreVenue(all, { cityMean: mean, distanceToTouristZoneM: null, priceRatio: null }, now).overall.score;

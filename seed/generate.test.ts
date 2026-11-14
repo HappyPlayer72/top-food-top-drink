@@ -19,7 +19,7 @@ it("favoritul localnicilor are destui localnici în luna trecută pentru top", (
   const { users, reviews } = generate(SEED_VENUES, now);
   const locals = new Set(users.filter((u) => u.localNeighborhood).map((u) => u.key));
   const october = reviews.filter(
-    (r) => r.venueSlug === "ciorba-lui-sandu" && r.authorKey && locals.has(r.authorKey) && r.postedAt.getUTCMonth() === 9,
+    (r) => r.venueSlug === "restaurant-nora" && r.authorKey && locals.has(r.authorKey) && r.postedAt.getUTCMonth() === 9,
   );
   expect(october.length).toBeGreaterThanOrEqual(10);
 });

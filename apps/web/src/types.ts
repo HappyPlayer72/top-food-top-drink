@@ -38,7 +38,7 @@ export interface LoyaltyProgram {
   isCustomVendor?: boolean;
 }
 
-export type FoodQuickFilter = 'fara-capcane' | 'deschis-acum' | 'sub-50-lei';
+export type FoodQuickFilter = 'fara-capcane' | 'deschis-acum' | 'sub-50-lei' | 'livrare';
 export type DrinkQuickFilter =
   | 'vineri-noaptea'
   | 'in-timpul-saptamanii'
@@ -89,15 +89,66 @@ export interface ThemeTop {
   declared: ThemeTopEntry[];
 }
 
+export interface UserSocialLink {
+  platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube';
+  url: string;
+  verified: boolean;
+  followers: number | null;
+}
+
+export interface UserEmployment {
+  employeeId: string;
+  venueId: string;
+  venueName: string;
+  venueSlug: string;
+  vertical?: 'food' | 'drink';
+  role: string;
+  firstName: string;
+  accepted: boolean;
+}
+
 export interface UserAccount {
   id: string;
+  username?: string;
   name: string;
   email?: string;
   role: 'verified-local' | 'tourist';
+  isInfluencer?: boolean;
+  followers?: number | null;
   neighborhood?: string;
   weightMultiplier: number;
   description: string;
   interests?: Interest[];
+  savedVenueSlugs?: string[];
+  socialLinks?: UserSocialLink[];
+  employments?: UserEmployment[];
+}
+
+export interface AdBanner {
+  id: string;
+  advertiser: string;
+  creativeUrl: string;
+  linkUrl: string;
+  placement: string;
+}
+
+export interface MonthlyAwards {
+  month: string | null;
+  months: string[];
+  revelation: { venueId: string; name?: string; slug?: string; neighborhood?: string; from: number; to: number } | null;
+  employee: { employeeId: string; venueId: string; mentions: number; firstName: string; venue: string; venueSlug?: string } | null;
+  local: { userId: string; reviews: number; username?: string; displayName: string; neighborhood: string | null } | null;
+  influencer: { userId: string; reviews: number; followers: number | null; username?: string; displayName: string } | null;
+}
+
+export interface VenueVideo {
+  url: string;
+  platform: string;
+  dishes: string[];
+  prices: { item: string; priceLei: number }[];
+  isPaid: boolean;
+  adSignal: 'marcat_reclama' | 'posibil_reclama' | 'organic';
+  sentiment: 'positive' | 'neutral' | 'negative';
 }
 
 export interface SignatureDish {
@@ -199,6 +250,10 @@ export interface Review {
   /** Optional answers to preference questions after posting a review */
   /** Răspunsurile la întrebările din review (Da / Nu / Nu am observat). */
   answers?: Record<string, Answer>;
+  /** Owner user ID when authored by a signed-in/local user */
+  authorId?: string;
+  /** Username-ul autorului pentru profil public `/u/{username}` */
+  authorUsername?: string;
 }
 
 export interface OwnerPost {
@@ -247,10 +302,13 @@ export interface WeekendEvent {
   venueName: string;
   venueId: string;
   details: string;
+  neighborhood?: string;
+  address?: string;
 }
 
 export interface TopReviewer {
   id: string;
+  username?: string;
   initials: string;
   name: string;
   role: 'verified-local' | 'influencer';
@@ -276,6 +334,21 @@ export interface VenueFacilities {
   otherFacilities?: string[];
 }
 
+export interface VenueDeliveryInfo {
+  /** Whether delivery is offered */
+  available: boolean;
+  /** Platforms or delivery channels (e.g. 'Wolt', 'Glovo', 'Bolt Food', 'Livrare proprie') */
+  platforms?: string[];
+  /** Whether the venue operates its own delivery fleet */
+  ownDelivery?: boolean;
+  /** Minimum order in RON, if known */
+  minimumOrderRon?: number;
+  /** Estimated delivery time label (e.g. '30–45 min') */
+  estimatedTime?: string;
+  /** Extra details in Romanian */
+  note?: string;
+}
+
 export interface Restaurant {
   id: string;
   /** UUID-ul din baza de date (lipsește la datele statice); îl folosesc acțiunile din backend. */
@@ -287,6 +360,7 @@ export interface Restaurant {
   shortNeighborhood?: string;
   cuisine: string;
   shortCategory?: string;
+  categories?: string[];
   priceTier: PriceTier;
   avgMealPriceRon: number;
   categoryAvgPriceRon: number;
@@ -338,9 +412,10 @@ export interface Restaurant {
   crowdLabel?: string;
   drinkTags?: DrinkQuickFilter[];
 
-  // --- Warnings & Practical Facilities ---
+  // --- Warnings, Practical Facilities & Delivery ---
   warnings?: VenueWarnings;
   facilities?: VenueFacilities;
+  delivery?: VenueDeliveryInfo;
 
   // --- Reviews & Owner Kitchen Story & Team ---
   reviewCounts?: {
@@ -352,6 +427,7 @@ export interface Restaurant {
   kitchenStory?: KitchenStory;
   ownerPosts?: OwnerPost[];
   team?: TeamMember[];
+  videos?: VenueVideo[];
 }
 
 /**
