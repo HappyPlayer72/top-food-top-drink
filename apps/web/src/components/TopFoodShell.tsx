@@ -23,6 +23,7 @@ import {
   recalculateRestaurantWithReview,
 } from '../data/restaurants';
 import { LoginScreen } from './LoginScreen';
+import { LocalVerificationPanel } from './LocalVerificationPanel';
 import { Navbar } from './Navbar';
 import { EditorialListView } from './EditorialListView';
 import { MapView } from './MapView';
@@ -213,15 +214,14 @@ export function TopFoodShell({
   useEffect(() => {
     if (!storageHydrated || !backendOnline) return;
     if (initialUser) {
-      setAccounts((prev) =>
-        prev.some((a) => a.id === initialUser.id) ? prev : [...prev, initialUser]
-      );
+      // înlocuim și varianta veche (ex. turist → localnic verificat după router.refresh())
+      setAccounts((prev) => [...prev.filter((a) => a.id !== initialUser.id), initialUser]);
       setCurrentUserId(initialUser.id);
     } else {
       setCurrentUserId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageHydrated, backendOnline]);
+  }, [storageHydrated, backendOnline, initialUser?.id, initialUser?.role]);
 
   // După router.refresh(), datele noi din DB înlocuiesc lista din memorie
   useEffect(() => setFoodRestaurants(initialFood), [initialFood]);
@@ -705,6 +705,11 @@ export function TopFoodShell({
         onSelectUser={handleSelectUser}
         onOpenLogin={handleOpenLogin}
         onLogout={handleLogout}
+        profileExtra={
+          backendOnline && currentUser && currentUser.role !== 'verified-local' ? (
+            <LocalVerificationPanel vertical={vertical} />
+          ) : null
+        }
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode((prev) => !prev)}
       />
