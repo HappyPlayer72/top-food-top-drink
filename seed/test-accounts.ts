@@ -26,7 +26,7 @@ async function main() {
   }
 
   const db = createDb(url);
-  const prepared = [];
+  const prepared: ((typeof accounts)[number] & { passwordHash: string })[] = [];
   for (const a of accounts) {
     prepared.push({ ...a, passwordHash: await hashPassword(a.password) });
   }
