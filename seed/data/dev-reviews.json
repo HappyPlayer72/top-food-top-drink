@@ -1,0 +1,1693 @@
+{
+ "note": "Review-uri de test scrise de agenți (Claude Haiku) după review-urile Google reale, pentru a vedea cum arată site-ul. Conturile sunt marcate (DevAccount). Doar pentru baza locală: npm run seed:dev",
+ "accounts": [
+  {
+   "key": "dev01",
+   "displayName": "Andrei A. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Iosefin",
+   "reviews": [
+    {
+     "slug": "aethernativ-cafe",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Băuturile sunt variate, cu ceva pentru fiecare gust, iar barmanii Robi și Toni sunt foarte atenți și prietenoși. Muzica e bună, atmosfera relaxată. Singurul minus e prețul: un Hugo costă 42 de lei, deci de luat în calcul.",
+     "weekendNight": false
+    },
+    {
+     "slug": "cartier-pizza",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Pizza are aluat subțire, pufos pe margine, sos destul și ingrediente care se îmbină bine. Sandwich-ul e la fel de bun. Problema e așteptarea, care la deschidere a fost foarte lungă, plus comenzile încurcate. Personalul e prompt. Comandați din timp sau alegeți livrarea.",
+     "weekendNight": null
+    },
+    {
+     "slug": "super-dona",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Patiserie mică, dar produsele sunt proaspete, calde chiar și dimineața, iar alegerea e mare. Rulada cu mac a fost foarte bună. Prețurile sunt decente pentru calitate. Nu are pretenții, dar face exact ce trebuie.",
+     "weekendNight": null
+    },
+    {
+     "slug": "aiona-food",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Shaormă pur românească, fără sosuri multe: maioneză, ketchup, tzatziki, carne bună și porții mari la preț corect. Nu e cea mai spectaculoasă, dar se mănâncă cu plăcere. Un client a găsit fire de păr, deci atenție. Personalul rămâne rapid chiar la coadă.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev02",
+   "displayName": "Ioana B. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Fabric",
+   "reviews": [
+    {
+     "slug": "biofresh-timisoara",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Experiențe foarte diferite la Biofresh. Ultima comandă online, orezul cu tofu de 56 de lei, a venit băltit în ulei și greu de mâncat. Pastele cu ciuperci au fost arse și uscate, iar supa cremă de spanac fără gust. Supa de roșii și ciorba de legume cu quinoa sunt bune, iar servirea e rapidă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "sandwich-la-juma-de-kil-timisoara",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Denumirea promite mai mult decât servesc: shaorma de 500 g a cântărit 421 g cu ambalaj, iar cartofii de 300 g au avut 268 g. Dincolo de cantitate, shaorma e destul de seacă. În schimb, pulled chicken și crispy sunt gustoase, iar meniurile cu inele de ceapă, creveți pane și mozza sticks primesc laude, mai ales comandate prin Wolt.",
+     "weekendNight": null
+    },
+    {
+     "slug": "the-charlatan-s-pub",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Design frumos, atmosferă plăcută, barman de nota 10 și bere bună. Muzica de DJ se aude peste conversații, mai ales pe terasă. Mâncarea însă dezamăgește: crispy, fish and chips și șnițelul sunt uleioase și uscate, iar mini burgers au venit aproape înghețate. O rezervare notată greșit s-a rezolvat în cele din urmă, dar nu fără discuții.",
+     "weekendNight": false
+    },
+    {
+     "slug": "restaurant-bun-timisoara",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Pizza din meniul nou, în special Roșu de Vară, are ingrediente proaspete și combinații echilibrate. Burgerul double smashed e foarte bun, cartofii sunt proaspeți, iar carbonara e printre cele mai bune din oraș. Porțiile sunt puțin mai mici decât mă așteptam, dar baia e foarte curată și personalul amabil.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev03",
+   "displayName": "Mihai C. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Elisabetin",
+   "reviews": [
+    {
+     "slug": "restaurant-nora",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Ciorba de vacuță are gustul de acasă: echilibrată, aromată, cu multă legumă și smântână de casă. Pleșcavița la tigaie a fost o surpriză plăcută. Minusul sunt extrasele, care se adună pe notă, de exemplu smântâna servită separat la 9 lei. Porțiile sunt generoase.",
+     "weekendNight": null
+    },
+    {
+     "slug": "sky-restaurant-timisoara",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Priveliștea și decorul merită nota maximă, locul se simte high-end și e potrivit pentru aniversări sau o întâlnire. Mâncarea e bună, iar meniul zilei are un raport calitate-preț foarte bun. Serviciul variază: unii ospătari sunt excelenți și recomandă bine, alții sunt mai puțin atenți.",
+     "weekendNight": false
+    },
+    {
+     "slug": "pizzeria-nuova-mama-mia",
+     "vertical": "food",
+     "rating": 6,
+     "text": "Pizza are gustul din copilărie, rețeta e aceeași de zeci de ani, ceea ce e un plus. Dar ingredientele sunt sub medie, sosurile sunt slabe, iar o pizza pentru 3-4 persoane a ajuns la 170 de lei. Personalul a fost nepoliticos când s-a discutat despre parcare. Pentru preț, aștept mai mult.",
+     "weekendNight": null
+    },
+    {
+     "slug": "nemesis-art-club",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Un spațiu cultural adevărat: concerte, lansări de carte, expoziții și filme. Atmosfera e caldă, gazdele sunt primitoare, muzica e bună, uneori live. Singurul minus este căldura, fiindcă nu există aer condiționat, doar ventilatoare zgomotoase. Un loc unde vrei să revii.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev04",
+   "displayName": "Elena D. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Cetate",
+   "reviews": [
+    {
+     "slug": "porto-arte",
+     "vertical": "drink",
+     "rating": 5,
+     "text": "Terasa e mare și are priveliște frumoasă spre Bega, iar concertele live sunt un plus. Micii nu au convins, iar crapul a fost servit din nou pe grătar, aceeași bucată, fără o scuză potrivită. Servirea a fost rapidă și ospătărița amabilă, dar localul are nevoie de renovare serioasă, iar insectele de pe terasă strică experiența.",
+     "weekendNight": false
+    },
+    {
+     "slug": "patiseria-select",
+     "vertical": "food",
+     "rating": 4,
+     "text": "Merdenelele cu brânză sărată primesc laude, dar alt client a cumpărat trei bucăți reci și uscate, deși vânzătoarea a confirmat că sunt proaspete. Personalul pare neglijent cu regulile de siguranță alimentară, iar la ora de deschidere anunțată nu existau produse în vitrină.",
+     "weekendNight": null
+    },
+    {
+     "slug": "house-of-pool",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "O sală de biliard foarte bună: mesele sunt bine întreținute, postavul e impecabil, tacurile sunt drepte, iar spațiul permite mișcare liberă. Atmosfera e relaxată, personalul amabil, iar există și o masă de snooker. Păcat că sala e cam mică și programul scurt. Recomand.",
+     "weekendNight": false
+    },
+    {
+     "slug": "massimo",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Burgerul vegetarian și cartofii prăjiți au dezamăgit, cartofii arătau a mâncare învechită. Obrăjorii de vită sunt buni, dar piureul e sumar, iar înghețata are toate sorturile cu același gust. Ospătarul a dat o cupă și jumătate la două plătite, deși în alte momente serviciul a fost rapid și amabil.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev05",
+   "displayName": "Radu E. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "minna-delicios",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Shaorma de aici are carne gustoasă și sosuri care chiar se simt, iar lipia e una adevărată, nu un aluat banal. La 28 de lei am primit shaorma, suc și baclava, ceea ce mi s-a părut un raport bun între preț și porție. Personalul e atent și atmosfera e plăcută. Pentru mine e una dintre cele mai bune shaorme din oraș.",
+     "weekendNight": null
+    },
+    {
+     "slug": "escape-venue",
+     "vertical": "drink",
+     "rating": 4,
+     "text": "Muzica a fost bună și locul are un farmec aparte, mai ales cu expoziția de artă din spațiu. Din păcate, berea era răsuflată, iar când am cerut altceva, barmanul mi-a returnat jetoanele fără să rezolve nimic. Am aflat și că paharul se plătește în avans și se returnează, dar nici asta nu se face ușor. Pentru banii pe care îi plătești, experiența e slabă.",
+     "weekendNight": false
+    },
+    {
+     "slug": "la-trattoria-cucina-moderna",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Dorada la grătar și tomahawk-ul de porc sunt preparatele care mi-au rămas în minte, iar fish and chips e făcut în stilul original și e foarte gustos. Biftecul tartar și salata Caesar au fost excelente, iar limonada portocalie e neașteptat de bună. Personalul e prietenos și locația e centrală. Am avut însă o experiență mai slabă: așteptarea a fost lungă, mâncarea a ajuns rece, iar prețul total a fost ridicat.",
+     "weekendNight": null
+    },
+    {
+     "slug": "club-black-8",
+     "vertical": "drink",
+     "rating": 5,
+     "text": "Am ajuns aici pentru un meci, iar cafeaua și berea rece au fost plăcute. Televizoarele mari și terasa răcoroasă sunt un plus, iar înghețata a fost de calitate. Servirea însă este lentă: la mine nu a venit nimeni să ajute până nu am întrebat, iar la bar a trebuit să mă servesc singur. Am observat și o limonadă călduță, lipsa mâncării și cabluri neizolate pe terasă. Locul are potențial, dar mai are mult de lucrat.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev06",
+   "displayName": "Ana F. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Freidorf",
+   "reviews": [
+    {
+     "slug": "cuib-d-arte",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Cuib d'Arte are o atmosfera prietenoasa, un loc bun sa petreci timp de calitate cu prietenii si sa cunosti oameni noi. Berea si bauturile sunt considerate bune. Minusul e atitudinea unor angajati de la bar: mai multi clienti s-au simtit tratati cu superioritate si nepoliticos. Pentru mine e nota 7.",
+     "weekendNight": false
+    },
+    {
+     "slug": "iskender-kebab-gheorghe-lazar",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Shaorma de vita de la Iskender Kebab are carne buna si sosuri gustoase, si mai multi oameni o considera una dintre cele mai bune din zona. Minusul: la un client puiul a fost servit inca roz, asa ca verifica bine carnea. Pentru un student cu buget mic e o optiune solida, mai ales la miezul noptii.",
+     "weekendNight": null
+    },
+    {
+     "slug": "boom-pub",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Micii de la Boom sunt gustosi si zemosi, cartofii sunt proaspeti, iar servirea e rapida si amabila. Insa experienta nu e la fel pentru toti: unii au gasit burgerul greu de mancat, pastele nereusite si meniul incomplet. Un sos a fost criticat ca fiind scump pentru cantitatea servita. Ambianta e placuta.",
+     "weekendNight": false
+    },
+    {
+     "slug": "gelateria-italiana-pomo-d-oro",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Inghetata e foarte gustoasa, multi o considera printre cele mai bune din oras, iar pretul e bun. Coada poate fi foarte lunga si servirea a fost criticata: cornetul e dat fara servetel sau con de hartie, iar cand cineva face o observatie angajatele se supara. Merita pentru gust, dar nu te astepta la servire impecabila.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev07",
+   "displayName": "Bogdan G. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Calea Șagului",
+   "reviews": [
+    {
+     "slug": "grazia-gelato",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Înghețata lor e de departe preferata mea din Timișoara. Au arome fără zahăr, cu stevie, și vitrine cu capac, ceea ce arată că e artizanală, fără stabilizatori. Desertul cu fistic și cel de mango merită încercate, deși mango e puțin mai apoasă după ce se topește. Prăjiturile arată foarte bine.",
+     "weekendNight": null
+    },
+    {
+     "slug": "beraria-700",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Mâncare gustoasă și porții mari: bulzul, gulașul și platoul B700 sunt recomandate, iar clătitele bănățene și papanașii cu dulceață de casă merită încercate. Prețuri decente pentru calitate. Atmosfera la subsol e plăcută, dar pe terasă e zgomot de stradă, iar servirea poate fi lentă uneori.",
+     "weekendNight": false
+    },
+    {
+     "slug": "cuina-bunicii",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Patiserie nouă, curată, în centru, cu personal amabil și produse mereu proaspete. Croissantul cu nutella, plăcinta cu mac și pogăcelele cu caș sunt printre cele mai bune din oraș. Doar savarinele au fost fade pentru gustul meu.",
+     "weekendNight": null
+    },
+    {
+     "slug": "vinto-gastro-wine-bar",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Restaurant cu terasă în centrul vechi, cu servire amabilă și atentă. Burgerul e foarte bun, cu arome diverse. Cartofii subțiri nu sunt cei mai potriviți, iar deserturile sunt slabe pentru un loc de acest fel. Mâncarea rămâne recomandată.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev08",
+   "displayName": "Cristina H. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Circumvalațiunii",
+   "reviews": [
+    {
+     "slug": "alf",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Loc nou în complexul studentesc, liniștit și bun de lucru cu laptopul deschis. Servirea e excelentă, personalul e energic, iar burgerul e lăudat de mai mulți ca cel mai bun din oraș. Prețurile sunt corecte, atmosfera plăcută, pentru o seară prin zonă.",
+     "weekendNight": false
+    },
+    {
+     "slug": "casa-bunicii",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Terasa e primitoare și grădina are un farmec aparte. Meniul zilei are rețete bănățene cu produse de la producători din zonă, iar papanașii sunt printre cei mai buni pe care i-am mâncat. Clătita cu piept de rață și sos de brânză merită încercată, personalul e atent și decorul e gândit cu gust.",
+     "weekendNight": null
+    },
+    {
+     "slug": "suppa-bar",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Cinci feluri de supă cremă în fiecare zi, dintre care trei vegane, iar meniul nu se repetă. Ciorba de pui a fost gustoasă, prețurile sunt accesibile, servirea rapidă. Sala e rustică, cu muzică în surdină, și chiar te poți relaxa aici cu o supă. Merită!",
+     "weekendNight": null
+    },
+    {
+     "slug": "al-caminetto",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Pizza are blatul bun, consistent, cu ingrediente de calitate, iar sosul de usturoi se face pe loc. Personalul e atent și pastele cu pară sunt diferite de alte locuri. Au fost însă și comenzi dezamăgitoare: o supă fără gust și o notă de 61 de lei pentru o ciorbă. Experiența variază mult.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev09",
+   "displayName": "Vlad I. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Girocului",
+   "reviews": [
+    {
+     "slug": "bistro-700",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncare gustoasă, gătită cu grijă la un preț avantajos. Meniul zilei e mereu variat și porțiile sunt generoase. Oamenii sunt modești și prietenoși, atmosfera e plăcută, ca la mama acasă. Un review se plânge de cum a fost tratat la coadă, așa că fii atent la aglomerație.",
+     "weekendNight": null
+    },
+    {
+     "slug": "sapori-pizza-more",
+     "vertical": "food",
+     "rating": 9,
+     "text": "O pizză bună, cu blat plăcut și ingrediente ok, dar care ar putea fi mai calitative. Un client zice că 4 formaggi nu iese prea bine și că blatul e greu la digestie. Serviciul e rapid, iar pizza se poate lua și acasă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "the-station-pub",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Pub retras, cu terasă liniștită și atmosferă modernă. Burgerul angus e bun, cartofii sunt naturali și proaspeți, sosul de usturoi e mai discret. Porțiile sunt mari, prețurile decente, personalul amabil și există parcare. Băuturile au plăcut foarte mult.",
+     "weekendNight": false
+    },
+    {
+     "slug": "restaurant-del-vecchio",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Locație frumoasă, mai ales terasa, elegantă și liniștită. Mâncarea e foarte bună, șnițelul și gulașul ies remarcabil, iar porțiile sunt mari. Servirea e impecabilă pentru majoritatea, dar un client spune că personalul ar avea nevoie de o trezire.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev10",
+   "displayName": "Maria J. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "restaurant-whisper",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncare excelentă, cu porții generoase și arome bine combinate. Antricotul de vită premium și pieptul de rață umplut cu brie și fistic au fost gustate cu plăcere. Ospătarul Andrei a fost atent, profesionist și prompt. Revin cu siguranță.",
+     "weekendNight": null
+    },
+    {
+     "slug": "spritz-bar",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Bar cochet și curat, cu bere la halbă, espresso, limonadă și sucuri. Servirea este excelentă, iar prețurile par sub cele ale unui local apropiat. Berea e bună, iar terasa și interiorul sunt la fel de plăcute. Ar fi perfect cu câteva locuri în plus.",
+     "weekendNight": false
+    },
+    {
+     "slug": "prego-gelato-dolci",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Cinnamon roll-urile sunt proaspete și nu prea dulci, iar înghețata franui e cremoasă, la 10 lei. Cornetul însă nu se ridică la nivelul înghețatei. Cafeaua și biscuitul de casă sunt bune. Personalul e amabil, deși cupa de amarena a fost o dezamăgire.",
+     "weekendNight": null
+    },
+    {
+     "slug": "no-name-club",
+     "vertical": "drink",
+     "rating": 5,
+     "text": "Locația e spațioasă, muzica e bună și atmosfera e plăcută. Shot-urile nu sunt făcute corect, iar la bar s-au luat bani în plus față de cât era normal. Intrarea a fost scumpă la o seară tematică. Un eveniment pentru adolescenți s-a încheiat prost, cu un agent de pază agresiv.",
+     "weekendNight": true
+    }
+   ]
+  },
+  {
+   "key": "dev11",
+   "displayName": "Alex K. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Iosefin",
+   "reviews": [
+    {
+     "slug": "private-lifestyle-club-sp",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Club discret, curat și bine întreținut, cu gazde foarte amabile și oameni deschiși. Am fost vineri, nu era multă lume, dar atmosfera a fost relaxată și ne-am simțit bine. Muzica e bună. Recomand pentru o seară altfel.",
+     "weekendNight": true
+    },
+    {
+     "slug": "patiseria-tempo",
+     "vertical": "food",
+     "rating": 3,
+     "text": "Am găsit un fir de păr într-o mâncare și o muscă într-un covrig. Igiena lasă de dorit. La casă, comanda a fost greșită, iar angajata a contrazis clientul în loc să rezolve. Nu mai revin.",
+     "weekendNight": null
+    },
+    {
+     "slug": "irish-public-house",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Burgerii sunt ok, dar nu impresionează: pâinea e prea groasă, carnea de porc are gust slab, iar cartofii sunt mediocri. Serviciul e lent, comenzile se uită. Berea Guinness e printre cele mai bune din oraș, iar înăuntru e cald.",
+     "weekendNight": false
+    },
+    {
+     "slug": "mcdonald-s",
+     "vertical": "food",
+     "rating": 3,
+     "text": "Comenzi greșite la aproape fiecare vizită: lipsă de sos, salată în burger deși am spus că sunt alergică. Personalul e nepoliticos, iar șeful de sală a închis prelata cu părinții în soare. Nu recomand.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev12",
+   "displayName": "Diana L. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Fabric",
+   "reviews": [
+    {
+     "slug": "namaste-timisoara",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Chicken Masala cu carne fragedă și sos bine echilibrat, naan proaspăt și pufos: mâncarea indiană de aici chiar merită. Servirea e atentă, localul e curat, iar muzica tradițională completează atmosfera. Mâncarea vegetariană e la fel de gustoasă. Prețurile sunt OK, iar gustarea de la casă a fost o surpriză plăcută.",
+     "weekendNight": null
+    },
+    {
+     "slug": "exit-club",
+     "vertical": "drink",
+     "rating": 5,
+     "text": "La 01:00 atmosfera era inexistentă, iar muzica slabă și lipsită de energie. Problema cea mai mare a fost paza: unui client în maiou i s-a cerut să-și pună geaca, deși alții, mai sumar îmbrăcați, nu au fost deranjați. Dubla măsură e frustrantă. Pentru un club din centru, nivelul e sub așteptări.",
+     "weekendNight": false
+    },
+    {
+     "slug": "lera-s-bistro",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Pleșcavița de 35 de lei are carne de calitate și e bună, dar un client a găsit-o subțire, iar porția pare să fi scăzut de la o vizită la alta. Prețurile în rest rămân bune. Personalul e amabil, dar cam neglijent, iar o comandă a fost uitată, cu o oră de așteptare. Mâncarea merită, serviciul trebuie reglat.",
+     "weekendNight": null
+    },
+    {
+     "slug": "club-elixir",
+     "vertical": "drink",
+     "rating": 6,
+     "text": "Locație ultracentrală, pază calificată, muzică bună și weekenduri cu evenimente. Cocktailurile sunt apreciate. Totuși, există relatări serioase despre comportamentul DJ-ului și al personalului de la bar, plus semnale privind respectarea legislației și modul în care sunt tratați clienții. Atmosfera e prietenoasă, dar aceste probleme nu pot fi ignorate.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev13",
+   "displayName": "Paul M. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Elisabetin",
+   "reviews": [
+    {
+     "slug": "curtea-berarilor-la-fabrica",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Bere proaspătă, servită direct din fabrică, nepasteurizată și nefiltrată, cu o tradiție de peste 300 de ani. Mâncarea tradițională românească e gustoasă, cu porții mari, și găsești și câteva deserturi. Spațiul e mic, așa că în weekend e bine să rezervi. Vara stai pe terasă, iarna în sala încălzită. Personalul e amabil.",
+     "weekendNight": false
+    },
+    {
+     "slug": "jacks-bistro",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Meniu variat, mâncare gustoasă și servire rapidă. Parcarea e cu plată, dar primești gratuit dacă consumi ceva. Băuturile m-au dezamăgit: fresh-ul era diluat cu apă, iar cappuccino-ul avea aromă slabă. Burgerul low-carb, cu legume la grătar în loc de cartofi, e o idee bună. Per total, ok, mai încerc altceva.",
+     "weekendNight": null
+    },
+    {
+     "slug": "brauhaus-sincu-beer-factory",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Bere artizanală locală, făcută de oameni care chiar se pricep. Gust excelent, ambalaj frumos, preț competitiv. Livrarea a ajuns rapid până la ușă. Există variante pentru toate gusturile, iar pentru mine e cea mai bună bere din zonă. Recomand fără rezerve.",
+     "weekendNight": false
+    },
+    {
+     "slug": "george-s-snack-hut",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Am încercat sandvișurile cu ton și cu pui: ingrediente proaspete și combinații de arome care surprind plăcut. Localul e mic, liniștit și confortabil. Recomand sandvișul cu pui. Un review negativ menționează că mâncarea a durat până la două ore la servire, deci ține cont de timp, mai ales la terasă.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev14",
+   "displayName": "Irina N. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Cetate",
+   "reviews": [
+    {
+     "slug": "grill-plescavita",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Mâncarea e în regulă, dar serviciul îmi strică seara. Programul se oprește la 21, iar după ora aceea nu mai găsești tot meniul. Au refuzat comenzi pentru că nu aveau jar, iar cartofii lipseau de fiecare dată. Dacă ești mai mult de doi în față, aștepți lejer 15 minute.",
+     "weekendNight": null
+    },
+    {
+     "slug": "beraria-bastion",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Berea casei e de calitate, iar sandwich-ul cu crispy și burgerii sunt gustoși și bine făcuți. Personalul e profesionist, mai ales la intrare, unde un local plin fără rezervare a fost gestionat bine. Minusul: servirea e lentă, ospătarii stau mai mult înăuntru decât pe terasă.",
+     "weekendNight": false
+    },
+    {
+     "slug": "dantino-ristorante-casa-antinori",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Prețurile din restaurant sunt mai mari decât în meniul online, cu diferențe de 10-20 lei la unele preparate. Pizza cu fructe de mare avea crevetele crude, iar fritto misto livrat era prea sărat și fără gust de fructe de mare. Doamna ospătar a fost amabilă, dar burgerul părea uscat și toaleta era murdară.",
+     "weekendNight": null
+    },
+    {
+     "slug": "vittoria-del-gusto",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Locul e plăcut, iar mâncarea arată foarte bine și are gust bun: pui cu gorgonzola, Vita Florentina, platoul gurmandului. Personalul e amabil și profesionist. Prețurile sunt ridicate pentru un restaurant, dar în centru se înțelege. Scădere: un somon a durat 45 de minute, pentru că marfa nu ajunsese, și nimeni nu a anunțat din timp.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev15",
+   "displayName": "Sorin O. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "atelier-d-experience",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Cocktailuri foarte bune și inedite, unele lichioruri sunt făcute chiar de barman. Am încercat un Apostol Sour recomandat de el și a fost unul dintre cele mai bune cocktailuri pe care le-am băut. Atmosfera e intimă, personalul te face să te simți bine primit. Locul merită recomandat.",
+     "weekendNight": false
+    },
+    {
+     "slug": "cattedrale-pizzeria",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Pizza napoletană făcută cum trebuie: aluat aerat, margini bine rumenite și ingrediente de calitate. Am luat Calabrese, cu nduja excelentă. Localul e mic, cu mese dragi din lemn, serviciu profesionist, prețuri corecte. Atenție, aluatul se termină după ora 21, deci mergeți mai devreme.",
+     "weekendNight": null
+    },
+    {
+     "slug": "sushi-ya-timisoara",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Mâncarea e bună și curată: ramen, nigiri și bowl-uri, toate bine gustate. Locul e mic, cu puține mese, dar terasa cu vedere spre Piața Operei e plăcută. Gyoza ar merita o parte prăjită mai mult. Serviciul a fost însă foarte lent într-o vizită, așa că aveți răbdare.",
+     "weekendNight": null
+    },
+    {
+     "slug": "atelierul-de-kurtos-tm",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Kürtöșul se face pe loc, după preferință, și are multe variante. Rahatul turcesc cu fistic e senzațional, iar cel cu petale de trandafir seamănă cu cel din bazarul din Istanbul. Porțiile sunt mari, prețul e cinstit, iar proprietarul și personalul sunt foarte amabili. Timpul de așteptare nu e mare, deși coada de afară se vede.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev16",
+   "displayName": "Raluca P. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Freidorf",
+   "reviews": [
+    {
+     "slug": "bistro-rion-s",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Burgerii sunt buni, iar prețurile sunt decente pentru buget mic. Localul e curat și plăcut, personalul amabil. Serviciul poate fi lent când sunt multe comenzi, așa că merită sunat înainte. Crispy-ul comandat prin Wolt a ajuns crud, deci la livrare fii atent.",
+     "weekendNight": null
+    },
+    {
+     "slug": "select-patiserie",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Produsele sunt tradiționale și proaspete, fără semifabricate congelate, și chiar merită încercate. Unii spun că înainte erau mai bune. Vânzătoarele nu sunt mereu răbdătoare cu cei care nu vorbesc românește, deci pregătește-te să arăți cu degetul.",
+     "weekendNight": null
+    },
+    {
+     "slug": "the-tube",
+     "vertical": "drink",
+     "rating": 5,
+     "text": "Sunt clienți mulțumiți de un burger din oferta ieftină și de servirea rapidă. Dar mulți au primit mâncare slabă: paste cu mucegai, cartofi cu mucegai sub coajă și porții mici. Telefonul nu răspunde mereu, iar comenzile întârzie mult.",
+     "weekendNight": false
+    },
+    {
+     "slug": "restaurant-dinar",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Bucătăria sârbească e gustoasă și variată: pleșcavița, șnițelul de pui și cotletul umplut merită comandate. Porțiile sunt generoase, decorul rustic, iar personalul amabil și punctual. Minusul e fumatul în interior. Un client spune că la alt Dinar din oraș platourile sunt mai mari.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev17",
+   "displayName": "Tudor R. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Calea Șagului",
+   "reviews": [
+    {
+     "slug": "riyo-chinese-fusion",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Am luat cina la Riyo și am rămas plăcut surprins: găluștele și chiflele bao la abur au fost gustoase și bine pregătite. Locul e frumos decorat, dar mic și se aglomerează, deci merită planificat. Servirea a fost atentă și amabilă, chiar dacă nu toți din personal vorbesc bine română.",
+     "weekendNight": null
+    },
+    {
+     "slug": "stage-pub",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Localul e frumos amenajat și muzica e pe gustul meu, un ultim bastion al rockului. Mâncarea e gustoasă, iar hamsiile au fost bune. Dar mai multe recenzii vorbesc despre lipsuri de bere în sezon și despre probleme cu personalul la plată, deci fii atent la ce comanzi.",
+     "weekendNight": false
+    },
+    {
+     "slug": "prospero",
+     "vertical": "food",
+     "rating": 6,
+     "text": "Pâinea e bună și mulți spun că nu are concurență în oraș, dar la patiserie lucrurile stau altfel. Produsele de dimineață par vechi, iar mucenicii au un aluat fără gust. Am cumpărat de mai multe ori și am rămas dezamăgit de partea de dulce.",
+     "weekendNight": null
+    },
+    {
+     "slug": "nokx-club",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Atmosferă plăcută, muzică bună și un vibe tropical, potrivit pentru o seară de distracție cu prietenii. Localul e considerat printre cele mai curate din oraș, iar băuturile sunt pe măsură. Personalul e amabil. Merită încercat și revin cu siguranță.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev18",
+   "displayName": "Bianca S. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Circumvalațiunii",
+   "reviews": [
+    {
+     "slug": "pub",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Atmosfera e relaxată și cozy, potrivită pentru o seară cu prietenii, iar personalul e amabil. Din ce am văzut, e un loc bun pentru karaoke și muzică, cu un decor care te captivează. Băuturile sunt apreciate, iar seara poate ajunge mult mai lungă decât plănuiești.",
+     "weekendNight": false
+    },
+    {
+     "slug": "patiserie-traditionala-tm",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Langoșii sunt foarte buni, iar plăcinta cu cartofi și brânză e extraordinară. Mâncarea e gustoasă, servirea e drăguță și personalul foarte prietenos. Recomand cu drag, mai ales pentru cine caută patiserie tradițională.",
+     "weekendNight": null
+    },
+    {
+     "slug": "josefin-pub",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Atmosfera e foarte plăcută, iar karaoke-ul e de calitate, cu muzică bună care te face să dansezi. Personalul e amabil, băuturile bune, iar barmanii și DJ-ii sunt apreciați. Minusuri: DJ-ul sare peste melodii, iar la nota de plată au apărut băuturi neconsumate.",
+     "weekendNight": false
+    },
+    {
+     "slug": "mega-yummy",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Burgerul are un gust bun, iar ciupercile cu sosul de usturoi sunt excelente, dar puiul pare congelat și cartofii sunt moi. Shaorma cu vită a fost plăcută, cu prețuri decente. Am avut însă și probleme: gramaj sub cel promis, roșii adăugate deși fuseseră excluse și o shaorma crispy slabă.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev19",
+   "displayName": "Darius T. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Girocului",
+   "reviews": [
+    {
+     "slug": "naru",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Un local retras și intim, cu o terasă foarte drăguță, unde poți sta afară sau înăuntru. Am gustat antricot de vită și mușchiuleț de porc sous vide; mâncarea arată bine și e bine condimentată, deși mușchiulețul a fost cam tare. Prețurile sunt decente, doar antricotul e o porție mare.",
+     "weekendNight": null
+    },
+    {
+     "slug": "faber-timisoara",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Un centru cultural cu iz industrial și o atmosferă care mi-a plăcut mult. Am fost la un eveniment gastronomic, iar locul e potrivit și pentru cafea sau o discuție. La evenimente muzica poate fi prea tare, cu bas excesiv.",
+     "weekendNight": false
+    },
+    {
+     "slug": "little-hanoi",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Meniul tradițional are preparate gustoase și arome variate. Rața cu tăieței e punctul forte, crocantă afară și suculentă înăuntru. Personalul e primitor și atent, iar desertul sticky rice cu banane a fost o surpriză plăcută.",
+     "weekendNight": null
+    },
+    {
+     "slug": "club-tabaco",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Personalul e amabil, ambianța e plăcută, iar muzica e bună, cu lăutari. Poți sta liniștit la o cafea, chiar și în interior. Un client s-a plâns că a așteptat 30 de minute la comandă, așa că fii pregătit dacă ești grăbit.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev20",
+   "displayName": "Larisa U. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "curtea-berarilor-timisoreana-la-han",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Atmosfera de berărie tradițională se simte din prima clipă, iar muzica de fundal e plăcută. Mâncarea e gustoasă și porțiile sunt generoase. Ospătarii sunt amabili și atenți, chiar și când e aglomerat, deși în serile de sâmbătă pot apărea întârzieri mari. Merită o oprire dacă ești în oraș.",
+     "weekendNight": true
+    },
+    {
+     "slug": "king-z-fast-food-tunisian",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Bagheta umplută e o experiență bună: lipia e proaspăt coaptă în cuptor, ingredientele par proaspete, iar condimentele au un gust tunisian aparte. Porția satură, servirea e rapidă și personalul e prietenos. Un fast food mic, dar cu mâncare care merită încercată.",
+     "weekendNight": null
+    },
+    {
+     "slug": "brick-by-brick-coffee-brunch-cocktails",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Cafenea și brunch foarte bun, la o locație centrală. Cafeaua e de specialitate, pancakes-urile cu fistic au gust intens, iar preparatele de brunch sunt bine gătite și condimentate. Prețuri rezonabile, personal atent și opțiuni de lapte vegetal. Minusul e zgomotul și mesele cam înghesuite.",
+     "weekendNight": false
+    },
+    {
+     "slug": "gina-s-bistro",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Bistro mic, cu atmosferă intimă și personal foarte amabil. Pizza napoletană e foarte apreciată, bruschetele sunt crocante, iar deserturile au fost descrise ca fiind excelente. Porțiile sunt generoase, iar comenzile prin aplicațiile de livrare ajung bine ambalate și calde. Recomand cu încredere.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev21",
+   "displayName": "Cosmin V. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Iosefin",
+   "reviews": [
+    {
+     "slug": "harolds-restaurant",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncare bună, servire rapidă și terasa e plăcută și liniștită. Meniu variat, prețuri OK pentru ce primești. Un minus: o dată am ajuns la 19:30 și era deja închis, deși pe Google scria că e deschis până la 21:30. Verificați programul înainte de drum.",
+     "weekendNight": null
+    },
+    {
+     "slug": "beraria-blinkers-brew",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Bere artizanală, proaspătă, peste 10 sortimente, direct de la sursă. Atmosferă relaxată, local cozy, personal primitor. Prețurile sunt mai mici decât valoarea locului. Am trecut de 3-4 ori, stau la cinci minute pe jos.",
+     "weekendNight": false
+    },
+    {
+     "slug": "dei-frati-timisoara",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncare italiană bună, porții potrivite, prețuri corecte. Antipasti-ul cu mezeluri a fost proaspăt. Local mic, curat și liniștit, personal amabil, servire caldă. Atenție: un client se plânge de un fritto misto slab, așa că alegeți cu grijă din meniu.",
+     "weekendNight": null
+    },
+    {
+     "slug": "why-pizza",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Pizza la metru cu aluat crocant și moale în același timp, ingrediente de calitate și combinații bune. Paninii sunt printre cei mai buni din oraș. Prețul e cam mare, iar felia se taie cu foarfeca, deci nu știi exact ce gramaj primești. Localul e central.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev22",
+   "displayName": "Adela Z. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Fabric",
+   "reviews": [
+    {
+     "slug": "ayahuasca-coffee-piscobar",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Am încercat un pisco sour în timpul unui tur de degustare prin Timișoara și locul m-a cucerit. Băuturile sunt autentice, de inspirație peruană, preparate de un localnic din Peru care chiar știe ce face, iar prețurile sunt accesibile. Personalul e amabil, atmosfera intimă. Merită susținut.",
+     "weekendNight": false
+    },
+    {
+     "slug": "celentano",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Am comandat prin Wolt și rezultatul m-a dezamăgit. Pizza Seby cântărea 329 g în loc de 520 g declarate, iar cererea fără ardei nu a fost respectată. Ouăle și ciupercile arătau prost, cașcavalul era ars, iar un fel de pleșcavită avea doar maioneză și cartofi congelați.",
+     "weekendNight": null
+    },
+    {
+     "slug": "taste-of-bali",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncarea are arome autentice și ingrediente de calitate. Am încercat lumpia cu porc și legume, ca starter, și tempeh manis, care m-a impresionat prin textură. Sosul e foarte gustos, porțiile sunt generoase, iar personalul e amabil. Atenție la preparatele picante, ajungi să aștepți puțin, dar merită.",
+     "weekendNight": null
+    },
+    {
+     "slug": "b40-bistro",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Am sărbătorit o zi de naștere aici și am fost mulțumită de mâncare și servire. Prețurile sunt rezonabile: pentru un adult și doi copii am plătit 89 de lei și am primit și o plăcintă cu dovleac din partea casei. Gustul e de mâncare făcută în casă, porțiile generoase, iar comenzile de platouri au ajuns la timp.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev23",
+   "displayName": "Florin A. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Elisabetin",
+   "reviews": [
+    {
+     "slug": "bistro-urban-by-deligroup",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Am mancat de vreo șase ori la Urban și micul dejun, dar și felurile principale, mi s-au părut foarte bune: combinații interesante, ingrediente proaspete și prețuri decente. Atenție la prânz, când se aglomerează tare și poți aștepta mult la rând. Localul e mare, deci de obicei are loc.",
+     "weekendNight": null
+    },
+    {
+     "slug": "shaorma-100",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Am comandat burgeri 100%, dar ceapa caramelizată a fost înlocuită cu ceapă cruda, iar oul extra a fost uitat. Masa la care am stat nu era curată. Shaorma a ajuns prea iute fără să fi cerut asta, iar cartofii erau pe jumătate cruzi. Calitatea a scăzut mult față de ce era înainte.",
+     "weekendNight": null
+    },
+    {
+     "slug": "union-pub",
+     "vertical": "drink",
+     "rating": 4,
+     "text": "Am comandat mâncare pentru 12 persoane, iar după peste două ore nu a mai ajuns, apoi comanda a fost anulată fără niciun telefon sau mesaj. Timpul de livrare fusese anunțat la 35-50 de minute. Răspunsurile lor la recenzii nu au fost politicoase. Nu recomand pentru comenzi mari.",
+     "weekendNight": false
+    },
+    {
+     "slug": "restaurant-lloyd-victoriei",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Am luat masa la prânz și am rămas plăcut surprins: ciorba de pui a la grec și șnițelul vienez au fost bune, porțiile foarte mari, iar interiorul te duce cu gândul în alt timp. Prețul mi s-a părut corect. Atenție la plată cu cash și verificați restul.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev24",
+   "displayName": "Oana B. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Cetate",
+   "reviews": [
+    {
+     "slug": "riyo-wok-sushi",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncarea e foarte bună: rolurile sunt bine făcute, cu ingrediente proaspete, iar porțiile sunt generoase. Locul e aglomerat, așa că rezervă sau fii pregătit să aștepți. Servirea e amabilă și atentă, deși comanda a fost luată în engleză. Nota 9 pentru că, la aglomerare, ritmul scade.",
+     "weekendNight": null
+    },
+    {
+     "slug": "sted",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Cafeaua e foarte bună, mâncarea la fel, iar locul e amenajat cu gust și răcoros. Am apreciat mai ales personalul: amabil, atent, cu zâmbetul pe buze. Prețurile sunt accesibile și atmosfera e plăcută. Revin cu plăcere.",
+     "weekendNight": false
+    },
+    {
+     "slug": "prospero-2",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Prăjiturile și pâinea sunt punctul forte: tortul de ciocolată e ales la multe sărbători, pâinea e pe vatră, cu maia, iar iaurtul și ștrudelul de dovleac merită încercate. Minusul e personalul, uneori sec, și câteva produse: un foietaj cu mult pesmet la preț mare și pâine tare, fără gust. Calitatea nu e constantă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "one-pub-shisha-lounge",
+     "vertical": "drink",
+     "rating": 6,
+     "text": "Narghilelele sunt bune, cu o varietate mare de arome și posibilitatea de a-ți face propriul amestec. Un ospătar e foarte atent și comanda vine repede. Dar nu e consecvent: unele narghilele sunt prost întreținute, iar servirea poate fi nepoliticoasă. Mâncarea e slabă, cu carne gătită excesiv și garnituri congelate. Bun pentru o seară de relaxare, nu pentru masă.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev25",
+   "displayName": "Sebastian C. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "reciproc-cafe",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Un local amenajat cu gust, unde poți veni cu prietenii la o poveste sau un joc de societate. Băuturile artizanale și vinurile sunt variate, iar personalul e foarte amabil. Un minus: prețurile nu corespund mereu cu cele afișate, iar la bar se poate aștepta mult.",
+     "weekendNight": false
+    },
+    {
+     "slug": "pizza-delicio",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Pizza de aici e foarte bună, cu blat pufos și moale, iar sosurile cu usturoi sunt apreciate. Clienții laudează și papanașii și pastele. Un singur comentariu cere puțin mai mult sos pe blat, dar per total recomandarea e clară.",
+     "weekendNight": null
+    },
+    {
+     "slug": "joy-pub",
+     "vertical": "drink",
+     "rating": 6,
+     "text": "Atmosferă plăcută, multă lume și muzică bună, iar servirea a fost apreciată. Cheeseburgerul și cartofii au fost buni, dar aripioarele și cartofii din platou au fost tari sau arse. Deserturile au fost ok, iar prețurile sunt un pic mari.",
+     "weekendNight": false
+    },
+    {
+     "slug": "milan-bakery",
+     "vertical": "food",
+     "rating": 6,
+     "text": "Produsele de patiserie sunt gustoase, cu recomandări pentru melcul cu nucă, cornul cu ciocolată și merdeneaua cu telemea. Programul însă nu e respectat: deschid la 7, dar unii clienți spun că au fost refuzați mai devreme. Un brânzoaică fără brânză a fost dezamăgitor.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev26",
+   "displayName": "Alina D. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Freidorf",
+   "reviews": [
+    {
+     "slug": "neata-omelette-bistro",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Omleta si platourile sunt gustoase si sanatoase. Servirea e rapida chiar si cand localul e destul de plin, iar personalul e foarte amabil. Locul e primitor si linistit, si pot veni si cu cainele. Recomand pentru micul dejun.",
+     "weekendNight": null
+    },
+    {
+     "slug": "fratelli-lounge-club-timisoara",
+     "vertical": "drink",
+     "rating": 5,
+     "text": "Am iesit cu prietenii sa ne distram, dar am ramas dezamagita. Intrarea si shot-urile sunt scumpe, caldura din interior e mare, iar muzica nu mi-a placut. Hugo-ul a venit fara gheata si menta, si tot l-am platit. Pretul apei difera intre meniu si bar, iar treapta de la intrare e periculoasa pe intuneric.",
+     "weekendNight": false
+    },
+    {
+     "slug": "locanda-del-corso",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Restaurant primitor, cu echipa atenta si calma. Pizza de la cuptorul cu lemne e foarte buna, vinetele cu parmezan si dorada au fost excelente. Fritto misto-ul e cel mai bun din oras, desi sosul aioli ar mai avea de lucrat. Lasagna a fost arsa si prea moale, la 70 de lei.",
+     "weekendNight": null
+    },
+    {
+     "slug": "cosi-garden",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Cafenea intima, cu ambient placut si personal foarte prietenos. Cuba libre-ul a fost delicios, iar barmanul s-a straduit sa faca o bautura pe gustul nostru, cu chipsuri si masline oferite de casa. Cafeaua e foarte buna, preturile sunt ok, iar muzica e cam tare dar placuta.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev27",
+   "displayName": "Ovidiu E. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Calea Șagului",
+   "reviews": [
+    {
+     "slug": "czech-in-iulius-town-by-staropramen",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Locul e frumos și cu copiii nu e problemă. Burgerul pulled pork și crispy-ul au fost reușite în una din vizite, iar lista de beri e variată. Coastele de porc însă au fost mai mult os și grăsime, pentru 75 de lei. Rezervarea de separeu nu apărea în sistem la sosire, dar ospătărița Sandra a fost foarte atentă.",
+     "weekendNight": false
+    },
+    {
+     "slug": "la-fala-fel-istanbul-2",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Șaorma și donerul sunt gustoase, carnea e bine făcută, iar sosul de măsline se remarcă. Servirea e rapidă, personalul prietenos și prețurile decente. La o altă vizită însă cartofii au fost slab gătiți, porția mică, iar atitudinea personalului a fost nepoliticoasă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "burger-club-by-100-original",
+     "vertical": "drink",
+     "rating": 6,
+     "text": "Burgerii sunt bine făcuți când ajung cum trebuie: carne de vită bună, sosul casei și cartofi buni. Problema e serviciul: am așteptat aproape 30 de minute, o comandă din aplicație a venit greșită și rece, iar muzica din club se aude tare și afară.",
+     "weekendNight": false
+    },
+    {
+     "slug": "gradina-banateana",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Terasa de pe malul Begăi e plăcută, cu personal amabil și mâncare gustoasă: ciorbă de văcuță, paste cu sos de hribi, platou de fructe de mare, clătite cu sos de vanilie. Porțiile sunt mari, iar la rezervare a apărut o problemă cu masa dorită. Meniul ar merita deserturi mai variate.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev28",
+   "displayName": "Teodora F. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Circumvalațiunii",
+   "reviews": [
+    {
+     "slug": "helios-bistro",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Bucătăria e foarte bună și meniul e variat. Restaurantul are un separeu potrivit pentru o masă cu prietenii. Locația e liniștită și se potrivește bine cu activitatea sportivă (squash, fotbal, tenis), personalul e amabil. Baza sportivă ar mai avea nevoie de îmbunătățiri, iar cafeaua, berea și vinul sunt cam scumpe.",
+     "weekendNight": null
+    },
+    {
+     "slug": "beraria-h-herastrau",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Atmosfera e deosebită, cu multă energie și muzică bună, mai ales la concerte. Terasa e plăcută și personalul e în mare parte amabil. Mâncarea e modestă, iar o porție de cartofi prăjiți costă 18 lei, cam mult pentru ce primești. Meniul are cam zece beri, deci nu veni cu așteptări culinare.",
+     "weekendNight": false
+    },
+    {
+     "slug": "delish-bistro",
+     "vertical": "food",
+     "rating": 4,
+     "text": "Porțiile sunt foarte mici, garnitura vine cât două linguri, iar salata e minimă. Legumele din ciorba erau tari și nefierte, cartofii arși pe alocuri, iar mâncarea lipsită de condimente. Nu are legătură cu meniul zilei, și pare catering ieftin. Nu recomand.",
+     "weekendNight": null
+    },
+    {
+     "slug": "yamy-bistro",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Sandvișurile și salatele sunt proaspete, cu ingrediente de calitate și porții generoase. Raportul calitate-preț e bun, iar în meniu există și produse fără carne. Proprietarii sunt pasionați și implicați, iar atmosfera e plăcută. Un client a criticat ingredientele dintr-un sandviș, deci merită verificat la comandă.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev29",
+   "displayName": "Marius G. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Girocului",
+   "reviews": [
+    {
+     "slug": "barrio",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Un loc cu o atmosferă intimă și decor autentic, unul dintre favoritele mele. Personalul e prietenos și te ajută cu recomandări, iar vitello tonnato nu dezamăgește. Cocktailurile sunt bune, dar există o consumație minimă la masă, ceea ce nu mi-a plăcut.",
+     "weekendNight": false
+    },
+    {
+     "slug": "cinnamood",
+     "vertical": "food",
+     "rating": 6,
+     "text": "Dezamăgitor. Rolurile de scorțișoară aveau aluatul tare și uscat, iar cremele erau foarte dulci, fără prea mult gust. Prețul e mare pentru ce primești. Unii spun că untul se simte bine și toppingurile sunt gustoase, dar aluatul pare necopt.",
+     "weekendNight": null
+    },
+    {
+     "slug": "the-scotland-yard",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncare bună și porții mari în centrul vechi, cu aceeași calitate de ani buni. Coastele BBQ sunt foarte fragede, iar chipsurile de cartofi sunt excelente. Burgerul e bun, dar nu spectaculos. Ospătarii sunt atenți, prețurile rezonabile. Un minus: bucătăria a refuzat o mică modificare la burger.",
+     "weekendNight": null
+    },
+    {
+     "slug": "balkan-bistro-timisoara",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Restaurant cu specific sârbesc și balcanic, cu pleșkaviță și cevapcici servite cu caimac autentic. Papanașii sunt un deliciu, iar ciorba de burtă și puiul cu piure au fost excelente. Personalul este amabil și rapid, porțiile sunt mari. Prețurile sunt puțin mai ridicate, dar merită.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev30",
+   "displayName": "Roxana H. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "bruck-cafe-unirii",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Bruck, din Piața Unirii, e locul unde am luat micul dejun de fiecare dată când ieșeam dimineața la plimbare prin centru. Mâncarea e foarte bună, ingredientele par de calitate, prețurile accesibile. Personalul e atent și amabil. Un minus: o porție de paste a fost mult sub gramajul din meniu.",
+     "weekendNight": null
+    },
+    {
+     "slug": "shock-kebab-timisoara",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Shaorma e voluminoasă și cu mult sos, cea cu cheese a fost chiar cheesy. Dar kebabul avea piele de pui, maioneza e de slabă calitate și carnea puțină. Am cerut fără varză din cauza unei alergii, am comandat prin BoltFood și nu am primit bon fiscal.",
+     "weekendNight": null
+    },
+    {
+     "slug": "wizards-pub",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Localul mi-a plăcut mult: are biliard, board games și o tematică rar întâlnită în România. Băuturile sunt gustoase, prețurile accesibile, terasa curată, personalul excelent. Cocktailurile au fost prea dulci pentru gustul meu, iar masa de biliard e slabă, bilele se abat. Într-o seară nu s-a putut comanda mâncare.",
+     "weekendNight": false
+    },
+    {
+     "slug": "restaurant-miorita-unirii",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Atmosferă tradițională, într-un beci amenajat cu obiecte românești vechi și muzică populară. Mâncarea e gustoasă și copioasă, meniul zilei cu trei feluri la 35 de lei, prețuri decente, ospătari amabili. Minusuri: într-o vizită tacâmurile erau murdare, ciorba de fasole cu ciolan a ieșit rece.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev31",
+   "displayName": "Dan I. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Iosefin",
+   "reviews": [
+    {
+     "slug": "roast-cafe-bistro",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Mâncare bună, ingrediente proaspete. Burgerul e cinstit, carnea la grătar e fixă cum trebuie, iar vita cu dovlecei și capere e de reținut. Local plăcut, decorat cu gust, personal atent și prețuri accesibile. Revin.",
+     "weekendNight": null
+    },
+    {
+     "slug": "storia-dance-bar",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Muzică bună, atmosferă relaxată, dar cu energie cât să stai ore bune. Barmanii sunt pricepuți, recomandă și personalizează cocktailurile. Program non-stop, băuturi echilibrate și constante. Cel mai bun cocktail din oraș, după părerea mea.",
+     "weekendNight": false
+    },
+    {
+     "slug": "prospero-iulius-town",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Mall modern, curat și bine organizat, cu multe magazine, restaurante și zone verzi. Parcarea e aglomerată și în timpul săptămânii. Problema e pe terasă: băuturi, țigări și scuipat aruncate de la etaje. Copiii sar încălțați pe canapelele unde se mănâncă. Paza ar trebui să fie mai atentă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "onetwo-room2",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Cea mai bună bere din zonă, mereu bine servită. Locația e minunată, oamenii din jur sunt faini, iar personalul și proprietarul se pricep la bere. Sortimentul e variat, muzica e pe gustul tuturor. Recomand din plin.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev32",
+   "displayName": "Simona J. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Fabric",
+   "reviews": [
+    {
+     "slug": "sara-bere-de-casa",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Berea de casă de aici e artizanală și chiar foarte bună, merită încercată fără ezitare. Toate cele cinci note primite sunt de 10, deci nu e o părere izolată. Dau 10.",
+     "weekendNight": false
+    },
+    {
+     "slug": "pizza-napoleon",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Pizza e bună și ieftină, potrivită pentru studenți. Restul e de evitat: ciorba de perișoare nu semăna cu rețeta, pastele aveau doar mult sos, shaorma a ajuns rece, iar o comandă de patru pizza mari pentru o petrecere a durat trei ore și a sosit uscată. Notă 5.",
+     "weekendNight": null
+    },
+    {
+     "slug": "like-pub",
+     "vertical": "drink",
+     "rating": 5,
+     "text": "Renovarea a făcut locul mai spațios, băutura e ieftină, muzica bună, iar carnatul special e o porție generoasă la un preț bun. Problema e siguranța: recenziile descriu bătăi, apeluri la poliție și un security criticat. Programul afișat a fost greșit, am ajuns pe ploaie și era închis. Notă 5.",
+     "weekendNight": false
+    },
+    {
+     "slug": "mimi-s-delices",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Locul e mic, cu 3-4 mese, dar personalul e amabil și rapid, iar cafeaua și pancakes Alegria au fost apreciate. Dezamăgirile: ciocolata e ieftină, nu se folosește nutella, cataif-ul e slab, iar un pahar costă 39 de lei. Limonada pare sub gramajul afișat. Notă 5.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev33",
+   "displayName": "Lucian K. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Elisabetin",
+   "reviews": [
+    {
+     "slug": "papabox",
+     "vertical": "food",
+     "rating": 3,
+     "text": "Pizza arată bine, dar blatul nu e copt uniform: e fie subțire și uscat, fie ars pe margini. Mărimea și prețul sunt decente, însă nu e o pizza care să te convingă să o recomanzi, mai ales cu atâta concurență în oraș. Comenzile au avut și greșeli: sosuri lipsă și pizza diferită de cea comandată.",
+     "weekendNight": null
+    },
+    {
+     "slug": "gentlemen-s-social-club",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Centru de divertisment nou în oraș, deschis non-stop, cu parcare gratuită. Bowling, biliard, darts și poker sunt bine întreținute, iar personalul e atent și politicos. Muzica e la nivel potrivit, nu acoperă conversațiile. Un review se plânge că sistemul e vechi și se blochează, deci merită verificat înainte.",
+     "weekendNight": false
+    },
+    {
+     "slug": "madame-magnifique-gheorghe-lazar",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Croissantul și rulourile cu fistic sunt printre cele mai bune din oraș, iar cozonacul cu fistic e pufos și moale. Prăjiturile sunt aerate, nu excesiv de dulci, iar cea cu zmeură e acrișoară. Singura rezervă: o prăjitură cu fistic avea textură mai densă decât un mousse. Locația e primitoare și personalul amabil.",
+     "weekendNight": null
+    },
+    {
+     "slug": "csiki-beer-house",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Terasă în aer liber, spațioasă și cu gust, cu personal atent și servire bună. Mâncarea e bună pe ansamblu: burgerul a fost cum te aștepți, iar la livrare gulașul a venit cu pâine și șervețele umede. Minusul: cartofii sunt congelați, ceea ce se simte. Într-o vizită gulașul a fost uscat, deci nu e mereu constant.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev34",
+   "displayName": "Andreea L. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Cetate",
+   "reviews": [
+    {
+     "slug": "darc-pe-mal",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Terasă răcoroasă pe malul Begăi, cu umbră de la un copac mare și scaune confortabile. Limonadele naturale cu fructe sunt bune. Ce mă deranjează: muzica e prea tare ca să mai vorbești la masă, iar o recenzie recentă descrie un ton arogant la bar, cu lista de prețuri greu de citit sub soare.",
+     "weekendNight": false
+    },
+    {
+     "slug": "la-focacceria",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Focaccia e pufoasă și aromată, margherita și salami au fost proaspete chiar și dimineața. Prăjiturile cu portocală și mac și cannoli sunt la fel de bune, iar locul e mic, curat și primitor. Scad două puncte: după mutarea în altă locație, un croissant a ieșit tare, iar crema de fistic și ciocolată a fost slabă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "clinica-de-bere",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Berea este foarte bună, spun mai mulți clienți, comparabilă cu cele germane de top, și se face manual de o echipă mică. Servirea e impecabilă, curățenia la fel. Singura nemulțumire: ar merita să apară și în alte locații din oraș.",
+     "weekendNight": false
+    },
+    {
+     "slug": "gratarul-cu-staif",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Mâncarea e gustoasă și satisfăcătoare: brisket-ul a fost uscat pe alocuri, dar salata cu halloumi și papanașii au plăcut. Servirea e rapidă și atentă, cu oameni calzi. Un client a reclamat însă carne complet carbonizată la două meniuri comandate, ceea ce nu poate fi trecut cu vederea. Merită încercat, cu rezerve.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev35",
+   "displayName": "Victor M. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "hotline-pizza",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Pizza de aici e cea mai bună pe care am mâncat-o în ultima vreme. Gustul e autentic, ingredientele sunt de calitate, iar diavola merită încercată. Personalul e foarte amabil, servirea rapidă, iar livrarea la domiciliu a fost la fel de impresionantă. Sigur revin.",
+     "weekendNight": null
+    },
+    {
+     "slug": "bere-timisoreana",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Locul s-a schimbat mult față de cum îl știam și s-a îmbunătățit. Am gustat sarmale și bulz banatean, recomand cu încredere. Berea nefiltrată, servită în halbe reci, e grozavă, iar chelnerii sunt atenți. Un client s-a plâns de așteptarea de 20 de minute după comandă, deci fii pregătit.",
+     "weekendNight": false
+    },
+    {
+     "slug": "drunken-rat",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Coastele de porc nu mai sunt la fel de savuroase ca în studenție, așa că am rămas cu nostalgia. Meniul zilei, cu ciorbă de pui și mușchi, a fost bun, iar sosurile dau dependență. Burgerul a plăcut mult, porțiile sunt mari, atmosfera relaxată, iar berea Helles e bună. Un client a fost dezamăgit de cheeseburger.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev36",
+   "displayName": "Carmen N. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Freidorf",
+   "reviews": [
+    {
+     "slug": "bastionbastards-pub",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Pentru o bere cu prietenii e un loc bun, cu multe variante în meniu și prețuri bune la bere. Mâncarea nu e constantă: unii au zis că e excelentă, dar la ciolan am avut parte de carne uscată. Personalul e prietenos, doar că strâng de pe masă cam repede. Muzica e bună, atmosfera plăcută.",
+     "weekendNight": false
+    },
+    {
+     "slug": "cofetaria-dessertime",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Prăjiturile și sărățelele cu cascaval au gust foarte bun, iar pentru evenimente au fost alese de mai mulți. Personalul e drăguț. Prețurile sunt însă sus: un ecler de 23 de lei a părut scump unui client, iar la un tort comandat după poză au fost reclamate detalii greșite, deci verifică bine comanda.",
+     "weekendNight": null
+    },
+    {
+     "slug": "timeout-bistro",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Mâncarea e gustoasă și prezentabilă, porțiile sunt mari, iar servirea e rapidă. Atmosfera e liniștită, bună pentru o cafea sau un prânz fără grabă, iar prețurile sunt acceptabile pentru ce primești. Minusuri: la terasă mesele erau ruginite, iar o omletă a fost nefăcută în interior.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev37",
+   "displayName": "Emil O. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Calea Șagului",
+   "reviews": [
+    {
+     "slug": "brutarie-patiserie-tuana",
+     "vertical": "food",
+     "rating": 5,
+     "text": "Painea e singurul lucru pe care nu l-am regretat. Produsele de patiserie depind de noroc: croissantul cu ciocolata a venit ars, iar la o comanda mare am platit si 50 de bani pe punga. Personalul e reticent, iar parcarea lipseste.",
+     "weekendNight": null
+    },
+    {
+     "slug": "simplu-bistro",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Burgerii au porti mari si gust bun, cartofii la fel, iar comanda a fost gata in vreo 20 de minute. Pulpa de rata a fost tare si dulceata de cirese lipsea, deci nu e totul perfect. Servirea ar putea fi mai prompta, dar limonada a fost buna.",
+     "weekendNight": null
+    },
+    {
+     "slug": "7spices",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Saorma de pui din meniul de 29 de lei a fost cea mai buna pe care am mancat-o, cu verdeturi aromate si porție generoasa. Platoul libanez e de impartit in doi. Exista si variante mai usoare si ceva potrivit pentru copii, preturi corecte, loc linistit.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev38",
+   "displayName": "Gabriela P. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Circumvalațiunii",
+   "reviews": [
+    {
+     "slug": "sabres-restaurant",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Restaurantul Sabres mi-a plăcut mult. Caracatița cu cartofi natur a fost punctul forte, iar pastele cu creveți și cremă de usturoi au fost foarte bune. Personalul e amabil și atent, atmosfera e plăcută, iar prețurile sunt corecte pentru calitate. La desert, tenerina a avut o amărăciune prea mare pentru mine, tiramisu-ul a fost ușor fad, dar tarta cu mere a ieșit bine. Recomand rezervarea, mai ales vinerea seara.",
+     "weekendNight": null
+    },
+    {
+     "slug": "student-s-pub",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Am luat micul dejun aici și a fost în regulă: cappuccino gustos, prețuri decente, personal amabil. Burgerii crispy și pizza Quattro Stagioni au fost reușite, cu porții care sătură. Atmosfera e relaxată, cu aer studențesc. Un minus: un membru al personalului nu părea atent la igienă, iar servirea cu părul desprins lasă de dorit.",
+     "weekendNight": false
+    },
+    {
+     "slug": "ramore-fresh-food-timisoara",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Nu am stat în local, am luat la pachet doi burgeri, cartofi și mujdei. Porțiile sunt foarte mari, iar mujdeiul e cu adevărat din usturoi, nu sos. Comanda a venit repede, deși era coadă. Cartofii cu usturoi și cei cu guanciale merită încercați, carnea și chifla au fost bune. Recomand cu încredere.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev39",
+   "displayName": "Horia R. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Girocului",
+   "reviews": [
+    {
+     "slug": "scart-loc-lejer",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Loc foarte plăcut și liniștit, fără muzică tare, cu multă verdeață și răcoare. Are cărți de împrumut gratuite și un mic muzeu cu obiecte din perioada comunistă. Servirea e amabilă, iar băuturile și cafelele sunt variate. Revin cu siguranță.",
+     "weekendNight": false
+    },
+    {
+     "slug": "pizza-no-limits",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Pizza de familie cu ingrediente bune și blat pufos, personalul e atent și ambianța e plăcută. Am mâncat aici cât am stat în hotelul de vizavi și am revenit. Prețurile sunt cam ridicate pentru ce primești, dar calitatea se simte. Recomand.",
+     "weekendNight": null
+    },
+    {
+     "slug": "manufactura-pub",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Pub la subsol, cu muzică rock și trupe live din când în când, atmosferă destinsă și fără pretenții. Greu de găsit, nu are firmă la intrare. Berea e bună, cu o gamă variată. Unii au găsit personalul nepoliticos și fumul puternic, deci depinde de seară.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev40",
+   "displayName": "Monica S. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "paso-local-cuisine",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Prima vizită a fost foarte reușită: mâncarea e gustoasă și bine gătită, meniul are multe feluri și toate sunt disponibile. Servirea e impecabilă, prețurile sunt accesibile și atmosfera e plăcută. Am citit că rezultatul depinde mult de bucătar, iar un pahar de vin la 37 de lei mi se pare exagerat. Desertul merită încercat.",
+     "weekendNight": null
+    },
+    {
+     "slug": "heaven",
+     "vertical": "drink",
+     "rating": 6,
+     "text": "Printre puținele stranduri decente din Timișoara, cu multă verdeață și bazine mari. Intrarea costă 50 de lei fără șezlong, iar personalul nu e mereu amabil, mai ales la verificarea bagajelor. Piscina pentru copii e separată, dar regulile nu sunt respectate de toți. Cafea doar espresso sau frappe.",
+     "weekendNight": false
+    },
+    {
+     "slug": "magic-pizzeria",
+     "vertical": "food",
+     "rating": 6,
+     "text": "Părerile sunt împărțite. La o vizită, personalul a fost primitor, coastele cu sos BBQ au fost fragede, iar burgerii aveau mult sos. Comenzile prin Wolt însă au venit incomplete, iar o comandă online a fost anulată fără niciun anunț. Pizza ar merita o ungere mai generoasă cu sos.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev41",
+   "displayName": "Iulian T. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Iosefin",
+   "reviews": [
+    {
+     "slug": "database-tm",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Atmosferă plăcută, muzică bună și personal prietenos. Minusuri: coada la toaletă poate dura 30 de minute, iar în timp ce aștepți ți-e frig. Sonorizarea e tare, la limită. O problemă cu o brățară de pe mână nu a fost rezolvată pe Instagram.",
+     "weekendNight": false
+    },
+    {
+     "slug": "la-pinochio",
+     "vertical": "food",
+     "rating": 7,
+     "text": "Prânzul în timpul săptămânii e cel mai bun moment: mâncare caldă, proaspătă, porții generoase, servire rapidă. Pizza comandată la livrare a fost însă o dezamăgire, cu blat necopt și gust fad, iar comanda de la 22:00 a ajuns după o oră și jumătate.",
+     "weekendNight": null
+    },
+    {
+     "slug": "club-1902",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Loc cozy, bun pentru meciuri și pentru ieșiri cu prietenii. Berea e bună, personalul e prietenos, iar evenimentele și seara de karaoke sunt faine. Burgerul e lăudat ca cel mai bun din oraș. Liniștit când vrei o seară fără zgomot.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev42",
+   "displayName": "Patricia U. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Fabric",
+   "reviews": [
+    {
+     "slug": "hype-culture",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Experiență bună pe ansamblu: am cerut să schimbăm masa de lângă ușa rece și a fost ok. Piept de curcan cu sos de gorgonzola și nuci caramelizate, foarte gustos, plus un cocktail cu citrice. Atenție la prânz: serviciul poate întârzia, unii clienți au plecat după peste jumătate de oră de așteptare.",
+     "weekendNight": null
+    },
+    {
+     "slug": "bereta-brewing-co",
+     "vertical": "drink",
+     "rating": 10,
+     "text": "Bere foarte bună, în special IPA-urile Triple Brutality și Alpha Overload. Nu există taproom, deci se cumpără direct de la brewery, dar colaborarea a fost rapidă și flexibilă, cu engleză fluentă. Mango panna cotta e o bere de vară fructată, o descoperire. Prețurile sunt plăcute.",
+     "weekendNight": false
+    },
+    {
+     "slug": "erba-restaurant",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Terasa e frumoasă, cu vedere spre Bega. Mâncarea e italienească, sofisticată și bine prezentată, prețul acceptabil. Pastele cu fructe de mare sunt printre cele mai bune din Timișoara, midiile perfect gătite. Serviciul e atent, dar la aglomerație felul principal a durat 30-40 de minute. Un oaspete a reclamat un pui nefiert.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev43",
+   "displayName": "Silviu V. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Elisabetin",
+   "reviews": [
+    {
+     "slug": "beer-pub",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Locație foarte centrală, iar prețurile la mâncare și băutură sunt decente. Atmosfera industrială e plăcută și se organizează des evenimente tematice. Minusurile: la draft erau doar una din cele trei beri afișate, iar muzica a fost nasoală, DJ-ul schimba ritmul la fiecare două melodii. Recomand, dar cu rezerve.",
+     "weekendNight": false
+    },
+    {
+     "slug": "cofetaria-trandafirul",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Plăcintele cu prune și nuci sunt super bune, iar tortul de ciocolată comandat pentru o zi de naștere a fost apreciat, la fel și tortul Imperial. Personalul e amabil și produsele par proaspete. Nu la fel de bune: savarina, care e mai gustoasă la supermarket, și limonada de 18 lei, slabă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "troppo-buono-pizza-pasta",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Pizza e coaptă pe vatră, cu blat bine copt și ingrediente de calitate, exact stilul italian autentic. Locul e mic și primitor, personalul e amabil și binedispus, iar la final ai parte de un shot de limoncello din partea casei și de o cafea. Recomand cu încredere pentru o masă bună.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev44",
+   "displayName": "Lavinia Z. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Cetate",
+   "reviews": [
+    {
+     "slug": "bulldog-burger",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Burgerii au gust intens și porții generoase, iar prețul unic pentru toți e un plus. Cartofii și sosurile sunt bune, dar la un box au lipsit cartofii dulci și mi-aș fi dorit mai multă carne în loc de salată și pâine. Servirea rapidă și amabilă.",
+     "weekendNight": null
+    },
+    {
+     "slug": "spartan-centru",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Snitelul la pita a fost bun pentru un fast-food, iar ecranul cu statusul comenzii e util, am primit mâncarea în 9 minute. Mă deranjează însă că s-a scumpit destul de mult. Au existat și comenzi greșite sau porții mici, deci verificați ce primiți. Managerul se implică și se vede.",
+     "weekendNight": null
+    },
+    {
+     "slug": "a-clair-by-alma-dulce",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Eclerele sunt fresh, ușoare și cu zahăr redus, iar cafeaua e pe măsură, lucru apreciat de cineva care a încercat multe cofetării. Pentru nuntă și botez, tortul, candy bar-ul și prăjiturile au fost delicioase și au impresionat invitații. Echipa e atentă la detalii și comunicarea e excelentă.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev45",
+   "displayName": "Ciprian A. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "san-marzano",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Pizza foarte bună, iar sosul de usturoi merită prețul. Angajații sunt amabili și atenți: după câteva zile, un membru al echipei m-a întrebat, întâmplător, cum a fost pizza. Am mâncat și pe loc, și comandat acasă, și ambele variante au fost plăcute.",
+     "weekendNight": null
+    },
+    {
+     "slug": "the-80s-pub",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Băuturile și muzica au plăcut mai multora, prețurile sunt bune, iar servirea excelentă. Minusurile: seara e multă lume destul de beată, paznicul de la intrare e strict cu garderoba, iar la masă nu ai voie să joci table. O seară de karaoke vara, pe interior, ar fi un plus.",
+     "weekendNight": false
+    },
+    {
+     "slug": "restaurant-bulevard-traditional",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Mâncare tradițională cum îmi place: ciorba de burtă a fost apreciată, pâinea e de casă, iar clătitele bănățene sunt printre cele mai bune. Porțiile sunt foarte mari, tocitura e enormă, deci ia-o în doi. Unii au găsit grătarul obosit și șnițelul fără gust, așa că alege cu atenție.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev46",
+   "displayName": "Denisa B. (DevAccount)",
+   "type": "regular",
+   "neighborhood": "Freidorf",
+   "reviews": [
+    {
+     "slug": "sidebar",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Un loc intim, unde poți savura un vin fără zgomot prea mare și poți privi strada. Ospătarul a fost amabil, vinul bun, iar cocktailurile tari sunt din belșug. Pentru mine sunt cam dulci, dar dacă îți plac dulciurile e locul tău. Plată doar cu cash, ceea ce e ciudat pentru un loc ca ăsta.",
+     "weekendNight": false
+    },
+    {
+     "slug": "pizzeria-cora-livrari",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Pizza e bună și prețurile sunt mici, ceea ce pentru un buget de student contează enorm. Ingredientele sunt gustoase, blatul bine făcut, iar porțiile sunt generoase. Comanda ajunge caldă și bine ambalată, personalul e amabil. Merită pentru o cină ieftină.",
+     "weekendNight": null
+    },
+    {
+     "slug": "mgm-bastion-pub-food",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Pizza e foarte gustoasă, cu blaturi bune, iar raportul calitate-preț e excelent, cu porții mari. Terasa e plăcută vara, atmosfera e relaxată și cafeaua bună. Serviciul a fost lent când erau puține mese ocupate. Un recenzent a găsit pizza uleioasă, deci nu e unanim.",
+     "weekendNight": false
+    }
+   ]
+  },
+  {
+   "key": "dev47",
+   "displayName": "Remus C. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Calea Șagului",
+   "reviews": [
+    {
+     "slug": "pasticceria",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Tortul comandat a rezistat foarte bine chiar dupa ore de drum cu masina, iar gustul a fost cel mai bun din cate am incercat. Cafeaua e buna, cinnamon roll-ul are blat umed si multa crema, iar doamna de la vanzare e draguta. Preturile sunt bune. Locul e micut, cu terasa afara. Un minus: mirosul de coptura se impregneaza in haine.",
+     "weekendNight": null
+    },
+    {
+     "slug": "helios-sport-club",
+     "vertical": "drink",
+     "rating": 9,
+     "text": "Baza are multe terenuri, deci sansele sa gasesti disponibilitate sunt mari, chiar si in orele de varf. Preturile sunt decente fata de alte locatii. Antrenorii sunt implicati si rabdatori, iar in sezonul rece balonul ofera conditii bune. Atmosfera e placuta. Un caz neplacut cu un teren ocupat de altcineva a fost singurul minus.",
+     "weekendNight": false
+    },
+    {
+     "slug": "mas-bistro",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Burgerii sunt suculenti si bine preparati, cartofii sunt crocanti, iar bauturile completeaza bine masa. Localul e modern, curat, cu toaleta curata, personalul e amabil si servirea rapida. Terasa e placuta, muzica potrivita. Un loc in care te intorci cu drag.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev48",
+   "displayName": "Delia D. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Circumvalațiunii",
+   "reviews": [
+    {
+     "slug": "docks",
+     "vertical": "drink",
+     "rating": 8,
+     "text": "Terasă plăcută, cu ecran mare unde se văd bine meciurile; pentru zilele cu meci e bine să rezervi. Personalul a ținut ritmul cu o singură ospătăriță la multe mese, iar mâncarea a fost gustoasă. Prezentarea farfuriilor nu a fost grozavă. Am citit și plângeri despre comenzi uitate și așteptare lungă, deci depinde mult de seară.",
+     "weekendNight": false
+    },
+    {
+     "slug": "la-pizza-napoletana",
+     "vertical": "food",
+     "rating": 8,
+     "text": "Pizza are blat subțire și gust bun, iar cei care au cerut sos de roșii extra au fost mulțumiți. Ce nu a mers: prosciuttoul tăiat în bucăți mici nu arată prea bine, iar un ospătar părea deranjat de orice cerere. Localul are atmosferă primitoare, dar atitudinea personalului contează mult pentru o experiență plăcută.",
+     "weekendNight": null
+    },
+    {
+     "slug": "club-amo",
+     "vertical": "drink",
+     "rating": 7,
+     "text": "Locație frumoasă, cu muzică live de genuri diferite și petreceri bune. Personalul e amabil, iar paza e atentă. Un minus serios: o sticlă de șampanie a fost taxată peste prețul din meniu, iar bonul fiscal nu a fost eliberat la cerere. Verifică nota înainte să comanzi.",
+     "weekendNight": true
+    }
+   ]
+  },
+  {
+   "key": "dev49",
+   "displayName": "Matei E. (DevAccount)",
+   "type": "local",
+   "neighborhood": "Girocului",
+   "reviews": [
+    {
+     "slug": "indian-bistro",
+     "vertical": "food",
+     "rating": 10,
+     "text": "Mâncarea indiană e foarte bună și autentică. Poți alege nivelul de iuțeală la fiecare fel, de la 0 la 5, deci se potrivește și celor care nu suportă picantul. Au multe variante fără carne, iar ceaiul indian și limonada sunt foarte gustoase. Personalul e primitor și atent, decorul e frumos. Cu siguranță revin.",
+     "weekendNight": null
+    },
+    {
+     "slug": "bibliotheka",
+     "vertical": "drink",
+     "rating": 6,
+     "text": "Am văzut rar atâtea tipuri de bere într-un singur loc, mai ales artizanale, și majoritatea sunt reci. Locul e simplu, doar mese și scaune, iar muzica e cam tare, cu boxele chiar lângă mese. Prețurile la berile îmbuteliate nu sunt afișate, deci nu știi cât plătești. Când am cerut o lămurire la notă, am fost acuzat de furt, iar patronul a avut o reacție agresivă. Din păcate, asta strică tot.",
+     "weekendNight": false
+    },
+    {
+     "slug": "fast-food-antalya",
+     "vertical": "food",
+     "rating": 4,
+     "text": "Am luat o shaorma și nu mi-a plăcut deloc. Carnea era foarte puțină, cea mai mare parte era cartof congelat, iar maioneza și sosul de usturoi erau prea multe. Unii spun că înainte era una dintre cele mai bune din oraș, dar acum gustul s-a schimbat și cartofii nu mai au aroma de altădată. Am avut și o comandă greșită. Nu recomand.",
+     "weekendNight": null
+    }
+   ]
+  },
+  {
+   "key": "dev50",
+   "displayName": "Sara F. (DevAccount)",
+   "type": "tourist",
+   "neighborhood": null,
+   "reviews": [
+    {
+     "slug": "berarescu",
+     "vertical": "drink",
+     "rating": 4,
+     "text": "Am venit cu gândul la o bere artizanală, dar la draft era disponibilă doar Azuga, deși meniul e plin de variante. Burgerii sunt mici, cartofii puțini, iar pentru prețul cerut așteptam mai mult. Personalul a fost amabil, dar la o comandă la pachet mâncarea a ajuns scursă.",
+     "weekendNight": false
+    },
+    {
+     "slug": "cofetaria-verona",
+     "vertical": "food",
+     "rating": 6,
+     "text": "Merdenea cu brânză e recomandată de mai mulți clienți, iar tarta cu fructe și tortul fără gluten primesc laude pentru gust echilibrat. Alții găsesc prăjiturile scumpe și cu gust șters, iar o reclamație vorbește despre o prăjitură îndoielnică și un incident la casă. Ambianța e plăcută.",
+     "weekendNight": null
+    },
+    {
+     "slug": "uptown-kitchen-lounge",
+     "vertical": "food",
+     "rating": 9,
+     "text": "Mâncarea e gustoasă: bruschetele mixte, tagliatele cu somon și lava cake sunt lăudate, iar crispy-ul de pui cu sos de gorgonzola are pesmet panko reușit. Serviciul e atent și primitor. Un singur client se plânge de prețuri și porții, dar majoritatea ies mulțumiți.",
+     "weekendNight": null
+    }
+   ]
+  }
+ ]
+}
