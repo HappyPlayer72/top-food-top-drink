@@ -62,7 +62,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [confirmLocalCheckin, setConfirmLocalCheckin] = useState(false);
   const [gpsVerified, setGpsVerified] = useState(false);
   const [selectedPreferences, setSelectedPreferences] = useState<UserPreferenceKey[]>([]);
-  const [preferencesSkipped, setPreferencesSkipped] = useState(false);
+  const [pendingUser, setPendingUser] = useState<UserAccount | null>(null);
   const [showWeightsInfo, setShowWeightsInfo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +86,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleModeChange = (nextMode: AuthMode) => {
     setMode(nextMode);
-    setPreferencesSkipped(false);
+    setPendingUser(null);
     setError(null);
   };
 
@@ -141,9 +141,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           : isDeclaredLocal
           ? `Localnic neverificat (${neighborhood}) · pondere 1,0× până la confirmarea prezenței în Timișoara.`
           : 'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
-        preferences: selectedPreferences,
       };
-      onLoginSuccess(newUser);
+      setPendingUser(newUser);
       return;
     }
 
@@ -244,9 +243,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       {/* Main Content */}
       <main className="flex-1 flex items-start lg:items-center py-5 sm:py-10 lg:py-12 px-4 sm:px-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
-        <div className="max-w-5xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 lg:gap-12 items-start">
+        <div
+          className={
+            pendingUser
+              ? 'max-w-5xl w-full mx-auto'
+              : 'max-w-5xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 lg:gap-12 items-start'
+          }
+        >
           {/* Left Column: Editorial Context & Quick Demo Access */}
-          <div className="lg:col-span-5 space-y-4 sm:space-y-6">
+          {!pendingUser && (
+            <div className="lg:col-span-5 space-y-4 sm:space-y-6">
             <div className="space-y-2 sm:space-y-3">
               <h1 className="font-display text-[32px] sm:text-[42px] lg:text-[46px] leading-[1.02]">
                 {isDrink
@@ -415,10 +421,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 ))}
               </div>
             </div>
-          </div>
+            </div>
+          )}
 
           {/* Right Column: Login / Register Form Card */}
-          <div className="lg:col-span-7">
+          <div className={pendingUser ? 'w-full' : 'lg:col-span-7'}>
             <div
               className={`rounded-[6px] border p-4 sm:p-7 space-y-5 ${
                 isDrink
@@ -427,6 +434,133 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               }`}
             >
               {/* Mode Segmented Control */}
+              {pendingUser ? (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <h2
+                        id="auth-preferences-label"
+                        className="font-display text-[26px] leading-tight"
+                      >
+                        Ce contează pentru tine la un local?
+                      </h2>
+                      <p
+                        className={`text-[13px] ${
+                          isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                        }`}
+                      >
+                        Opțional — după review-uri te vom întreba rapid doar despre criteriile alese.
+                      </p>
+                    </div>
+                    {selectedPreferences.length > 0 && (
+                      <span
+                        className={`text-[11px] font-semibold tabular-nums shrink-0 mt-1 ${
+                          isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
+                        }`}
+                      >
+                        {selectedPreferences.length === 1
+                          ? '1 selectată'
+                          : `${selectedPreferences.length} selectate`}
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    role="group"
+                    aria-labelledby="auth-preferences-label"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5"
+                  >
+                    {USER_PREFERENCE_OPTIONS.map((opt) => {
+                      const isSelected = selectedPreferences.includes(opt.key);
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => togglePreference(opt.key)}
+                          className={`btn-press min-h-[44px] px-3 py-2 rounded-[4px] border text-[13px] text-left flex items-center justify-between gap-2 ${
+                            isSelected
+                              ? isDrink
+                                ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17382C] font-bold'
+                                : 'bg-[#3A2418] border-[#3A2418] text-white font-semibold'
+                              : isDrink
+                              ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85 hover:border-[#F2A33A] font-medium'
+                              : 'bg-white border-[#E6DFD5] text-[#3A2418] hover:border-[#3A2418] font-medium'
+                          }`}
+                        >
+                          <span className="leading-snug">{opt.label}</span>
+                          {isSelected ? (
+                            <span
+                              aria-hidden="true"
+                              className="w-4 h-4 rounded-[3px] border border-current flex items-center justify-center shrink-0"
+                            >
+                              <Check className="w-3 h-3 stroke-[2.75]" />
+                            </span>
+                          ) : (
+                            <span
+                              aria-hidden="true"
+                              className={`w-4 h-4 rounded-[3px] border shrink-0 ${
+                                isDrink
+                                  ? 'border-[#2D5947]'
+                                  : 'border-[#D6CFC5]'
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onLoginSuccess({
+                          ...pendingUser,
+                          preferences: [],
+                        })
+                      }
+                      className={`btn-press min-h-[48px] px-4 py-3 rounded-[4px] border text-[14px] font-semibold ${
+                        isDrink
+                          ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                          : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                      }`}
+                    >
+                      Sari peste
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onLoginSuccess({
+                          ...pendingUser,
+                          preferences: selectedPreferences,
+                        })
+                      }
+                      className={`btn-press flex-1 min-h-[48px] py-3 px-4 rounded-[4px] text-[14px] font-bold flex items-center justify-center gap-2 ${
+                        isDrink
+                          ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
+                          : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
+                      }`}
+                    >
+                      <span>Salvează și intră</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setPendingUser(null)}
+                    className={`text-[12px] font-semibold underline underline-offset-2 ${
+                      isDrink
+                        ? 'text-[#F4EEE2]/70 hover:text-[#F4EEE2]'
+                        : 'text-[#6E5649] hover:text-[#3A2418]'
+                    }`}
+                  >
+                    ← Înapoi la datele contului
+                  </button>
+                </div>
+              ) : (
+                <>
               <div
                 role="tablist"
                 aria-label="Tip autentificare"
@@ -752,125 +886,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       </div>
                     )}
 
-                    {/* Multi-select user preferences (appears after typing email) */}
-                    {email.trim().length > 0 && !preferencesSkipped && (
-                      <div
-                        className={`space-y-2 pt-3 border-t ${
-                          isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            id="auth-preferences-label"
-                            className="text-[13px] font-semibold"
-                          >
-                            Ce contează pentru tine la un local?
-                          </span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {selectedPreferences.length > 0 && (
-                              <span
-                                className={`text-[11px] font-semibold tabular-nums ${
-                                  isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
-                                }`}
-                              >
-                                {selectedPreferences.length === 1
-                                  ? '1 selectată'
-                                  : `${selectedPreferences.length} selectate`}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedPreferences([]);
-                                setPreferencesSkipped(true);
-                              }}
-                              className={`btn-press min-h-[32px] px-2.5 py-1 rounded-[4px] border text-[12px] font-semibold ${
-                                isDrink
-                                  ? 'border-[#2D5947] text-[#F4EEE2]/80 hover:border-[#F2A33A] hover:text-[#F4EEE2]'
-                                  : 'border-[#D6CFC5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
-                              }`}
-                            >
-                              Sari peste
-                            </button>
-                          </div>
-                        </div>
-                        <p
-                          className={`text-[12px] ${
-                            isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
-                          }`}
-                        >
-                          Opțional — după review-uri te vom întreba rapid doar despre criteriile alese.
-                        </p>
-                        <div
-                          role="group"
-                          aria-labelledby="auth-preferences-label"
-                          className="grid grid-cols-1 sm:grid-cols-2 gap-2"
-                        >
-                          {USER_PREFERENCE_OPTIONS.map((opt) => {
-                            const isSelected = selectedPreferences.includes(opt.key);
-                            return (
-                              <button
-                                key={opt.key}
-                                type="button"
-                                aria-pressed={isSelected}
-                                onClick={() => togglePreference(opt.key)}
-                                className={`btn-press min-h-[44px] px-3 py-2 rounded-[4px] border text-[13px] text-left flex items-center justify-between gap-2 ${
-                                  isSelected
-                                    ? isDrink
-                                      ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17382C] font-bold'
-                                      : 'bg-[#3A2418] border-[#3A2418] text-white font-semibold'
-                                    : isDrink
-                                    ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85 hover:border-[#F2A33A] font-medium'
-                                    : 'bg-white border-[#E6DFD5] text-[#3A2418] hover:border-[#3A2418] font-medium'
-                                }`}
-                              >
-                                <span className="leading-snug">{opt.label}</span>
-                                {isSelected ? (
-                                  <span
-                                    aria-hidden="true"
-                                    className="w-4 h-4 rounded-[3px] border border-current flex items-center justify-center shrink-0"
-                                  >
-                                    <Check className="w-3 h-3 stroke-[2.75]" />
-                                  </span>
-                                ) : (
-                                  <span
-                                    aria-hidden="true"
-                                    className={`w-4 h-4 rounded-[3px] border shrink-0 ${
-                                      isDrink
-                                        ? 'border-[#2D5947]'
-                                        : 'border-[#D6CFC5]'
-                                    }`}
-                                  />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {email.trim().length > 0 && preferencesSkipped && (
-                      <div
-                        className={`pt-2 border-t flex items-center justify-between gap-2 text-[12px] ${
-                          isDrink
-                            ? 'border-[#285443] text-[#F4EEE2]/70'
-                            : 'border-[#E6DFD5] text-[#6E5649]'
-                        }`}
-                      >
-                        <span>Preferințe sărite.</span>
-                        <button
-                          type="button"
-                          onClick={() => setPreferencesSkipped(false)}
-                          className={`font-semibold underline underline-offset-2 ${
-                            isDrink
-                              ? 'text-[#F2A33A] hover:opacity-85'
-                              : 'text-[#3A2418] hover:opacity-85'
-                          }`}
-                        >
-                          Alege preferințe
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -902,6 +917,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
+                </>
+              )}
 
               <div
                 className={`pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[13px] ${
