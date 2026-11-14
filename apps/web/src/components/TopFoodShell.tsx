@@ -95,6 +95,8 @@ function buildUrlForState(
   let path = basePath;
   if (venueSlugOrId) {
     path = `${basePath}/${encodeURIComponent(venueSlugOrId)}`;
+  } else if (navSection === 'map') {
+    path = '/harta';
   } else if (navSection === 'monthly') {
     path = selectedMonth
       ? `${basePath}/top-luna/${encodeURIComponent(selectedMonth)}`
@@ -178,6 +180,9 @@ export function TopFoodShell({
   const [selectedNeighborhood, setSelectedNeighborhood] =
     useState<string>('all');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
+    string | null
+  >(null);
+  const [mapFocusedRestaurantId, setMapFocusedRestaurantId] = useState<
     string | null
   >(null);
   const [savedIds, setSavedIds] = useState<string[]>(['restaurant-nora']);
@@ -337,6 +342,8 @@ export function TopFoodShell({
         rawSection === 'scarnavii' ||
         rawSection === 'fidelitate'
           ? rawSection
+          : pathname.startsWith('/harta')
+          ? 'map'
           : monthMatch
           ? 'monthly'
           : pathname.startsWith('/fidelitate')
@@ -435,6 +442,9 @@ export function TopFoodShell({
 
   const navigateToSection = (nextSection: NavSection) => {
     setSelectedRestaurantId(null);
+    if (nextSection !== 'map') {
+      setMapFocusedRestaurantId(null);
+    }
     if (nextSection === navSection) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -552,6 +562,11 @@ export function TopFoodShell({
     return allVenues.find((r) => r.id === selectedRestaurantId) ?? null;
   }, [allVenues, selectedRestaurantId]);
 
+  const mapFocusedRestaurant = useMemo(() => {
+    if (!mapFocusedRestaurantId) return null;
+    return allVenues.find((r) => r.id === mapFocusedRestaurantId) ?? null;
+  }, [allVenues, mapFocusedRestaurantId]);
+
   useEffect(() => {
     if (!backendOnline || !selectedRestaurant?.venueId) return;
     if (lastTrackedVenueIdRef.current === selectedRestaurant.venueId) return;
@@ -563,6 +578,8 @@ export function TopFoodShell({
     const pageVertical = selectedRestaurant?.vertical ?? vertical;
     document.title = selectedRestaurant
       ? `${selectedRestaurant.name} | ${VERTICAL_TITLES[pageVertical]}`
+      : navSection === 'map'
+      ? 'Hartă Timișoara — topfood & topdrink'
       : VERTICAL_TITLES[vertical];
     if (!urlReadyRef.current) return;
 
@@ -753,7 +770,7 @@ export function TopFoodShell({
 
   const handleSwitchToMap = (restaurant?: Restaurant) => {
     if (restaurant) {
-      setSelectedNeighborhood(restaurant.neighborhood);
+      setMapFocusedRestaurantId(restaurant.id);
     }
     navigateToSection('map');
   };
@@ -872,7 +889,9 @@ export function TopFoodShell({
           scrollPositionsRef.current = {};
           pendingScrollYRef.current = 0;
           setVertical(v);
-          setNavSection('top');
+          if (navSection !== 'map') {
+            setNavSection('top');
+          }
           setSelectedRestaurantId(null);
         }}
         navSection={navSection}
@@ -921,9 +940,9 @@ export function TopFoodShell({
           <MapView
             darkMode={darkMode}
             vertical={vertical}
-            restaurants={activeVerticalVenues}
+            restaurants={allVenues}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
-            selectedRestaurant={selectedRestaurant}
+            selectedRestaurant={selectedRestaurant ?? mapFocusedRestaurant}
             selectedNeighborhood={selectedNeighborhood}
             onSelectNeighborhood={(n) => setSelectedNeighborhood(n)}
             touristZones={TOURIST_ZONES}

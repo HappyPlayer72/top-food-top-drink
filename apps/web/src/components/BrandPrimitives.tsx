@@ -165,16 +165,88 @@ export const CoasterScore: React.FC<{
  * 4b. PlateScore / MugScore — scorul din clasament: pe o farfurie (TOP FOOD) sau pe o halbă (TOP DRINK).
  * Culorile sunt fixe (nu clase hex remapate de html.dark), ca cifrele Cafea / Sticlă să rămână pe farfurie / bere.
  * `lg` = cardul de loc 1, `md` = rândurile; cifrele rămân mai mari decât rangul.
+ * Aspectul farfuriei / halbei reflectă scorul: >= 8.5 curat lună, 7.5–8.4 ușor atins, 6.5–7.4 folosit, < 6.5 murdar.
  */
+type CleanlinessTier = 'pristine' | 'light' | 'messy' | 'dirty';
+
+function getCleanlinessTier(score: number): CleanlinessTier {
+  if (score >= 8.5) return 'pristine';
+  if (score >= 7.5) return 'light';
+  if (score >= 6.5) return 'messy';
+  return 'dirty';
+}
+
 export const PlateScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ score, size = 'md' }) => {
   const box = size === 'lg' ? 'w-[92px] h-[92px] sm:w-[104px] sm:h-[104px]' : 'w-[64px] h-[64px] sm:w-[76px] sm:h-[76px]';
   const digits = size === 'lg' ? 'text-[36px] sm:text-[42px]' : 'text-[24px] sm:text-[30px]';
+  const tier = getCleanlinessTier(score);
+
+  const outerFill = tier === 'dirty' ? '#E8DEC9' : tier === 'messy' ? '#F5ECE0' : '#FFFFFF';
+  const outerStroke = tier === 'dirty' ? '#A6927A' : tier === 'messy' ? '#CBBBA6' : '#D6CFC5';
+  const wellFill = tier === 'dirty' ? '#DDD0B8' : tier === 'messy' ? '#EDE0CE' : '#FAF8F5';
+  const wellStroke = tier === 'dirty' ? '#B9A58C' : tier === 'messy' ? '#D6C6B2' : '#E6DFD5';
+
   return (
     <span role="img" aria-label={`Scor Onest ${formatScore(score)} din 10`} className={`relative inline-flex items-center justify-center shrink-0 select-none ${box}`}>
       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" aria-hidden="true">
-        <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#D6CFC5" strokeWidth="2" />
-        <circle cx="50" cy="50" r="36" fill="#FAF8F5" stroke="#E6DFD5" strokeWidth="1.5" />
-        <path d="M22 34a32 32 0 0 1 12-14" fill="none" stroke="#ECE6DD" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="50" cy="50" r="48" fill={outerFill} stroke={outerStroke} strokeWidth="2" />
+        <circle cx="50" cy="50" r="36" fill={wellFill} stroke={wellStroke} strokeWidth="1.5" />
+        <path d="M22 34a32 32 0 0 1 12-14" fill="none" stroke={tier === 'dirty' ? '#CBBBA6' : '#ECE6DD'} strokeWidth="3" strokeLinecap="round" />
+
+        {tier === 'pristine' && (
+          <g fill="#D8B467" opacity="0.9">
+            <path d="M77 16l1.3 3.2L81.5 20.5l-3.2 1.3L77 25l-1.3-3.2L72.5 20.5l3.2-1.3Z" />
+            <path d="M22 76l.9 2.1L25 79l-2.1.9L22 82l-.9-2.1L19 79l2.1-.9Z" />
+          </g>
+        )}
+
+        {tier === 'light' && (
+          <g aria-hidden="true">
+            <path d="M22 65c5 7 12 11 20 12" fill="none" stroke="#BA5D3B" strokeWidth="3.6" strokeLinecap="round" opacity="0.58" />
+            <circle cx="72" cy="23" r="1.8" fill="#8C5230" opacity="0.72" />
+            <circle cx="77" cy="29" r="1.4" fill="#6E4025" opacity="0.68" />
+            <circle cx="27" cy="75" r="1.5" fill="#8C5230" opacity="0.72" />
+            <circle cx="67" cy="75" r="1.4" fill="#6E4025" opacity="0.6" />
+          </g>
+        )}
+
+        {tier === 'messy' && (
+          <g aria-hidden="true">
+            <path d="M17 59c5 11 15 19 28 21" fill="none" stroke="#A8482B" strokeWidth="5.5" strokeLinecap="round" opacity="0.66" />
+            <path d="M60 18c10 4 17 11 20 20" fill="none" stroke="#B87338" strokeWidth="4.2" strokeLinecap="round" opacity="0.58" />
+            <ellipse cx="24" cy="27" rx="6" ry="3.4" transform="rotate(-28 24 27)" fill="#A8482B" opacity="0.62" />
+            <ellipse cx="74" cy="69" rx="5" ry="3" transform="rotate(22 74 69)" fill="#8C4F2B" opacity="0.55" />
+            <circle cx="68" cy="78" r="2.2" fill="#5E351E" opacity="0.75" />
+            <circle cx="21" cy="72" r="2.1" fill="#6E4025" opacity="0.78" />
+            <circle cx="34" cy="20" r="1.8" fill="#5E351E" opacity="0.7" />
+            <circle cx="80" cy="48" r="1.6" fill="#7D4932" opacity="0.68" />
+          </g>
+        )}
+
+        {tier === 'dirty' && (
+          <g aria-hidden="true">
+            {/* Heavy rim & well grease / sauce smears */}
+            <path d="M14 55c4 15 17 27 34 29" fill="none" stroke="#96361E" strokeWidth="7.5" strokeLinecap="round" opacity="0.78" />
+            <path d="M56 15c13 4 23 14 26 27" fill="none" stroke="#7A4422" strokeWidth="6.5" strokeLinecap="round" opacity="0.74" />
+            <path d="M16 31c4-9 11-15 20-17" fill="none" stroke="#B3702E" strokeWidth="5" strokeLinecap="round" opacity="0.68" />
+            <path d="M58 84c11-3 20-10 25-20" fill="none" stroke="#8C4E28" strokeWidth="5.5" strokeLinecap="round" opacity="0.68" />
+            {/* Leftover sauce splatters & smudges */}
+            <ellipse cx="22" cy="69" rx="9" ry="5" transform="rotate(24 22 69)" fill="#96361E" opacity="0.75" />
+            <ellipse cx="77" cy="64" rx="8" ry="4.5" transform="rotate(-35 77 64)" fill="#7A4422" opacity="0.74" />
+            <ellipse cx="72" cy="24" rx="6.5" ry="3.8" transform="rotate(18 72 24)" fill="#96361E" opacity="0.7" />
+            <ellipse cx="14" cy="44" rx="4.5" ry="6" transform="rotate(-12 14 44)" fill="#8C5328" opacity="0.66" />
+            <circle cx="51" cy="14" r="4" fill="#B3702E" opacity="0.65" />
+            {/* Bold dark burnt bits & crumbs */}
+            <circle cx="28" cy="79" r="3.1" fill="#3A2418" opacity="0.88" />
+            <circle cx="64" cy="80" r="2.6" fill="#4A3020" opacity="0.85" />
+            <circle cx="83" cy="47" r="2.8" fill="#3A2418" opacity="0.82" />
+            <circle cx="19" cy="23" r="2.5" fill="#4A3020" opacity="0.85" />
+            <circle cx="45" cy="13" r="2.2" fill="#3A2418" opacity="0.78" />
+            <circle cx="48" cy="87" r="2.6" fill="#4A3020" opacity="0.85" />
+            <circle cx="79" cy="34" r="2.1" fill="#3A2418" opacity="0.82" />
+            <circle cx="15" cy="59" r="2.3" fill="#3A2418" opacity="0.8" />
+          </g>
+        )}
       </svg>
       <span className={`relative font-display leading-none tabular-nums ${digits}`} style={{ color: '#3A2418' }}>
         {formatScore(score)}
@@ -188,16 +260,76 @@ export const MugScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ scor
   // mijlocul cutiei: halba stă centrată sub eticheta „Scor Onest”, iar toarta iese în dreapta.
   const box = size === 'lg' ? 'w-[107px] h-[92px] sm:w-[121px] sm:h-[104px]' : 'w-[74px] h-[64px] sm:w-[88px] sm:h-[76px]';
   const digits = size === 'lg' ? 'text-[32px] sm:text-[38px]' : 'text-[22px] sm:text-[27px]';
+  const tier = getCleanlinessTier(score);
+
+  const beerFill =
+    tier === 'dirty'
+      ? '#CEC3AE'
+      : tier === 'messy'
+        ? '#CF852B'
+        : tier === 'light'
+          ? '#ECA03A'
+          : '#F2A33A';
+  const rimStroke = tier === 'dirty' ? '#7D5E42' : tier === 'messy' ? '#A3774B' : '#B98A5E';
+
   return (
     <span role="img" aria-label={`Scor Onest ${formatScore(score)} din 10`} className={`relative inline-block shrink-0 select-none ${box}`}>
       <svg viewBox="-16 0 116 100" className="absolute inset-0 w-full h-full" aria-hidden="true">
         {/* toartă */}
-        <path d="M74 40h7a11 11 0 0 1 11 11v13a11 11 0 0 1-11 11h-7" fill="none" stroke="#B98A5E" strokeWidth="6" />
+        <path d="M74 40h7a11 11 0 0 1 11 11v13a11 11 0 0 1-11 11h-7" fill="none" stroke={rimStroke} strokeWidth="6" />
         {/* halba cu bere */}
-        <rect x="8" y="26" width="68" height="70" rx="8" fill="#F2A33A" stroke="#B98A5E" strokeWidth="3" />
-        {/* spuma */}
-        {/* simetrică față de mijlocul halbei (x = 42), cu 2 unități peste margine pe fiecare parte */}
-        <path d="M6 34C6 26 13 20 22 21C25 14 36 11 42 16C48 11 59 14 62 21C71 20 78 26 78 34Z" fill="#F4EEE2" stroke="#B98A5E" strokeWidth="3" strokeLinejoin="round" />
+        <rect x="8" y="26" width="68" height="70" rx="8" fill={beerFill} stroke={rimStroke} strokeWidth="3" />
+
+        {tier === 'pristine' && (
+          <>
+            {/* spuma plină și proaspătă */}
+            <path d="M6 34C6 26 13 20 22 21C25 14 36 11 42 16C48 11 59 14 62 21C71 20 78 26 78 34Z" fill="#F4EEE2" stroke="#B98A5E" strokeWidth="3" strokeLinejoin="round" />
+            <line x1="15" y1="42" x2="15" y2="84" stroke="#FFF8EC" strokeWidth="2.5" strokeLinecap="round" opacity="0.45" />
+            <path d="M64 11l1.1 2.6L67.7 14.7l-2.6 1.1L64 18.4l-1.1-2.6L60.3 14.7l2.6-1.1Z" fill="#F4EEE2" opacity="0.95" />
+          </>
+        )}
+
+        {tier === 'light' && (
+          <>
+            {/* spuma ușor așezată + urme vizibile de spumă pe pahar */}
+            <path d="M6 34C6 27 13 22 22 23C26 17 36 15 42 19C48 15 58 17 62 23C71 22 78 27 78 34Z" fill="#F4EEE2" stroke="#B98A5E" strokeWidth="3" strokeLinejoin="round" />
+            <path d="M13 40c6 2.5 12 1.5 17 0" fill="none" stroke="#F4EEE2" strokeWidth="2.4" strokeLinecap="round" opacity="0.65" />
+            <path d="M55 43c5 1.5 10 1 15-1" fill="none" stroke="#F4EEE2" strokeWidth="2.2" strokeLinecap="round" opacity="0.6" />
+          </>
+        )}
+
+        {tier === 'messy' && (
+          <>
+            {/* spuma subțire/lăsată + dâre clare de spumă uscată + picătură */}
+            <path d="M7 34C8 29 14 26 22 27C28 24 36 23 42 25C48 23 56 24 62 27C70 26 76 29 77 34Z" fill="#E0D4BE" stroke={rimStroke} strokeWidth="3" strokeLinejoin="round" />
+            <path d="M11 41c8 3 16 2 23 0M49 45c8 2 15 1 22-1" fill="none" stroke="#F4EEE2" strokeWidth="2.8" strokeLinecap="round" opacity="0.72" />
+            <path d="M13 55c6 2 11 1 15-1M56 60c5 1.5 9 1 13-1" fill="none" stroke="#EFE4D2" strokeWidth="2.4" strokeLinecap="round" opacity="0.62" />
+            {/* picătură pe margine */}
+            <path d="M67 34v18" stroke="#E0D4BE" strokeWidth="3.6" strokeLinecap="round" opacity="0.88" />
+            <ellipse cx="42" cy="90" rx="24" ry="3" fill="#6E4414" opacity="0.42" />
+          </>
+        )}
+
+        {tier === 'dirty' && (
+          <>
+            {/* zaț / rest de bere stătută la fundul halbei */}
+            <path d="M10 68h64v19a7 7 0 0 1-7 7H17a7 7 0 0 1-7-7Z" fill="#8F5E1D" opacity="0.85" />
+            {/* dâre și inele groase de spumă uscată pe sticla murdară */}
+            <path d="M12 38c10 3.5 18 2.5 27 0M45 41c9 2.5 17 1.5 25-1" fill="none" stroke="#EFE6D5" strokeWidth="3.4" strokeLinecap="round" opacity="0.85" />
+            <path d="M13 52c7 2.5 13 1.5 18-1M52 56c6 2.5 12 1.5 18-1" fill="none" stroke="#9C8462" strokeWidth="3" strokeLinecap="round" opacity="0.82" />
+            <path d="M14 65c9 2.5 16 1.5 22-1" fill="none" stroke="#7A6242" strokeWidth="2.6" strokeLinecap="round" opacity="0.78" />
+            {/* buză murdară cu spumă ruptă */}
+            <path d="M7 33C10 29 17 29 24 31C32 30 37 32 42 30C49 32 56 29 64 31C70 29 75 30 77 33Z" fill="#DDD0B8" stroke={rimStroke} strokeWidth="2.8" strokeLinejoin="round" />
+            {/* picături lipicioase pe exterior și pe toartă */}
+            <path d="M15 33v21M68 33v27" stroke="#8C6028" strokeWidth="3.6" strokeLinecap="round" opacity="0.88" />
+            <circle cx="88" cy="54" r="2.6" fill="#8C6028" opacity="0.82" />
+            {/* zaț / impurități groase la fund */}
+            <circle cx="20" cy="87" r="2.8" fill="#4A3012" opacity="0.85" />
+            <circle cx="33" cy="90" r="2.3" fill="#3D260E" opacity="0.82" />
+            <circle cx="51" cy="88" r="3" fill="#4A3012" opacity="0.85" />
+            <circle cx="64" cy="86" r="2.2" fill="#3D260E" opacity="0.8" />
+          </>
+        )}
       </svg>
       {/* cifrele stau pe corpul halbei: x 8–76 → (8 + 16) / 116 = 20,7%, lățime 68 / 116 = 58,6%; y 36–96 din 100 */}
       <span
