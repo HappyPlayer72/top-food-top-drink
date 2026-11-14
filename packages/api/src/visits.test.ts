@@ -37,7 +37,7 @@ describe.skipIf(!process.env.DATABASE_URL)("vizită verificată (pe baza de date
     const [venue] = await db
       .select({ id: venues.id, lat: sql<number>`ST_Y(${venues.location})`, lng: sql<number>`ST_X(${venues.location})` })
       .from(venues)
-      .where(eq(venues.slug, "ciorba-lui-sandu"));
+      .where(eq(venues.slug, "restaurant-nora"));
     if (!venue) throw new Error("Rulează întâi `npm run seed`.");
     const [user] = await db.insert(users).values({ username: `vizita${Date.now()}`, displayName: "Test Vizită" }).returning();
     const [admin] = await db.insert(users).values({ username: `admin${Date.now()}`, displayName: "Admin", roles: ["user", "admin"] }).returning();

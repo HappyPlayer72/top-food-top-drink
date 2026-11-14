@@ -51,7 +51,7 @@ describe.skipIf(!url)("integrare PostgreSQL (bază de test)", () => {
   it("review: răspunsurile se salvează împreună cu review-ul; o cheie invalidă nu salvează nimic", () =>
     inTx(async (tx) => {
       const u = await newUser(tx);
-      const v = await venue(tx, "ciorba-lui-sandu");
+      const v = await venue(tx, "restaurant-nora");
       const r = await writeReview(tx, u.id, { venueId: v.id, rating: 8, text, answers: { intrare_fara_trepte: "yes", wifi: "not_observed" } });
       const saved = await tx.select().from(reviewAnswers).where(eq(reviewAnswers.reviewId, r.id));
       expect(Object.fromEntries(saved.map((a) => [a.questionKey, a.answer]))).toEqual({ intrare_fara_trepte: "yes", wifi: "not_observed" });
@@ -64,7 +64,7 @@ describe.skipIf(!url)("integrare PostgreSQL (bază de test)", () => {
 
   it("procente: prag, „Nu am observat” ignorat, review-urile ascunse excluse, fallback și contradicție cu owner-ul", () =>
     inTx(async (tx) => {
-      const v = await venue(tx, "hanul-cu-tei"); // fără date demo
+      const v = await venue(tx, "sabres-restaurant"); // fără date demo
       const page = () => venuePage(tx, { citySlug: v.citySlug, vertical: v.vertical, slug: v.slug }).then((p) => p.features.flatMap((t) => t.items));
       const entry = async () => (await page()).find((i) => i.key === "intrare_fara_trepte")!;
 
@@ -89,7 +89,7 @@ describe.skipIf(!url)("integrare PostgreSQL (bază de test)", () => {
 
   it("facilități: doar managerii localului; „liniștea” nu se declară; Nespecificat șterge declarația", () =>
     inTx(async (tx) => {
-      const v = await venue(tx, "hanul-cu-tei");
+      const v = await venue(tx, "sabres-restaurant");
       const m = { userId: (await newUser(tx)).id };
       await tx.insert(venueManagers).values({ venueId: v.id, userId: m.userId, role: "manager" });
       const stranger = await newUser(tx);
@@ -109,9 +109,9 @@ describe.skipIf(!url)("integrare PostgreSQL (bază de test)", () => {
       const before = await order();
       // Seed-ul demo: Verde pe Farfurie conduce la accesibilitate; Bistro Bega (sponsorizat) stă la „Declarat de local”.
       const access = before.find(([t]) => t === "accesibilitate")!;
-      expect((access[1] as string[])[0]).toBe("verde-pe-farfurie");
-      expect(access[1]).not.toContain("bistro-bega");
-      expect(access[2]).toContain("bistro-bega");
+      expect((access[1] as string[])[0]).toBe("biofresh-timisoara");
+      expect(access[1]).not.toContain("vinto-gastro-wine-bar");
+      expect(access[2]).toContain("vinto-gastro-wine-bar");
       const allFood = await tx.select({ id: venues.id }).from(venues).where(eq(venues.vertical, "food"));
       const now = new Date();
       await tx.insert(partnerships).values(
@@ -122,7 +122,7 @@ describe.skipIf(!url)("integrare PostgreSQL (bază de test)", () => {
 
   it("voturi rapide: un vot per user și tip (se schimbă), validate, agregate de la prag, fără efect asupra ordinii", () =>
     inTx(async (tx) => {
-      const v = await venue(tx, "hanul-cu-tei");
+      const v = await venue(tx, "sabres-restaurant");
       const u = await newUser(tx);
       await submitQuickVote(tx, u.id, v.id, "safety", 2);
       await submitQuickVote(tx, u.id, v.id, "safety", 4);

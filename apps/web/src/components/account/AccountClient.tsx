@@ -14,7 +14,7 @@ import type { UserAccount } from '@/types';
 
 /** Aceeași cheie ca TopFoodShell. Pentru userul logat lista vine de pe server (saved_venues); localStorage e doar rezervă. */
 const SAVED_KEY = 'topfood-saved-ids';
-const DEFAULT_SAVED = ['ciorba-lui-sandu'];
+const DEFAULT_SAVED = ['restaurant-nora'];
 
 export type SavedVenue = { id: string; name: string; neighborhood: string | null; href: string };
 

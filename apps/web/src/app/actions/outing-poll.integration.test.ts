@@ -12,15 +12,15 @@ vi.mock('next/headers', () => ({
 import { createOutingPoll, getOutingPoll, voteOutingPoll } from './outing-poll';
 
 it.skipIf(process.env.RUN_OUTING_DB_TEST !== '1')('persistă voturile separate ale două browsere și permite schimbarea lor', async () => {
-  const created = await createOutingPoll(['ciorba-lui-sandu', 'pizzeria-din-fabric']);
+  const created = await createOutingPoll(['restaurant-nora', 'la-focacceria']);
   expect(created.ok).toBe(true);
   if (!created.ok) throw new Error(created.error);
   const token = created.token;
-  expect(await voteOutingPoll(token, 'ciorba-lui-sandu')).toMatchObject({ ok: true, myVote: 'ciorba-lui-sandu' });
+  expect(await voteOutingPoll(token, 'restaurant-nora')).toMatchObject({ ok: true, myVote: 'restaurant-nora' });
   browser.active = 'second';
-  expect(await voteOutingPoll(token, 'pizzeria-din-fabric')).toMatchObject({ ok: true, counts: { 'ciorba-lui-sandu': 1, 'pizzeria-din-fabric': 1 } });
+  expect(await voteOutingPoll(token, 'la-focacceria')).toMatchObject({ ok: true, counts: { 'restaurant-nora': 1, 'la-focacceria': 1 } });
   browser.active = 'first';
-  expect(await voteOutingPoll(token, 'pizzeria-din-fabric')).toMatchObject({ ok: true, counts: { 'ciorba-lui-sandu': 0, 'pizzeria-din-fabric': 2 } });
+  expect(await voteOutingPoll(token, 'la-focacceria')).toMatchObject({ ok: true, counts: { 'restaurant-nora': 0, 'la-focacceria': 2 } });
   browser.active = 'second';
-  expect(await getOutingPoll(token)).toMatchObject({ ok: true, myVote: 'pizzeria-din-fabric', counts: { 'ciorba-lui-sandu': 0, 'pizzeria-din-fabric': 2 } });
+  expect(await getOutingPoll(token)).toMatchObject({ ok: true, myVote: 'la-focacceria', counts: { 'restaurant-nora': 0, 'la-focacceria': 2 } });
 });

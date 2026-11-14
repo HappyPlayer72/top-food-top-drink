@@ -1,6 +1,8 @@
 /**
  * DATE DEMO pentru preferințe / facilități / topuri tematice / voturi rapide.
  * Inventate pentru demonstrație (prezentare, teste), nu vin de la clienți reali.
+ * Localurile din seed sunt reale (Restaurant Nora, The 80's Pub…): răspunsurile și facilitățile de aici sunt
+ * ilustrative, nu informații verificate despre ele.
  *
  * Se adaugă PESTE datele existente, fără să șteargă nimic:
  *   npm run seed:demo
@@ -13,34 +15,34 @@ import { createDb, reviewAnswers, reviews, users, venueFacilityDeclarations, ven
 
 /** Răspunsuri atașate review-urilor native existente: [Da, Nu, Nu am observat]. */
 const DEMO_ANSWERS: Record<string, Record<string, [number, number, number?]>> = {
-  "ciorba-lui-sandu": { intrare_fara_trepte: [7, 1, 2], toaleta_accesibila: [2, 4], spatiu_intre_mese: [5, 1] },
-  "cafe-domului": { wifi: [9, 1], prize: [6, 1], liniste: [6, 2], intrare_fara_trepte: [5, 0] },
-  "verde-pe-farfurie": { intrare_fara_trepte: [6, 0], toaleta_accesibila: [5, 1], spatiu_intre_mese: [4, 1], wifi: [3, 0] },
-  "bistro-bega": { intrare_fara_trepte: [3, 0] }, // sub prag: rămâne „Declarat de local” (și e sponsorizat — nu urcă)
-  "pizzeria-din-fabric": { wifi: [1, 5, 1] }, // contrazice declarația owner-ului
-  "cafeneaua-de-noapte": { wifi: [6, 1], prize: [5, 2], intrare_fara_trepte: [2, 3] },
-  "terasa-de-pe-bega": { intrare_fara_trepte: [6, 0], spatiu_intre_mese: [5, 0], atmosfera: [5, 3], siguranta: [6, 1] },
+  "restaurant-nora": { intrare_fara_trepte: [7, 1, 2], toaleta_accesibila: [2, 4], spatiu_intre_mese: [5, 1] },
+  "bruck-cafe-unirii": { wifi: [9, 1], prize: [6, 1], liniste: [6, 2], intrare_fara_trepte: [5, 0] },
+  "biofresh-timisoara": { intrare_fara_trepte: [6, 0], toaleta_accesibila: [5, 1], spatiu_intre_mese: [4, 1], wifi: [3, 0] },
+  "vinto-gastro-wine-bar": { intrare_fara_trepte: [3, 0] }, // sub prag: rămâne „Declarat de local” (și e sponsorizat — nu urcă)
+  "la-focacceria": { wifi: [1, 5, 1] }, // contrazice declarația owner-ului
+  "faber-timisoara": { wifi: [6, 1], prize: [5, 2], intrare_fara_trepte: [2, 3] },
+  "darc-pe-mal": { intrare_fara_trepte: [6, 0], spatiu_intre_mese: [5, 0], atmosfera: [5, 3], siguranta: [6, 1] },
   // Ieșiri: experiența personală raportată de clienți; owner-ii nu o pot declara.
-  "pivnita-cu-bolta": { intrare_fara_trepte: [0, 6], toaleta_accesibila: [0, 5], atmosfera: [9, 1], siguranta: [8, 1], revin_cu_prietenii: [7, 2] },
-  "depoul-de-tramvaie": { atmosfera: [6, 2], siguranta: [3, 4, 1], revin_cu_prietenii: [5, 2] },
-  "studio-19": { siguranta: [2, 1] }, // sub prag: „Nespecificat”
+  "scart-loc-lejer": { intrare_fara_trepte: [0, 6], toaleta_accesibila: [0, 5], atmosfera: [9, 1], siguranta: [8, 1], revin_cu_prietenii: [7, 2] },
+  "the-80s-pub": { atmosfera: [6, 2], siguranta: [3, 4, 1], revin_cu_prietenii: [5, 2] },
+  "no-name-club": { siguranta: [2, 1] }, // sub prag: „Nespecificat”
 };
 
 const DEMO_DECLARATIONS: Record<string, Record<string, "yes" | "no">> = {
-  "ciorba-lui-sandu": { intrare_fara_trepte: "yes", toaleta_accesibila: "yes", wifi: "no" },
-  "bistro-bega": { intrare_fara_trepte: "yes", toaleta_accesibila: "yes", wifi: "yes", prize: "yes" },
-  "placintaria-elisabetin": { wifi: "yes" },
-  "pizzeria-din-fabric": { wifi: "yes" },
-  "jazz-in-pivnita": { intrare_fara_trepte: "yes" },
+  "restaurant-nora": { intrare_fara_trepte: "yes", toaleta_accesibila: "yes", wifi: "no" },
+  "vinto-gastro-wine-bar": { intrare_fara_trepte: "yes", toaleta_accesibila: "yes", wifi: "yes", prize: "yes" },
+  "neata-omelette-bistro": { wifi: "yes" },
+  "la-focacceria": { wifi: "yes" },
+  "manufactura-pub": { intrare_fara_trepte: "yes" },
 };
 
 /** Voturi rapide: siguranță 1–5, zgomot 1 liniștit … 4 zgomotos; câte un vot de la useri diferiți. */
 const DEMO_QUICK: Record<string, { safety?: number[]; noise?: number[] }> = {
-  "pivnita-cu-bolta": { safety: [5, 4, 5, 4, 5, 4], noise: [3, 3, 4, 3, 2, 3] },
-  "depoul-de-tramvaie": { safety: [2, 3, 2, 1, 2], noise: [4, 4, 3, 4, 4] }, // avertizări din voturi reale
-  "cafeneaua-de-noapte": { noise: [2, 1, 2, 2, 3] },
-  "cafe-domului": { noise: [1, 1, 2, 1, 1, 2] },
-  "pizzeria-din-fabric": { noise: [3, 4, 3, 3, 4] }, // ascuns de „Doar liniștite” în topul Lucru
+  "scart-loc-lejer": { safety: [5, 4, 5, 4, 5, 4], noise: [3, 3, 4, 3, 2, 3] },
+  "the-80s-pub": { safety: [2, 3, 2, 1, 2], noise: [4, 4, 3, 4, 4] }, // avertizări din voturi reale
+  "faber-timisoara": { noise: [2, 1, 2, 2, 3] },
+  "bruck-cafe-unirii": { noise: [1, 1, 2, 1, 1, 2] },
+  "la-focacceria": { noise: [3, 4, 3, 3, 4] }, // ascuns de „Doar liniștite” în topul Lucru
 };
 
 /** Adaugă datele demo; localurile care lipsesc din DB sunt sărite. Întoarce câte rânduri noi au intrat. */
