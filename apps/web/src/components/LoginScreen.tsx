@@ -1,8 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, ChevronDown, Eye, EyeOff, Lock, Mail, MapPin, Moon, Sun, User } from 'lucide-react';
-import { Neighborhood, UserAccount, Vertical, formatScore } from '../types';
+import { ArrowRight, Check, ChevronDown, Eye, EyeOff, Lock, Mail, MapPin, Moon, Sun, User } from 'lucide-react';
+import {
+  Neighborhood,
+  USER_PREFERENCE_OPTIONS,
+  UserAccount,
+  UserPreferenceKey,
+  Vertical,
+  formatScore,
+} from '../types';
 import { NEIGHBORHOODS } from '../data/restaurants';
 import { BrandWordmark, CarouStrip, LocalnicBadge } from './BrandPrimitives';
 
@@ -63,8 +70,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [neighborhood, setNeighborhood] = useState<Neighborhood>('Iosefin');
   const [confirmLocalCheckin, setConfirmLocalCheckin] = useState(false);
   const [gpsVerified, setGpsVerified] = useState(false);
+  const [selectedPreferences, setSelectedPreferences] = useState<UserPreferenceKey[]>([]);
+  const [preferencesSkipped, setPreferencesSkipped] = useState(false);
   const [showWeightsInfo, setShowWeightsInfo] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const togglePreference = (key: UserPreferenceKey) => {
+    setSelectedPreferences((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
+    );
+  };
 
   const emailSuggestsLocal = isAcademicLocalEmail(email);
 
@@ -80,6 +95,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleModeChange = (nextMode: AuthMode) => {
     setMode(nextMode);
+    setPreferencesSkipped(false);
     setError(null);
   };
 
@@ -159,6 +175,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           : isDeclaredLocal
           ? `Localnic neverificat (${neighborhood}) · pondere 1,0× până la confirmarea prezenței în Timișoara.`
           : 'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
+        preferences: selectedPreferences,
       };
       onLoginSuccess(newUser);
       return;
@@ -774,6 +791,126 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                             </span>
                           </button>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Multi-select user preferences (appears after typing email) */}
+                    {email.trim().length > 0 && !preferencesSkipped && (
+                      <div
+                        className={`space-y-2 pt-3 border-t ${
+                          isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            id="auth-preferences-label"
+                            className="text-[13px] font-semibold"
+                          >
+                            Ce contează pentru tine la un local?
+                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {selectedPreferences.length > 0 && (
+                              <span
+                                className={`text-[11px] font-semibold tabular-nums ${
+                                  isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
+                                }`}
+                              >
+                                {selectedPreferences.length === 1
+                                  ? '1 selectată'
+                                  : `${selectedPreferences.length} selectate`}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedPreferences([]);
+                                setPreferencesSkipped(true);
+                              }}
+                              className={`btn-press min-h-[32px] px-2.5 py-1 rounded-[4px] border text-[12px] font-semibold ${
+                                isDrink
+                                  ? 'border-[#2D5947] text-[#F4EEE2]/80 hover:border-[#F2A33A] hover:text-[#F4EEE2]'
+                                  : 'border-[#D6CFC5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
+                              }`}
+                            >
+                              Sari peste
+                            </button>
+                          </div>
+                        </div>
+                        <p
+                          className={`text-[12px] ${
+                            isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+                          }`}
+                        >
+                          Opțional — după review-uri te vom întreba rapid doar despre criteriile alese.
+                        </p>
+                        <div
+                          role="group"
+                          aria-labelledby="auth-preferences-label"
+                          className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                        >
+                          {USER_PREFERENCE_OPTIONS.map((opt) => {
+                            const isSelected = selectedPreferences.includes(opt.key);
+                            return (
+                              <button
+                                key={opt.key}
+                                type="button"
+                                aria-pressed={isSelected}
+                                onClick={() => togglePreference(opt.key)}
+                                className={`btn-press min-h-[44px] px-3 py-2 rounded-[4px] border text-[13px] text-left flex items-center justify-between gap-2 ${
+                                  isSelected
+                                    ? isDrink
+                                      ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17382C] font-bold'
+                                      : 'bg-[#3A2418] border-[#3A2418] text-white font-semibold'
+                                    : isDrink
+                                    ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85 hover:border-[#F2A33A] font-medium'
+                                    : 'bg-white border-[#E6DFD5] text-[#3A2418] hover:border-[#3A2418] font-medium'
+                                }`}
+                              >
+                                <span className="leading-snug">{opt.label}</span>
+                                {isSelected ? (
+                                  <span
+                                    aria-hidden="true"
+                                    className="w-4 h-4 rounded-[3px] border border-current flex items-center justify-center shrink-0"
+                                  >
+                                    <Check className="w-3 h-3 stroke-[2.75]" />
+                                  </span>
+                                ) : (
+                                  <span
+                                    aria-hidden="true"
+                                    className={`w-4 h-4 rounded-[3px] border shrink-0 ${
+                                      isDrink
+                                        ? 'border-[#2D5947]'
+                                        : 'border-[#D6CFC5]'
+                                    }`}
+                                  />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {email.trim().length > 0 && preferencesSkipped && (
+                      <div
+                        className={`pt-2 border-t flex items-center justify-between gap-2 text-[12px] ${
+                          isDrink
+                            ? 'border-[#285443] text-[#F4EEE2]/70'
+                            : 'border-[#E6DFD5] text-[#6E5649]'
+                        }`}
+                      >
+                        <span>Preferințe sărite.</span>
+                        <button
+                          type="button"
+                          onClick={() => setPreferencesSkipped(false)}
+                          className={`font-semibold underline underline-offset-2 ${
+                            isDrink
+                              ? 'text-[#F2A33A] hover:opacity-85'
+                              : 'text-[#3A2418] hover:opacity-85'
+                          }`}
+                        >
+                          Alege preferințe
+                        </button>
                       </div>
                     )}
                   </div>

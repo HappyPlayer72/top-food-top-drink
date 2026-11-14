@@ -61,6 +61,65 @@ export type TrapTier = 'local-staple' | 'mixed-fair' | 'tourist-trap';
 
 export type AuthorRole = 'verified-local' | 'tourist' | 'influencer' | 'regular';
 
+export type UserPreferenceKey =
+  | 'accessible'
+  | 'outlets'
+  | 'goodWifi'
+  | 'goodForWork'
+  | 'quiet'
+  | 'petFriendly'
+  | 'softLighting'
+  | 'heatedTerrace';
+
+export interface UserPreferenceOption {
+  key: UserPreferenceKey;
+  label: string;
+  question: string;
+}
+
+export const USER_PREFERENCE_OPTIONS: UserPreferenceOption[] = [
+  {
+    key: 'accessible',
+    label: 'Accesibil dizabilități',
+    question: 'Este accesibil pentru persoane cu dizabilități?',
+  },
+  {
+    key: 'outlets',
+    label: 'Prize la mese',
+    question: 'Există prize la mese?',
+  },
+  {
+    key: 'goodWifi',
+    label: 'Wi-Fi bun',
+    question: 'Wi-Fi-ul funcționează bine?',
+  },
+  {
+    key: 'goodForWork',
+    label: 'Bun de lucrat',
+    question: 'Este un loc bun pentru lucrat (laptop)?',
+  },
+  {
+    key: 'quiet',
+    label: 'Liniște / fără gălăgie',
+    question: 'Este suficient de liniște?',
+  },
+  {
+    key: 'petFriendly',
+    label: 'Pet-friendly',
+    question: 'Este pet-friendly?',
+  },
+  {
+    key: 'softLighting',
+    label: 'Fără lumină stridentă',
+    question: 'Lumina este plăcută (nu deranjant de puternică)?',
+  },
+  {
+    key: 'heatedTerrace',
+    label: 'Terasă încălzită',
+    question: 'Are terasă încălzită?',
+  },
+];
+
 export interface UserAccount {
   id: string;
   name: string;
@@ -69,6 +128,7 @@ export interface UserAccount {
   neighborhood?: string;
   weightMultiplier: number;
   description: string;
+  preferences?: UserPreferenceKey[];
 }
 
 export interface SignatureDish {
@@ -165,6 +225,8 @@ export interface Review {
   safetyScore?: number;
   /** Perceived noise level at the venue */
   noiseLevel?: NoiseLevel;
+  /** Optional answers to preference questions after posting a review */
+  preferenceAnswers?: Partial<Record<UserPreferenceKey, boolean>>;
 }
 
 export interface OwnerPost {
