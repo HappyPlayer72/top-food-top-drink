@@ -4,7 +4,7 @@
  * Fiecare test rulează într-o tranzacție anulată la final, deci baza rămâne neschimbată.
  */
 import { afterAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { createDb, partnerships, reviewAnswers, reviews, users, venueManagers, venueQuickVotes, venues, type Db } from "@tftd/db";
 import { MIN_ANSWERS } from "@tftd/scoring/features";
 import { accounts, myQuickVotes, owner, submitQuickVote, thematicTops, venuePage, writeReview } from "./index.ts";
@@ -106,12 +106,27 @@ describe.skipIf(!url)("integrare PostgreSQL (bază de test)", () => {
     inTx(async (tx) => {
       const order = async () =>
         (await thematicTops(tx, { citySlug: "timisoara", vertical: "food" })).map((t) => [t.theme, t.community.map((c) => c.slug), t.declared.map((d) => d.slug)]);
+      // Datele vin din test (seed-ul are doar date reale): A are răspunsuri peste prag, B doar declarația patronului.
+      const ranked = await tx
+        .select()
+        .from(venues)
+        .where(and(eq(venues.citySlug, "timisoara"), eq(venues.vertical, "food"), eq(venues.status, "active"), isNotNull(venues.honestScore)))
+        .orderBy(venues.slug)
+        .limit(2);
+      const [a, b] = ranked as [typeof venues.$inferSelect, typeof venues.$inferSelect];
+      for (let i = 0; i <= MIN_ANSWERS; i++) {
+        const u = await newUser(tx);
+        await writeReview(tx, u.id, { venueId: a.id, rating: 8, text, answers: { intrare_fara_trepte: "yes", toaleta_accesibila: "yes", spatiu_intre_mese: "yes" } });
+      }
+      const managerId = (await newUser(tx)).id;
+      await tx.insert(venueManagers).values({ venueId: b.id, userId: managerId, role: "owner" });
+      await owner.setFacilities(tx, managerId, b.id, { intrare_fara_trepte: "yes", toaleta_accesibila: "yes" });
+
       const before = await order();
-      // Seed-ul demo: Verde pe Farfurie conduce la accesibilitate; Bistro Bega (sponsorizat) stă la „Declarat de local”.
       const access = before.find(([t]) => t === "accesibilitate")!;
-      expect((access[1] as string[])[0]).toBe("biofresh-timisoara");
-      expect(access[1]).not.toContain("vinto-gastro-wine-bar");
-      expect(access[2]).toContain("vinto-gastro-wine-bar");
+      expect((access[1] as string[])[0]).toBe(a.slug);
+      expect(access[1]).not.toContain(b.slug);
+      expect(access[2]).toContain(b.slug);
       const allFood = await tx.select({ id: venues.id }).from(venues).where(eq(venues.vertical, "food"));
       const now = new Date();
       await tx.insert(partnerships).values(
