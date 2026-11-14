@@ -1,7 +1,7 @@
 /** Joburile de ingestie: descoperă locale, actualizează ratinguri/review-uri, procesează linkuri trimise. */
-import { and, eq } from "drizzle-orm";
-import { socialSubmissions, reviews, touristZones, venueSources, venues, type Db } from "@tftd/db";
-import { linkExternalPlace } from "@tftd/matching";
+import { and, eq, gt, ne, notExists, sql } from "drizzle-orm";
+import { socialSubmissions, reviews, touristZones, venueManagers, venueSources, venues, type Db } from "@tftd/db";
+import { attachSource, haversineM, linkExternalPlace, nameSimilarity } from "@tftd/matching";
 import * as google from "./google.ts";
 import * as ta from "./tripadvisor.ts";
 import { analyzeSocial, detectPlatform } from "./social.ts";
@@ -36,8 +36,85 @@ export async function discoverVenues(db: Db, citySlug: string, vertical: "food" 
   return outcomes;
 }
 
-/** Jobul `actualizeaza-ratinguri` (zilnic): rating brut + review-uri noi de pe Google și Tripadvisor. */
-export async function refreshCity(db: Db, citySlug: string) {
+/**
+ * Cât de departe acceptăm rezultatul căutării țintite, după cât de mult seamănă numele.
+ * Coordonatele din seed pot fi greșite cu sute de metri, deci un nume identic e acceptat mai departe.
+ */
+export const KNOWN_VENUE_RULES = [
+  { minSim: 0.99, maxM: 1500 },
+  { minSim: 0.95, maxM: 600 },
+  { minSim: 0.75, maxM: 300 },
+] as const;
+export const acceptKnown = (sim: number, distM: number) => KNOWN_VENUE_RULES.some((r) => sim >= r.minSim && distM <= r.maxM);
+
+/**
+ * Un local creat de import (fără owner, fără review-uri scrise pe site) e de fapt unul de-al nostru:
+ * îi mutăm sursa și review-urile Google la localul nostru și îl ștergem. Altfel nu atingem nimic.
+ */
+async function mergeImportedDuplicate(db: Db, duplicateId: string, intoId: string) {
+  const [managed] = await db.select({ x: sql`1` }).from(venueManagers).where(eq(venueManagers.venueId, duplicateId)).limit(1);
+  const [native] = await db.select({ x: sql`1` }).from(reviews).where(and(eq(reviews.venueId, duplicateId), ne(reviews.source, "google"))).limit(1);
+  if (managed || native) return false;
+  await db.update(reviews).set({ venueId: intoId }).where(eq(reviews.venueId, duplicateId));
+  await db.update(venueSources).set({ venueId: intoId }).where(eq(venueSources.venueId, duplicateId));
+  await db.delete(venues).where(eq(venues.id, duplicateId));
+  return true;
+}
+
+/**
+ * Localurile noastre fără fișă Google (ex. cele din seed): o căutare țintită după nume, lângă coordonatele lor.
+ * Se leagă după KNOWN_VENUE_RULES; dacă importul a creat deja o copie, copia se unește cu localul nostru.
+ * Când locul Google e la peste 150 m, preluăm coordonatele Google (cele din seed erau aproximative).
+ */
+export async function linkKnownVenues(db: Db, citySlug: string) {
+  const unlinked = await db
+    .select({ id: venues.id, name: venues.name, vertical: venues.vertical, location: venues.location })
+    .from(venues)
+    .where(
+      and(
+        eq(venues.citySlug, citySlug),
+        notExists(db.select({ x: sql`1` }).from(venueSources).where(and(eq(venueSources.venueId, venues.id), eq(venueSources.source, "google")))),
+      ),
+    );
+  const outcome = { linked: 0, merged: 0, notFound: 0 };
+  for (const v of unlinked) {
+    const here = { lat: v.location.y, lng: v.location.x };
+    const { places } = await google.searchText(`${v.name} Timișoara`, here, 500);
+    const best = places
+      .filter((p) => p.location && p.id && p.primaryType !== "route")
+      .map((p) => ({ p, sim: nameSimilarity(v.name, p.displayName?.text ?? ""), dist: haversineM(here, { lat: p.location!.latitude, lng: p.location!.longitude }) }))
+      .filter((x) => acceptKnown(x.sim, x.dist))
+      .sort((a, b) => b.sim - a.sim || a.dist - b.dist)[0];
+    if (!best) {
+      outcome.notFound++;
+      continue;
+    }
+    const [taken] = await db.select({ id: venueSources.venueId }).from(venueSources).where(and(eq(venueSources.source, "google"), eq(venueSources.externalId, best.p.id)));
+    if (taken && !(await mergeImportedDuplicate(db, taken.id, v.id))) {
+      outcome.notFound++;
+      continue;
+    }
+    if (taken) outcome.merged++;
+    await attachSource(db, v.id, google.toExternalPlace(best.p, citySlug, v.vertical));
+    if (best.dist > 150) {
+      await db.update(venues).set({ location: { x: best.p.location!.longitude, y: best.p.location!.latitude } }).where(eq(venues.id, v.id));
+    }
+    outcome.linked++;
+  }
+  return outcome;
+}
+
+/**
+ * Jobul `actualizeaza-ratinguri` (zilnic): rating brut + review-uri noi de pe Google (și Tripadvisor, dacă are cheie).
+ * `skipFreshHours`: sare localurile care au primit review-uri Google în ultimele N ore (import incremental, mai puține cereri).
+ */
+export async function refreshCity(db: Db, citySlug: string, opts: { skipFreshHours?: number } = {}) {
+  const fresh = new Set<string>();
+  if (opts.skipFreshHours) {
+    const since = new Date(Date.now() - opts.skipFreshHours * 3_600_000);
+    const rows = await db.selectDistinct({ id: reviews.venueId }).from(reviews).where(and(eq(reviews.source, "google"), gt(reviews.createdAt, since)));
+    for (const r of rows) fresh.add(r.id);
+  }
   const rows = await db
     .select({ venue: venues, source: venueSources })
     .from(venues)
@@ -54,7 +131,7 @@ export async function refreshCity(db: Db, citySlug: string) {
 
   for (const { venue, sources } of byVenue.values()) {
     const g = sources.find((s) => s.source === "google");
-    if (g && process.env.GOOGLE_PLACES_API_KEY) {
+    if (g && process.env.GOOGLE_PLACES_API_KEY && !fresh.has(venue.id)) {
       const d = await google.placeDetails(g.externalId);
       await db
         .update(venueSources)

@@ -10,6 +10,7 @@
     "@tftd/db": "*",
     "@tftd/ingestion": "*",
     "@tftd/leaderboard": "*",
+    "@tftd/matching": "*",
     "@tftd/review-analysis": "*",
     "@tftd/scoring": "*",
     "croner": "^9.1.0",

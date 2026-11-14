@@ -20,12 +20,7 @@ export type ExternalPlace = Place & {
 export type LinkResult = { venueId: string; outcome: "existing-source" | "matched" | "created" | "queued-for-admin" };
 
 export async function linkExternalPlace(db: Db, p: ExternalPlace): Promise<LinkResult> {
-  const sourceRow = {
-    rawRating: p.rating ?? null,
-    rawReviewCount: p.reviewCount ?? null,
-    url: p.url ?? null,
-    fetchedAt: new Date(),
-  };
+  const sourceRow = sourceRowOf(p);
 
   // Deja legat: doar actualizăm ratingul brut
   const [existing] = await db
@@ -48,21 +43,18 @@ export async function linkExternalPlace(db: Db, p: ExternalPlace): Promise<LinkR
 
   if (decision.status === "match") {
     const venueId = known[decision.index]!.id;
-    await db.insert(venueSources).values({ venueId, source: p.source, externalId: p.externalId, ...sourceRow });
-    // Completează din sursă ce nu știam încă (program, telefon, site); nu suprascrie ce e deja în DB
-    await db
-      .update(venues)
-      .set({
-        openingHours: sql`coalesce(${venues.openingHours}, ${p.openingHours ? JSON.stringify(p.openingHours) : null}::jsonb)`,
-        phone: sql`coalesce(${venues.phone}, ${p.phone ?? null})`,
-        website: sql`coalesce(${venues.website}, ${p.website ?? null})`,
-      })
-      .where(eq(venues.id, venueId));
+    await attachSource(db, venueId, p);
     return { venueId, outcome: "matched" };
   }
 
   if (decision.status === "uncertain") {
     const venueId = known[decision.index]!.id;
+    // Același loc găsit de mai multe căutări: o singură cerere în coadă
+    const [queued] = await db
+      .select({ id: matchCandidates.id })
+      .from(matchCandidates)
+      .where(and(eq(matchCandidates.source, p.source), eq(matchCandidates.externalId, p.externalId), eq(matchCandidates.status, "pending")));
+    if (queued) return { venueId, outcome: "queued-for-admin" };
     await db.insert(matchCandidates).values({
       venueId,
       source: p.source,
@@ -74,6 +66,26 @@ export async function linkExternalPlace(db: Db, p: ExternalPlace): Promise<LinkR
     return { venueId, outcome: "queued-for-admin" };
   }
 
+  return { venueId: await createFromPlace(db, p), outcome: "created" };
+}
+
+const sourceRowOf = (p: ExternalPlace) => ({ rawRating: p.rating ?? null, rawReviewCount: p.reviewCount ?? null, url: p.url ?? null, fetchedAt: new Date() });
+
+/** Leagă sursa externă de un local al nostru și completează ce nu știam (program, telefon, site), fără să suprascrie. */
+export async function attachSource(db: Db, venueId: string, p: ExternalPlace) {
+  await db.insert(venueSources).values({ venueId, source: p.source, externalId: p.externalId, ...sourceRowOf(p) }).onConflictDoNothing();
+  await db
+    .update(venues)
+    .set({
+      openingHours: sql`coalesce(${venues.openingHours}, ${p.openingHours ? JSON.stringify(p.openingHours) : null}::jsonb)`,
+      phone: sql`coalesce(${venues.phone}, ${p.phone ?? null})`,
+      website: sql`coalesce(${venues.website}, ${p.website ?? null})`,
+    })
+    .where(eq(venues.id, venueId));
+}
+
+/** Fișă nouă pentru un loc real pe care nu îl aveam. */
+export async function createFromPlace(db: Db, p: ExternalPlace): Promise<string> {
   const [created] = await db
     .insert(venues)
     .values({
@@ -90,8 +102,50 @@ export async function linkExternalPlace(db: Db, p: ExternalPlace): Promise<LinkR
       openingHours: p.openingHours ?? null,
     })
     .returning({ id: venues.id });
-  await db.insert(venueSources).values({ venueId: created!.id, source: p.source, externalId: p.externalId, ...sourceRow });
-  return { venueId: created!.id, outcome: "created" };
+  await db.insert(venueSources).values({ venueId: created!.id, source: p.source, externalId: p.externalId, ...sourceRowOf(p) });
+  return created!.id;
+}
+
+/** Pragurile cu care se golește automat coada de potriviri nesigure (vezi resolveCandidates). */
+export const AUTO_RESOLVE = { confirmNameMin: 0.9, confirmMaxM: 150, newPlaceNameMax: 0.7 } as const;
+
+/**
+ * Golește coada de potriviri nesigure cu reguli clare; ce rămâne la mijloc decide un admin în /admin.
+ * - sursa e deja legată de un local → duplicat, se închide;
+ * - nume aproape identic (≥ 0,9) la max. 150 m → același local, se leagă;
+ * - nume clar diferit (< 0,7) → alt local real, i se face fișă.
+ */
+export async function resolveCandidates(db: Db, citySlug: string) {
+  const pending = await db
+    .select({ c: matchCandidates })
+    .from(matchCandidates)
+    .innerJoin(venues, eq(venues.id, matchCandidates.venueId))
+    .where(and(eq(matchCandidates.status, "pending"), eq(venues.citySlug, citySlug)));
+  const outcome = { linked: 0, created: 0, duplicate: 0, leftForAdmin: 0 };
+  for (const { c } of pending) {
+    const [taken] = await db
+      .select({ venueId: venueSources.venueId })
+      .from(venueSources)
+      .where(and(eq(venueSources.source, c.source), eq(venueSources.externalId, c.externalId)));
+    const p = c.payload as ExternalPlace;
+    let status: "confirmed" | "rejected" | null = null;
+    if (taken) {
+      status = taken.venueId === c.venueId ? "confirmed" : "rejected";
+      outcome.duplicate++;
+    } else if (c.nameSimilarity >= AUTO_RESOLVE.confirmNameMin && (c.distanceM ?? Infinity) <= AUTO_RESOLVE.confirmMaxM) {
+      await attachSource(db, c.venueId, p);
+      status = "confirmed";
+      outcome.linked++;
+    } else if (c.nameSimilarity < AUTO_RESOLVE.newPlaceNameMax) {
+      await createFromPlace(db, p);
+      status = "rejected";
+      outcome.created++;
+    } else {
+      outcome.leftForAdmin++;
+    }
+    if (status) await db.update(matchCandidates).set({ status }).where(eq(matchCandidates.id, c.id));
+  }
+  return outcome;
 }
 
 /** „Ciorba lui Sandu” → „ciorba-lui-sandu” (cu -2, -3 dacă e ocupat). */

@@ -1,7 +1,8 @@
 /** Cele 5 joburi programate (apps/worker/README.md). Fiecare poate rula și o singură dată din linia de comandă. */
 import { and, eq, isNull, lt } from "drizzle-orm";
 import { cities, reviewSubmissions, reviews, socialSubmissions, venues, visitProofs, type Db } from "@tftd/db";
-import { discoverVenues, processSubmission, refreshCity } from "@tftd/ingestion";
+import { discoverVenues, linkKnownVenues, processSubmission, refreshCity } from "@tftd/ingestion";
+import { resolveCandidates } from "@tftd/matching";
 import { freezeMonth, lastMonth } from "@tftd/leaderboard";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
@@ -17,13 +18,19 @@ export const JOBS = {
   async "descopera-locale"(db: Db) {
     if (!process.env.GOOGLE_PLACES_API_KEY) return log("descopera-locale", "sărit: lipsește GOOGLE_PLACES_API_KEY");
     for (const city of await citySlugs(db)) {
-      for (const v of VERTICALS) log("descopera-locale", `${city}/${v}`, await discoverVenues(db, city, v));
+      // IMPORT_MAX_PAGES: câte pagini de 20 de rezultate per căutare (implicit 3); 1 = import mic și ieftin
+      const pages = Number(process.env.IMPORT_MAX_PAGES ?? 3);
+      for (const v of VERTICALS) log("descopera-locale", `${city}/${v}`, await discoverVenues(db, city, v, pages));
+      log("descopera-locale", `${city}: localurile noastre fără Google`, await linkKnownVenues(db, city));
+      log("descopera-locale", `${city}: coada de potriviri`, await resolveCandidates(db, city));
     }
   },
 
   /** Zilnic: ratinguri brute + review-uri noi, apoi analiză și scoruri. */
   async "actualizeaza-ratinguri"(db: Db) {
-    for (const city of await citySlugs(db)) log("actualizeaza-ratinguri", city, await refreshCity(db, city));
+    // IMPORT_SKIP_FRESH_HOURS: sare localurile actualizate de curând (import incremental, mai puține cereri)
+    const skipFreshHours = Number(process.env.IMPORT_SKIP_FRESH_HOURS ?? 0) || undefined;
+    for (const city of await citySlugs(db)) log("actualizeaza-ratinguri", city, await refreshCity(db, city, { skipFreshHours }));
     await JOBS["recalculeaza-scoruri"](db, { onlyNew: true });
   },
 
