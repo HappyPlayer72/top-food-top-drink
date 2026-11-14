@@ -28,7 +28,7 @@ Copiază [`.env.example`](../.env.example) și completează pentru producție:
 | `SESSION_SECRET` | **Da** | Secret lung aleatoriu pentru semnarea cookie-ului `tf_session` și a QR-urilor de fidelitate |
 | `SITE_URL` | **Da** | URL-ul public (folosit în `sitemap.xml`, `robots.txt` și OG tags), ex. `https://topfood.ro` |
 | `GOOGLE_PLACES_API_KEY` | Recomandat | Descoperire și actualizare localuri prin Google Places API (New) |
-| `TRIPADVISOR_API_KEY` | Opțional | Rating și surse TripAdvisor |
+| `TRIPADVISOR_API_KEY` | Nu folosim | Tripadvisor nu are variantă gratuită; codul îl sare când cheia lipsește |
 | `META_OEMBED_TOKEN` | Opțional | Extragere preview Instagram / Facebook oEmbed (`app_id\|client_token`) |
 | `ANTHROPIC_API_KEY` | Opțional | Analiză aspecte cu Claude (`claude-haiku-5-5`); fără cheie, folosește fallback pe cuvinte-cheie |
 | `STRIPE_SECRET_KEY` | Opțional | Rezervat pentru integrare billing externă |

@@ -1,8 +1,8 @@
 # Ghid Demo (3–5 minute)
 
-Baza are doar **date reale**: cele 30 de locale din Timișoara (`seed/venues.ts`) și ce vine din Google Places + Tripadvisor (`npm run import:real`). Nu mai există useri, review-uri sau scoruri inventate. Totul se testează logat pe un **cont de test**.
+Baza are doar **date reale**: cele 30 de locale din Timișoara (`seed/venues.ts`) și ce vine din Google Places (`npm run import:real`). Tripadvisor nu îl folosim: nu are variantă gratuită. Nu mai există useri, review-uri sau scoruri inventate. Totul se testează logat pe un **cont de test**.
 
-> Fără cheile Google/Tripadvisor, localurile apar fără scor („Încă nu are review-uri”) până scrie cineva primul review.
+> Fără cheia Google, localurile apar fără scor („Încă nu are review-uri”) până scrie cineva primul review.
 
 ---
 
@@ -12,7 +12,7 @@ Baza are doar **date reale**: cele 30 de locale din Timișoara (`seed/venues.ts`
 npm run db:up
 npm run db:migrate
 npm run seed -- --reset   # 30 de locale reale + conturile de test (doar pe baza locală)
-npm run import:real       # cu GOOGLE_PLACES_API_KEY și/sau TRIPADVISOR_API_KEY în .env: ratinguri și review-uri reale
+npm run import:real       # cu GOOGLE_PLACES_API_KEY în .env: ratinguri, program și până la 5 review-uri reale per local
 npm run dev -w @topfood/web
 ```
 
@@ -36,7 +36,7 @@ Pe ecranul de login, la „Acces rapid cu un cont de test” (ascuns în produc�
 
 ### 1. Lista reală — `/topfood/timisoara` (45 s)
 - Localurile cu review-uri sunt primele, ordonate după **Scorul Onest**; cele fără review-uri sunt la final, cu „—” și „Încă nu are review-uri”.
-- Review-urile importate au atribuirea „de pe Google” / „de pe Tripadvisor”.
+- Review-urile importate au atribuirea „de pe Google”.
 - *„Nu inventăm nicio notă: scorul există doar când există review-uri, și fiecare scor are explicația lui.”*
 
 ### 2. Primul review — logat ca `test.user` (60 s)
@@ -70,6 +70,6 @@ Trece prin toate fluxurile de mai sus pe conturile de test, într-o tranzacție 
 
 ## Dacă te întreabă
 
-- **De unde vin review-urile?** Google Places API și Tripadvisor Content API (oficiale) + review-urile scrise pe site. Fără scraping.
+- **De unde vin review-urile?** Google Places API (oficial) + review-urile scrise pe site. Fără scraping.
 - **Cum știți că e localnic?** Check-in în oraș în 5 zile diferite din 30 sau email universitar. Din GPS păstrăm doar ziua, nu traseul.
 - **Cum faceți bani?** Parteneriate (blog, statistici, fidelitate, „Sponsorizat”) + reclame. Nimic din ele nu intră în scor.

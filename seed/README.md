@@ -1,6 +1,6 @@
 # `seed` — Date reale și verificare DB
 
-Populează baza cu orașul **Timișoara** (zone turistice, 14 cartiere și prețuri de referință din [`config/cities/timisoara.json`](../config/cities/timisoara.json)) și **30 de locale reale** (20 `food` + 10 `drink`, din [`venues.ts`](venues.ts)). Nu creează useri, review-uri sau scoruri inventate: review-urile și ratingurile vin din Google Places + Tripadvisor (`npm run import:real`) și de pe site.
+Populează baza cu orașul **Timișoara** (zone turistice, 14 cartiere și prețuri de referință din [`config/cities/timisoara.json`](../config/cities/timisoara.json)) și **30 de locale reale** (20 `food` + 10 `drink`, din [`venues.ts`](venues.ts)). Nu creează useri, review-uri sau scoruri inventate: review-urile și ratingurile vin din Google Places (`npm run import:real`) și de pe site.
 
 ## Fișiere
 
@@ -15,6 +15,6 @@ Populează baza cu orașul **Timișoara** (zone turistice, 14 cartiere și preț
 
 ```bash
 npm run seed -- --reset                                  # locale reale + conturi de test
-npm run import:real                                      # ratinguri și review-uri reale (cu cheile în .env)
+npm run import:real                                      # ratinguri și review-uri reale (cu GOOGLE_PLACES_API_KEY în .env)
 npm exec -- tsx --env-file-if-exists=.env seed/smoke.ts  # verificare cap-coadă
 ```

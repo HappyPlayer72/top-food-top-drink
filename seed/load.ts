@@ -5,7 +5,7 @@
  *   npm run db:up && npm run db:migrate && npm run seed
  *   npm run seed -- --reset      # șterge TOATE datele și reîncarcă (doar pe o bază locală)
  *
- * Review-urile, ratingurile și programul vin apoi din Google Places + Tripadvisor (`npm run import:real`)
+ * Review-urile, ratingurile și programul vin apoi din Google Places (`npm run import:real`; Tripadvisor nu, n-are variantă gratuită)
  * și din review-urile scrise de oameni pe site. Pentru teste: conturile din `seed/test-accounts.ts`, create la final.
  */
 import { readFileSync } from "node:fs";

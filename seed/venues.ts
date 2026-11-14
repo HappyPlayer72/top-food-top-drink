@@ -1,7 +1,7 @@
 /**
  * 30 de locale REALE din Timișoara (20 food, 10 drink), cu adrese, coordonate, fotografii și informații de livrare.
  * În bază intră doar datele reale (nume, adresă, coordonate, poze, prețuri). Review-urile și ratingurile vin din
- * Google Places + Tripadvisor (`npm run import:real`).
+ * Google Places (`npm run import:real`).
  *
  * `profile` descrie distribuția review-urilor sintetice din teste (seed/generate.ts), nu ajunge în bază:
  *  localMean / touristMean = nota medie (0–10) dată de localnici / turiști
