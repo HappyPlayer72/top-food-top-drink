@@ -57,6 +57,13 @@
       "when": 1794663783757,
       "tag": "0007_quick_votes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794670823191,
+      "tag": "0008_flawless_aqueduct",
+      "breakpoints": true
     }
   ]
 }

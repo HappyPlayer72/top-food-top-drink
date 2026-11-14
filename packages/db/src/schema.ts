@@ -654,3 +654,17 @@ export type LeaderboardAwards = {
   employee?: { employeeId: string; venueId: string; mentions: number };
   local?: { userId: string; reviews: number };
 };
+
+/** Sondaj public de ieșire; opțiunile sunt slug-urile localurilor active la creare. */
+export const outingPolls = pgTable("outing_polls", {
+  token: text().primaryKey(),
+  venueSlugs: text().array().notNull(),
+  createdAt: createdAt(),
+});
+
+export const outingPollVotes = pgTable("outing_poll_votes", {
+  pollToken: text().notNull().references(() => outingPolls.token, { onDelete: "cascade" }),
+  voterHash: text().notNull(),
+  venueSlug: text().notNull(),
+  updatedAt: createdAt(),
+}, (t) => [primaryKey({ columns: [t.pollToken, t.voterHash] })]);
