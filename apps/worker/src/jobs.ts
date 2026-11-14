@@ -1,7 +1,7 @@
 /** Cele 5 joburi programate (apps/worker/README.md). Fiecare poate rula și o singură dată din linia de comandă. */
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { cities, reviewSubmissions, reviews, socialSubmissions, venues, visitProofs, type Db } from "@tftd/db";
-import { discoverVenues, linkKnownVenues, processSubmission, refreshCity } from "@tftd/ingestion";
+import { discoverVenues, google, linkKnownVenues, processSubmission, refreshCity } from "@tftd/ingestion";
 import { resolveCandidates } from "@tftd/matching";
 import { freezeMonth, lastMonth } from "@tftd/leaderboard";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
@@ -13,24 +13,61 @@ async function citySlugs(db: Db) {
   return (await db.select({ slug: cities.slug }).from(cities)).map((c) => c.slug);
 }
 
+/**
+ * Joburile care cheamă Google Places (costă bani peste pragul gratuit) pornesc doar dacă:
+ * - există GOOGLE_PLACES_API_KEY (colegii nu o au: datele sunt în seed/data/google-snapshot.json);
+ * - baza e cea locală, sau IMPORT_TARGET=online pentru baza online;
+ * - IMPORT_CONFIRM=da. Altfel jobul doar spune câte cereri ar face și se oprește.
+ * Cu IMPORT_MAX_REQUESTS (implicit 300) rularea se oprește singură la plafon.
+ */
+async function googleGuard(job: string, estimate: number): Promise<boolean> {
+  if (!process.env.GOOGLE_PLACES_API_KEY) {
+    log(job, "sărit: lipsește GOOGLE_PLACES_API_KEY (datele Google sunt deja în seed/data/google-snapshot.json)");
+    return false;
+  }
+  const host = new URL(process.env.DATABASE_URL ?? "postgres://localhost").hostname;
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(host) && process.env.IMPORT_TARGET !== "online") {
+    log(job, "oprit: DATABASE_URL nu e baza locală. Pune IMPORT_TARGET=online doar dacă vrei să imporți în baza online.");
+    return false;
+  }
+  const max = Number(process.env.IMPORT_MAX_REQUESTS ?? 300);
+  if (process.env.IMPORT_CONFIRM !== "da") {
+    log(job, `simulare: ar face cam ${estimate} cereri Google (plafon ${max}). Nu am trimis nimic. Ca să ruleze: IMPORT_CONFIRM=da`);
+    return false;
+  }
+  google.limitGoogleRequests(max);
+  return true;
+}
+
+const unlinkedCount = async (db: Db) =>
+  ((await db.execute(sql`select count(*)::int as n from venues v where not exists (select 1 from venue_sources s where s.venue_id = v.id and s.source = 'google')`)) as unknown as [{ n: number }])[0].n;
+const toRefreshCount = async (db: Db, freshHours: number) =>
+  ((await db.execute(sql`select count(*)::int as n from venue_sources s where s.source = 'google' and not exists (
+      select 1 from reviews r where r.venue_id = s.venue_id and r.source = 'google' and r.created_at > now() - make_interval(hours => ${freshHours}))`)) as unknown as [{ n: number }])[0].n;
+
 export const JOBS = {
   /** Săptămânal, per oraș: locale noi de pe Google Places. */
   async "descopera-locale"(db: Db) {
-    if (!process.env.GOOGLE_PLACES_API_KEY) return log("descopera-locale", "sărit: lipsește GOOGLE_PLACES_API_KEY");
-    for (const city of await citySlugs(db)) {
-      // IMPORT_MAX_PAGES: câte pagini de 20 de rezultate per căutare (implicit 3); 1 = import mic și ieftin
-      const pages = Number(process.env.IMPORT_MAX_PAGES ?? 3);
+    // IMPORT_MAX_PAGES: câte pagini de 20 de rezultate per căutare (implicit 1 = import mic și ieftin)
+    const pages = Number(process.env.IMPORT_MAX_PAGES ?? 1);
+    const cityList = await citySlugs(db);
+    const estimate = cityList.length * VERTICALS.length * 5 * pages + (await unlinkedCount(db));
+    if (!(await googleGuard("descopera-locale", estimate))) return;
+    for (const city of cityList) {
       for (const v of VERTICALS) log("descopera-locale", `${city}/${v}`, await discoverVenues(db, city, v, pages));
       log("descopera-locale", `${city}: localurile noastre fără Google`, await linkKnownVenues(db, city));
       log("descopera-locale", `${city}: coada de potriviri`, await resolveCandidates(db, city));
     }
+    log("descopera-locale", `cereri Google trimise: ${google.googleRequestsUsed()}`);
   },
 
   /** Zilnic: ratinguri brute + review-uri noi, apoi analiză și scoruri. */
   async "actualizeaza-ratinguri"(db: Db) {
-    // IMPORT_SKIP_FRESH_HOURS: sare localurile actualizate de curând (import incremental, mai puține cereri)
-    const skipFreshHours = Number(process.env.IMPORT_SKIP_FRESH_HOURS ?? 0) || undefined;
-    for (const city of await citySlugs(db)) log("actualizeaza-ratinguri", city, await refreshCity(db, city, { skipFreshHours }));
+    // IMPORT_SKIP_FRESH_HOURS: sare localurile actualizate în ultimele N ore (implicit 24; 0 = toate)
+    const skipFreshHours = Number(process.env.IMPORT_SKIP_FRESH_HOURS ?? 24);
+    if (!(await googleGuard("actualizeaza-ratinguri", await toRefreshCount(db, skipFreshHours || 0)))) return;
+    for (const city of await citySlugs(db)) log("actualizeaza-ratinguri", city, await refreshCity(db, city, { skipFreshHours: skipFreshHours || undefined }));
+    log("actualizeaza-ratinguri", `cereri Google trimise: ${google.googleRequestsUsed()}`);
     await JOBS["recalculeaza-scoruri"](db, { onlyNew: true });
   },
 
