@@ -51,7 +51,7 @@ export async function findVenue(vertical: 'food' | 'drink', slug: string): Promi
   }
   const r = (vertical === 'drink' ? DRINK_VENUES : INITIAL_RESTAURANTS).find((x) => x.slug === slug);
   return r
-    ? { name: r.name, honest: r.foodQualityScore, locals: r.localsScore, trap: r.touristTrapIndex, headline: r.editorialHeadline, photo: r.photoUrl }
+    ? { name: r.name, honest: null, locals: null, trap: null, headline: r.editorialHeadline, photo: r.photoUrl } // fără bază: fără scor inventat în titlu
     : null;
 }
 

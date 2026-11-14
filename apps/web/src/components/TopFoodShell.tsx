@@ -34,10 +34,7 @@ import {
   Vertical,
 } from '../types';
 import {
-  DRINK_VENUES,
-  INITIAL_RESTAURANTS,
   TOURIST_ZONES,
-  WEEKEND_EVENTS,
   recalculateRestaurantWithReview,
   recalculateRestaurantWithUpdatedReview,
   recalculateRestaurantWithoutReview,
@@ -51,6 +48,7 @@ import { ScarnaviiView } from './ScarnaviiView';
 import { FidelityView } from './FidelityView';
 import { Footer } from './Footer';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
+import { OFFLINE_DRINK, OFFLINE_FOOD } from '../data/offline';
 
 /** Conturile de test din seed (doar pe baza locală; în producție „Acces rapid” e ascuns). */
 const USER_ACCOUNTS: UserAccount[] = [
@@ -151,13 +149,14 @@ export function TopFoodShell({
   initialMonth = null,
   initialFoodHeroIndex = 0,
   initialDrinkHeroIndex = 0,
-  foodRestaurants: initialFood = INITIAL_RESTAURANTS,
-  drinkVenues: initialDrink = DRINK_VENUES,
+  // Fără bază de date: doar informațiile reale din datele statice, fără scoruri și review-uri scrise de mână
+  foodRestaurants: initialFood = OFFLINE_FOOD,
+  drinkVenues: initialDrink = OFFLINE_DRINK,
   foodAds = [],
   drinkAds = [],
   foodAwards,
   drinkAwards,
-  weekendEvents = WEEKEND_EVENTS,
+  weekendEvents = [], // fără bază de date nu arătăm evenimente scrise de mână
   topReviewers,
   backendOnline = false,
   initialUser = null,

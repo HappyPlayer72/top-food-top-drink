@@ -991,7 +991,7 @@ export function getVenueLastUpdated(restaurant: Restaurant): string {
   return (
     restaurant.lastUpdated ??
     VENUE_EXTRAS[restaurant.id]?.lastUpdated ??
-    '10 nov 2026'
+    '—'
   );
 }
 

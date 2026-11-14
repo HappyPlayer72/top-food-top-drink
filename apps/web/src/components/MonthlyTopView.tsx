@@ -4,7 +4,6 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Award, ChevronDown, ChevronLeft, Download, Sparkles, Trophy } from 'lucide-react';
 import { MonthlyAwards, Restaurant, TopReviewer, Vertical, formatScore } from '../types';
-import { TOP_LOCAL_REVIEWERS } from '../data/restaurants';
 import { InfluencerBadge, LocalnicBadge } from './BrandPrimitives';
 
 export interface MonthlyTopViewProps {
@@ -34,7 +33,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   restaurants,
   onBack,
   onSelectRestaurant,
-  topReviewers = TOP_LOCAL_REVIEWERS,
+  topReviewers = [],
   awards,
   selectedMonth: selectedMonthProp = null,
   onSelectMonth,
@@ -320,7 +319,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   >
                     <img
                       src={first.photoUrl}
-                      alt={first.name}
+                      alt=""
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
@@ -370,7 +369,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   >
                     <img
                       src={second.photoUrl}
-                      alt={second.name}
+                      alt=""
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
@@ -421,7 +420,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   >
                     <img
                       src={third.photoUrl}
-                      alt={third.name}
+                      alt=""
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
@@ -500,7 +499,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                         >
                           <img
                             src={spot.photoUrl}
-                            alt={spot.name}
+                            alt=""
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full object-cover venue-photo-zoom"

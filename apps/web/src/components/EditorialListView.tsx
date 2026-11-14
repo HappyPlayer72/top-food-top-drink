@@ -364,7 +364,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       .filter((r) => !r.isSponsored && r.touristTrapIndex < 60)
       .filter((r) => {
         if (!matchesSelectedCategory(r)) return false;
-        if (foodFilters.includes('fara-capcane') && r.touristTrapIndex > 25) {
+        // Fără scor = nu știm încă dacă e capcană, deci nu îl garantăm ca „fără capcane”
+        if (foodFilters.includes('fara-capcane') && (r.touristTrapIndex > 25 || r.foodQualityScore <= 0)) {
           return false;
         }
         if (foodFilters.includes('deschis-acum') && !r.openNow) {
@@ -822,7 +823,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                           <div className="w-14 h-14 rounded-[4px] overflow-hidden shrink-0 border border-[#285443] bg-[#122B22]">
                             <img
                               src={targetVenue.photoUrl}
-                              alt={targetVenue.name}
+                              alt=""
                               loading="lazy"
                               decoding="async"
                               className="w-full h-full object-cover object-center venue-photo-zoom"
@@ -1255,7 +1256,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5] mt-0.5">
                       <img
                         src={trap.photoUrl}
-                        alt={trap.name}
+                        alt=""
                         loading="lazy"
                         decoding="async"
                         className="w-full h-full object-cover object-center venue-photo-zoom"

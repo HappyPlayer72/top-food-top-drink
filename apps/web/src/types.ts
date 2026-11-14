@@ -390,6 +390,8 @@ export interface Restaurant {
   verifiedVisitCount?: number;
   /** De unde pornește Scorul Onest (nota Google trasă spre media orașului), afișat la „Cum se calculează?”. */
   scorePriorNote?: string;
+  /** false = photoUrl e ilustrația neutră (localul nu are încă poză); imaginea e atunci decorativă (alt gol). */
+  hasPhoto?: boolean;
   trapBreakdown: TrapBreakdown;
   aspectScores: AspectScores;
 

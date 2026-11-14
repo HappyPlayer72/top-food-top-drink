@@ -47,9 +47,10 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 const label = (cat?: string) => (cat ? CATEGORY_LABEL[cat] ?? cat : '');
 
+/** Fără poză reală: o ilustrație neutră (farfurie / halbă), nu o fotografie care ar părea a localului. */
 const PLACEHOLDER_PHOTO = {
-  food: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=80',
-  drink: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80',
+  food: '/placeholder-food.svg',
+  drink: '/placeholder-drink.svg',
 };
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
@@ -245,6 +246,9 @@ export function toRestaurant(
           : fb?.priceRangeLabel,
     openUntilLabel: v.openLabel ? `${v.openLabel}.` : fb?.openUntilLabel,
     photoUrl: v.photos[0] ?? fb?.photoUrl ?? PLACEHOLDER_PHOTO[v.vertical],
+    hasPhoto: !!(v.photos[0] ?? fb?.photoUrl),
+    // Data reală a ultimei recalculări a scorului (nu o dată scrisă de mână)
+    lastUpdated: s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Bucharest' }) : undefined,
     editorialHeadline: v.headline ?? fb?.editorialHeadline ?? '',
     editorialWriteup: v.writeup.length ? v.writeup : (fb?.editorialWriteup ?? []),
     // „Ce să comanzi” = doar felurile marcate recomandat, nu tot meniul.

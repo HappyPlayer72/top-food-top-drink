@@ -467,14 +467,22 @@ html.dark {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
+  /* Închis = ascuns și pentru cititoarele de ecran și pentru Tab (după ce se termină animația) */
+  visibility: hidden;
   transition:
     grid-template-rows 200ms var(--ease-out),
-    opacity 200ms var(--ease-out);
+    opacity 200ms var(--ease-out),
+    visibility 0s linear 200ms;
 }
 
 .collapse-grid[data-open="true"] {
   grid-template-rows: 1fr;
   opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows 200ms var(--ease-out),
+    opacity 200ms var(--ease-out),
+    visibility 0s;
 }
 
 /* Închis are înălțime 0: nu păstrează nici spațiul din space-y-* (altfel rămân goluri sub butoane). */

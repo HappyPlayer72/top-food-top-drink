@@ -5,7 +5,6 @@ import { CheckCircle2, ChevronLeft, ExternalLink, House, ShieldCheck, Star } fro
 import { userProfile } from '@tftd/api';
 import { Footer } from '@/components/Footer';
 import { getDb } from '@/lib/server/db';
-import { TOP_LOCAL_REVIEWERS } from '@/data/restaurants';
 
 export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ username: string }> };
@@ -17,25 +16,11 @@ async function loadProfile(username: string): Promise<ProfileData | null> {
     try {
       return await userProfile(getDb(), username);
     } catch {
-      // fallback doar dacă baza e offline sau userul e din seed-ul static
+      // baza nu răspunde: pagina dă 404, nu un profil inventat
     }
   }
-  const staticMatch = TOP_LOCAL_REVIEWERS.find(
-    (r) => r.id.toLowerCase() === username.toLowerCase() || (r.username?.toLowerCase() === username.toLowerCase())
-  );
-  if (!staticMatch) return null;
-  return {
-    username: staticMatch.username ?? staticMatch.id,
-    displayName: staticMatch.name,
-    avatarUrl: null,
-    roles: staticMatch.role === 'influencer' ? ['user', 'influencer'] : ['user', 'local'],
-    local: staticMatch.role === 'verified-local'
-      ? { citySlug: 'timisoara', neighborhood: staticMatch.badgeLabel.replace(/^Localnic din\s+/i, '') }
-      : null,
-    followers: null,
-    socialLinks: [],
-    reviews: [],
-  };
+  // Fără profiluri inventate: doar userii reali din baza de date
+  return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

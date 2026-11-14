@@ -786,7 +786,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           >
             <img
               src={restaurant.photoUrl}
-              alt={`Fotografie a localului ${restaurant.name}`}
+              alt={restaurant.hasPhoto === false ? "" : `Fotografie a localului ${restaurant.name}`}
               className="w-full h-full object-cover object-center"
             />
           </div>

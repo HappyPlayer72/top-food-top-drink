@@ -267,6 +267,7 @@ export async function venuePage(
       touristTrapIndex: venue.touristTrapIndex,
       trapLevel: trapLevel(venue.touristTrapIndex),
       explanation: venue.scoreExplanation,
+      updatedAt: venue.scoreUpdatedAt,
       ...(venue.vertical === "drink" ? { byTime: await drinkTimeScores(db, venue.id) } : {}),
     },
     isPartner: !!(await activePartnership(db, venue.id, now)),

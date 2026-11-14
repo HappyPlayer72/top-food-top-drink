@@ -1,7 +1,6 @@
 import { ImageResponse } from 'next/og';
-import { leaderboardPage } from '@tftd/api';
+import { cityPage, leaderboardPage } from '@tftd/api';
 import { getDb } from '../server/db';
-import { DRINK_VENUES, INITIAL_RESTAURANTS } from '../../data/restaurants';
 import { findVenue } from './venueRoute';
 
 const fmt = (x: number | null | undefined) => (x == null ? '—' : x.toFixed(1).replace('.', ','));
@@ -113,12 +112,14 @@ export async function renderMonthlyOgImage(vertical: 'food' | 'drink', month?: s
       entries = [];
     }
   }
-  if (!entries.length) {
-    const list = (vertical === 'drink' ? DRINK_VENUES : INITIAL_RESTAURANTS)
-      .filter((r) => !r.isSponsored && r.touristTrapIndex < 60)
-      .sort((a, b) => b.foodQualityScore - a.foodQualityScore)
-      .slice(0, 5);
-    entries = list.map((r, i) => ({ rank: i + 1, name: r.name, score: r.foodQualityScore }));
+  // Luna nu e încă înghețată: topul real de acum (Scorul Onest din DB), nu date statice
+  if (!entries.length && process.env.DATABASE_URL) {
+    try {
+      const city = await cityPage(getDb(), { citySlug: 'timisoara', vertical, limit: 5, noTraps: true });
+      entries = city.top.filter((v) => v.honestScore != null).map((v, i) => ({ rank: i + 1, name: v.name, score: v.honestScore! }));
+    } catch {
+      entries = [];
+    }
   }
 
   const isVertical = dims.height > dims.width;
