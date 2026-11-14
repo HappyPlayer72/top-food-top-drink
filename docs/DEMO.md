@@ -25,7 +25,7 @@ Pe ecranul de login, la „Acces rapid cu un cont de test” (ascuns în produc�
 | Cont | Parolă | Pentru ce |
 |---|---|---|
 | `test.user` | `TestUser2026!` | review, „util”, check-in, fidelitate, adaugă local |
-| `test.owner` | `TestOwner2026!` | `/owner` pentru localul primit la seed (primul fără proprietar, alfabetic) |
+| `test.owner` | `TestOwner2026!` | `/owner`: își alege localul din listă și îl revendică (codul demo din `DEMO_CLAIM_CODE`) |
 | `test.admin` | `TestAdmin2026!` | `/admin`: rapoarte, bonuri, locale noi de aprobat |
 
 > Conturile se creează doar pe o bază locală. Pe baza online nu există.

@@ -7,7 +7,7 @@ Populează baza cu orașul **Timișoara** (zone turistice, 14 cartiere și preț
 | Fișier | Rol |
 |---|---|
 | [`load.ts`](load.ts) | Orașul + cele 30 de locale reale, apoi conturile de test. `-- --reset` șterge tot (doar pe baza locală) |
-| [`test-accounts.ts`](test-accounts.ts) | Conturile cu care testăm: `test.user` / `TestUser2026!`, `test.owner` / `TestOwner2026!` (proprietar pe un local), `test.admin` / `TestAdmin2026!`. Doar pe baza locală |
+| [`test-accounts.ts`](test-accounts.ts) | Conturile cu care testăm: `test.user` / `TestUser2026!`, `test.owner` / `TestOwner2026!` (pornește fără local, își revendică unul din `/owner`), `test.admin` / `TestAdmin2026!`. Doar pe baza locală |
 | [`smoke.ts`](smoke.ts) | Test de fum cap-coadă pe `@tftd/api`, logat pe conturile de test, într-o tranzacție anulată la final (baza rămâne neschimbată) |
 | [`generate.ts`](generate.ts) | Generator de review-uri sintetice **doar pentru testele unitare** ale algoritmilor (`scenarios.test.ts`); nu ajunge în bază |
 
