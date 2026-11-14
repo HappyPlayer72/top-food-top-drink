@@ -22,7 +22,7 @@ export async function createTestAccounts() {
   }
 
   const db = createDb(url);
-  const prepared: ((typeof accounts)[number] & { passwordHash: string })[] = [];
+  const prepared: Array<(typeof accounts)[number] & { passwordHash: string }> = [];
   for (const a of accounts) {
     prepared.push({ ...a, passwordHash: await hashPassword(a.password) });
   }

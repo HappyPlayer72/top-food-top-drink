@@ -14,6 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pages: MetadataRoute.Sitemap = [
     { url: `${SITE}/topfood/timisoara`, lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: `${SITE}/topdrink/timisoara`, lastModified: now, changeFrequency: 'daily', priority: 1 },
+    { url: `${SITE}/harta`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE}/topfood/timisoara/top-luna`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE}/topdrink/timisoara/top-luna`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE}/topdrink/timisoara/weekend`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },

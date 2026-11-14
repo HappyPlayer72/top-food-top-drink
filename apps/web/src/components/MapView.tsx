@@ -43,7 +43,7 @@ import {
   Vertical,
   formatHonest, honestSpoken, formatScore,
 } from '../types';
-import { INITIAL_RESTAURANTS, TOURIST_ZONES } from '../data/restaurants';
+import { DRINK_VENUES, INITIAL_RESTAURANTS, TOURIST_ZONES } from '../data/restaurants';
 import {
   OPENFREEMAP_POSITRON_URL,
   TIMISOARA_LANDMARKS,
@@ -52,8 +52,14 @@ import {
   buildNeighborhoodsGeoJSON,
   buildTouristZonesGeoJSON,
 } from '../data/timisoaraGeo';
-import { LocalnicBadge, TrapBadge } from './BrandPrimitives';
-import { MAP_TASTES, matchesMapTastes, type MapTaste } from './mapTasteFilter';
+import { CarouMark, CoasterMark, LocalnicBadge, TrapBadge } from './BrandPrimitives';
+import {
+  computeTierCounts,
+  computeVerticalCounts,
+  filterMapRestaurants,
+  type MapVerticalFilter,
+} from './mapFilter';
+import { MAP_TASTES, type MapTaste } from './mapTasteFilter';
 
 export interface MapViewProps {
   darkMode?: boolean;
@@ -224,10 +230,12 @@ function createFallbackStyle(isDrink: boolean, darkMode: boolean): maplibreglTyp
   };
 }
 
+const DEFAULT_SHARED_VENUES = [...INITIAL_RESTAURANTS, ...DRINK_VENUES];
+
 export function MapView({
   darkMode = false,
   vertical = 'food',
-  restaurants = INITIAL_RESTAURANTS,
+  restaurants = DEFAULT_SHARED_VENUES,
   onSelectRestaurant,
   selectedRestaurant = null,
   selectedNeighborhood,
@@ -236,6 +244,7 @@ export function MapView({
   onResetFilters,
 }: MapViewProps) {
   const isDrink = vertical === 'drink';
+  const [verticalFilter, setVerticalFilter] = useState<MapVerticalFilter>('all');
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(() => {
     if (selectedRestaurant) return selectedRestaurant.id;
     return restaurants[0]?.id ?? null;
@@ -347,29 +356,24 @@ export function MapView({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeZoneId]);
 
-  const visibleRestaurants = useMemo(() => {
-    return restaurants.filter((r) => {
-      if (tierFilter !== 'all' && r.trapTier !== tierFilter) return false;
-      if (!matchesMapTastes(r, selectedTastes)) return false;
-      if (sidebarQuery.trim() !== '') {
-        const q = sidebarQuery.toLowerCase();
-        return (
-          r.name.toLowerCase().includes(q) ||
-          r.cuisine.toLowerCase().includes(q) ||
-          r.neighborhood.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [restaurants, tierFilter, sidebarQuery, selectedTastes]);
+  const visibleRestaurants = useMemo(
+    () =>
+      filterMapRestaurants(restaurants, {
+        verticalFilter,
+        tierFilter,
+        selectedTastes,
+        query: sidebarQuery,
+      }),
+    [restaurants, verticalFilter, tierFilter, sidebarQuery, selectedTastes]
+  );
 
   useEffect(() => {
     if (visibleRestaurants.length === 0) {
-      setActiveRestaurantId(null);
+      if (activeRestaurantId !== null) setActiveRestaurantId(null);
       return;
     }
     if (
-      !activeRestaurantId ||
+      activeRestaurantId !== null &&
       !visibleRestaurants.some((r) => r.id === activeRestaurantId)
     ) {
       setActiveRestaurantId(visibleRestaurants[0].id);
@@ -386,17 +390,15 @@ export function MapView({
     [touristZones, activeZoneId]
   );
 
-  const tierCounts = useMemo(() => {
-    let staple = 0;
-    let mixed = 0;
-    let trap = 0;
-    for (const r of restaurants) {
-      if (r.trapTier === 'local-staple') staple++;
-      else if (r.trapTier === 'mixed-fair') mixed++;
-      else trap++;
-    }
-    return { staple, mixed, trap, total: restaurants.length };
-  }, [restaurants]);
+  const verticalCounts = useMemo(
+    () => computeVerticalCounts(restaurants),
+    [restaurants]
+  );
+
+  const tierCounts = useMemo(
+    () => computeTierCounts(restaurants, verticalFilter),
+    [restaurants, verticalFilter]
+  );
 
   const flyToCamera = useCallback(
     (camKey: string) => {
@@ -437,21 +439,14 @@ export function MapView({
     []
   );
 
-  useEffect(() => {
-    if (!selectedRestaurant) return;
-    setActiveRestaurantId(selectedRestaurant.id);
-    if (mapReady) {
-      mapRef.current?.flyTo({
-        center: [selectedRestaurant.coordinates.lng, selectedRestaurant.coordinates.lat],
-        zoom: 15.6,
-        duration: 650,
-        essential: true,
-      });
-    }
-  }, [selectedRestaurant, mapReady]);
+  const lastFocusedIdRef = useRef<string | null>(null);
+  const prevNeighborhoodRef = useRef<string | undefined>(selectedNeighborhood);
 
   useEffect(() => {
     if (!selectedNeighborhood || !mapReady) return;
+    const neighborhoodChanged = prevNeighborhoodRef.current !== selectedNeighborhood;
+    prevNeighborhoodRef.current = selectedNeighborhood;
+    if (selectedRestaurant && !neighborhoodChanged) return;
     const isSmallScreen =
       typeof window !== 'undefined' && window.innerWidth < 768;
     if (selectedNeighborhood === 'All' || selectedNeighborhood === 'all') {
@@ -476,7 +471,29 @@ export function MapView({
         duration: 700,
       });
     }
-  }, [selectedNeighborhood, mapReady]);
+  }, [selectedNeighborhood, mapReady, selectedRestaurant]);
+
+  useEffect(() => {
+    if (!selectedRestaurant) {
+      lastFocusedIdRef.current = null;
+      return;
+    }
+    if (lastFocusedIdRef.current !== selectedRestaurant.id) {
+      lastFocusedIdRef.current = selectedRestaurant.id;
+      setVerticalFilter((prev) =>
+        prev !== 'all' && prev !== selectedRestaurant.vertical ? 'all' : prev
+      );
+      setActiveRestaurantId(selectedRestaurant.id);
+    }
+    if (mapReady) {
+      mapRef.current?.flyTo({
+        center: [selectedRestaurant.coordinates.lng, selectedRestaurant.coordinates.lat],
+        zoom: 15.6,
+        duration: 650,
+        essential: true,
+      });
+    }
+  }, [selectedRestaurant, mapReady]);
 
   // Helper to ensure our real zone GeoJSON layers exist on the active MapLibre style
   const syncCustomGeoLayers = useCallback(
@@ -1020,6 +1037,12 @@ export function MapView({
         const hasActive = group.items.some((r) => r.id === activeRestaurantId);
         const hasSevereTrap = group.items.some((r) => r.touristTrapIndex >= 80);
         const hasPossibleTrap = group.items.some((r) => r.touristTrapIndex >= 60);
+        const foodCount = group.items.filter((r) => r.vertical === 'food').length;
+        const drinkCount = group.items.length - foodCount;
+        const mixSummary =
+          foodCount > 0 && drinkCount > 0
+            ? ` (${foodCount} mâncare, ${drinkCount} băutură)`
+            : '';
 
         const wrapper = document.createElement('div');
         wrapper.className = 'relative flex flex-col items-center';
@@ -1029,7 +1052,7 @@ export function MapView({
         btn.type = 'button';
         btn.setAttribute(
           'aria-label',
-          `${group.items.length} localuri în această zonă: ${group.items
+          `${group.items.length} localuri în această zonă${mixSummary}: ${group.items
             .map((r) => r.name)
             .join(', ')}. Apasă pentru a mări.`
         );
@@ -1105,6 +1128,7 @@ export function MapView({
       }
 
       const restaurant = group.items[0];
+      const isDrinkVenue = restaurant.vertical === 'drink';
       const isSelected = restaurant.id === activeRestaurantId;
       const isHovered = restaurant.id === hoveredRestaurantId;
       const tierStyle = getTierStyles(
@@ -1123,19 +1147,43 @@ export function MapView({
       btn.type = 'button';
       btn.setAttribute(
         'aria-label',
-        `${restaurant.name}, ${restaurant.shortNeighborhood ?? restaurant.neighborhood}, ${honestSpoken(restaurant.foodQualityScore)}${isTrap ? `, ${tierStyle.label}` : ''}`
+        `${restaurant.name} (${isDrinkVenue ? 'băutură' : 'mâncare'}), ${restaurant.shortNeighborhood ?? restaurant.neighborhood}, ${honestSpoken(restaurant.foodQualityScore)}${isTrap ? `, ${tierStyle.label}` : ''}`
       );
       btn.setAttribute('aria-pressed', String(isSelected));
       btn.className = `group relative min-w-[44px] min-h-[44px] inline-flex items-end justify-center pb-1 bg-transparent cursor-pointer transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A] ${
         isSelected ? 'scale-110' : isHovered ? 'scale-105' : 'hover:scale-105'
       }`;
 
-      if (isDrink && !isTrap) {
-        // Suport de bere circular coaster pin on topdrink
+      if (isDrinkVenue) {
+        // Suport de bere circular coaster pin pentru localurile de băutură (topdrink)
+        const coasterBg = isSevereTrap
+          ? '#B3261E'
+          : isTrap
+          ? '#E0A526'
+          : isSelected
+          ? '#17382C'
+          : '#F4EEE2';
+        const coasterFg = isSevereTrap
+          ? '#FFFFFF'
+          : isTrap
+          ? '#3A2418'
+          : isSelected
+          ? '#F4EEE2'
+          : '#17382C';
+        const coasterBorder = isSelected
+          ? '#F2A33A'
+          : isTrap
+          ? '#3A2418'
+          : '#B98A5E';
+        const coasterTrapTri = isTrap
+          ? `<span class="inline-flex items-center justify-center w-3 h-3 text-[8px] font-extrabold leading-none ml-0.5" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); background:${
+              isSevereTrap ? '#FFFFFF' : '#3A2418'
+            }; color:${isSevereTrap ? '#B3261E' : '#E0A526'}; padding-top:1.5px;">!</span>`
+          : '';
         btn.innerHTML = `
-          <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-md font-display text-[15px] leading-none tabular-nums"
-            style="background:#F4EEE2; color:#17382C; border: ${isSelected ? '3px solid #F2A33A' : '2.5px solid #B98A5E'};">
-            ${formatHonest(restaurant.foodQualityScore)}
+          <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-md font-display text-[14px] leading-none tabular-nums"
+            style="background:${coasterBg}; color:${coasterFg}; border: ${isSelected ? '3px' : '2.5px'} solid ${coasterBorder};">
+            <span>${formatHonest(restaurant.foodQualityScore)}</span>${coasterTrapTri}
           </div>
         `;
       } else {
@@ -1199,8 +1247,10 @@ export function MapView({
         const label = document.createElement('div');
         label.className = `pointer-events-none -mt-0.5 px-1.5 py-0.5 rounded-[3px] text-[11px] leading-tight font-semibold border whitespace-nowrap shadow-sm ${
           isSelected
-            ? 'bg-[#3A2418] text-white border-[#3A2418]'
-            : isDrink
+            ? isDrinkVenue
+              ? 'bg-[#17382C] text-[#F4EEE2] border-[#F2A33A]'
+              : 'bg-[#3A2418] text-white border-[#3A2418]'
+            : isDrinkVenue
             ? 'bg-[#143025] text-[#F4EEE2] border-[#2D5947]'
             : 'bg-white text-[#3A2418] border-[#D6CFC5]'
         }`;
@@ -1283,6 +1333,52 @@ export function MapView({
               <span>{sidebarOpen ? 'Ascunde lista' : 'Listă și filtre'}</span>
               <span className="opacity-75 tabular-nums">({visibleRestaurants.length})</span>
             </button>
+
+            <div
+              role="group"
+              aria-label="Filtrează după tipul localului"
+              className={`inline-flex items-center rounded-[4px] border p-0.5 shrink-0 ${
+                isDrink
+                  ? 'border-[#2D5947] bg-[#143025]'
+                  : 'border-[#D6CFC5] bg-[#FAF8F5]'
+              }`}
+            >
+              {(
+                [
+                  { id: 'all' as const, label: 'Toate', count: verticalCounts.all, icon: null },
+                  { id: 'food' as const, label: 'Mâncare', count: verticalCounts.food, icon: 'food' },
+                  { id: 'drink' as const, label: 'Băutură', count: verticalCounts.drink, icon: 'drink' },
+                ] as const
+              ).map((item) => {
+                const active = verticalFilter === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setVerticalFilter(item.id)}
+                    className={`inline-flex items-center gap-1 px-2 min-h-[40px] md:min-h-[28px] py-1 rounded-[3px] text-[12px] font-semibold transition-colors whitespace-nowrap ${
+                      active
+                        ? item.id === 'drink'
+                          ? 'bg-[#17382C] text-[#F4EEE2] shadow-xs ring-1 ring-[#F2A33A]/60'
+                          : isDrink
+                          ? 'bg-[#F2A33A] text-[#17382C]'
+                          : 'bg-[#3A2418] text-white'
+                        : isDrink
+                        ? 'text-[#F4EEE2]/80 hover:text-[#F4EEE2]'
+                        : 'text-[#6E5649] hover:text-[#3A2418]'
+                    }`}
+                  >
+                    {item.icon === 'food' && <CarouMark size={13} />}
+                    {item.icon === 'drink' && <CoasterMark size={13} />}
+                    <span>{item.label}</span>
+                    <span className="hidden lg:inline opacity-75 tabular-nums text-[11px]">
+                      ({item.count})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
             <div
               className={`h-4 w-px shrink-0 ${
@@ -1727,6 +1823,7 @@ export function MapView({
                   <button
                     type="button"
                     onClick={() => {
+                      setVerticalFilter('all');
                       setTierFilter('all');
                       setSelectedTastes([]);
                       setSidebarQuery('');
@@ -1779,6 +1876,11 @@ export function MapView({
                                 isDrink ? 'bg-[#F2A33A]' : 'bg-[#B3261E]'
                               }`}
                             />
+                          )}
+                          {r.vertical === 'drink' ? (
+                            <CoasterMark size={13} />
+                          ) : (
+                            <CarouMark size={13} />
                           )}
                           <span className="font-bold text-[14px] truncate">
                             {r.name}
@@ -1833,7 +1935,7 @@ export function MapView({
                 : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
             }`}
           >
-            © OpenStreetMap · OpenFreeMap · TOP FOOD skin
+            © OpenStreetMap · OpenFreeMap · TOP FOOD &amp; DRINK skin
           </div>
 
           {/* Floating Legend Pill when sidebar is collapsed */}
@@ -2034,6 +2136,28 @@ export function MapView({
               <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      {activeRestaurant.vertical === 'drink' ? (
+                        <CoasterMark size={14} />
+                      ) : (
+                        <CarouMark size={14} />
+                      )}
+                      <span
+                        className={`text-[11px] font-bold uppercase tracking-[0.06em] ${
+                          activeRestaurant.vertical === 'drink'
+                            ? isDrink
+                              ? 'text-[#F2A33A]'
+                              : 'text-[#17382C]'
+                            : isDrink
+                            ? 'text-[#F4EEE2]/80'
+                            : 'text-[#B3261E]'
+                        }`}
+                      >
+                        {activeRestaurant.vertical === 'drink'
+                          ? 'topdrink'
+                          : 'topfood'}
+                      </span>
+                    </div>
                     <h3 className="font-display text-[20px] sm:text-[24px] leading-tight truncate">
                       {activeRestaurant.name}
                     </h3>

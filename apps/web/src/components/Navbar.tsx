@@ -205,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleSwitchVertical = () => {
     onVerticalChange(isDrink ? 'food' : 'drink');
-    if (navSection !== 'top') {
+    if (navSection !== 'top' && navSection !== 'map') {
       onNavSectionChange('top');
     }
   };
