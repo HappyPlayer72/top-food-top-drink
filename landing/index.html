@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOP FOOD / TOP DRINK · Timișoara</title>
+<meta name="description" content="Unde mănânci și ieși bine în Timișoara, după localnici, nu după turiști sau review-uri cumpărate. Lasă-ne emailul și te anunțăm când pornim.">
+<meta property="og:title" content="TOP FOOD / TOP DRINK · Timișoara">
+<meta property="og:description" content="Clasamentul restaurantelor și barurilor din Timișoara făcut după ce cred localnicii. Te anunțăm la lansare.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#22262E" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='5' fill='%23B3261E' stroke='%239E1F18' stroke-width='2'/%3E%3Crect x='4' y='4' width='12' height='12' rx='1.5' fill='%23D96B63'/%3E%3Crect x='16' y='4' width='12' height='12' rx='1.5' fill='%23C44037'/%3E%3Crect x='4' y='16' width='12' height='12' rx='1.5' fill='%23C44037'/%3E%3Crect x='16' y='16' width='12' height='12' rx='1.5' fill='%23B3261E'/%3E%3C/svg%3E">
+<script>
+  // Tema salvată se aplică înainte de desenarea paginii, ca să nu clipească. Fără alegere salvată: tema sistemului.
+  try {
+    var saved = localStorage.getItem("topfood-dark-mode");
+    if (saved === "true" || saved === "false") {
+      document.documentElement.setAttribute("data-theme", saved === "true" ? "dark" : "light");
+    }
+  } catch (_) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap" rel="stylesheet">
+<style>
+  /*
+   * Identitatea vizuală din design/design-language.md și design/README.md,
+   * cu aceleași valori ca apps/web/src/app/globals.css și BrandPrimitives.tsx.
+   */
+  :root {
+    /* Cele 8 culori de identitate */
+    --carou: #B3261E;
+    --cafea: #3A2418;
+    --mustar: #E0A526;
+    --placuta: #1F4E8C;
+    --sticla: #17382C;
+    --chihlimbar: #F2A33A;
+    --spuma: #F4EEE2;
+    --carton: #B98A5E;
+
+    /* Suprafețe discrete */
+    --paper: #FFFFFF;
+    --card: #FAF8F5;
+    --sponsored: #F2EFE9;
+    --hairline: #E6DFD5;
+    --hairline-strong: #D6CFC5;
+    --muted: #6E5649;
+
+    /* Roluri (se schimbă în modul întunecat) */
+    --bg: var(--paper);
+    --text: var(--cafea);
+    --carou-ink: var(--carou);        /* Carou folosit ca text */
+    --placuta-ink: var(--placuta);    /* Plăcuță folosit ca text/bară */
+    --track: var(--sponsored);
+    --tourist-bar: #9C8978;
+    --focus: var(--carou);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #22262E;               /* Evening Slate */
+      --card: #2B303A;
+      --sponsored: #313743;
+      --hairline: #3A404B;
+      --hairline-strong: #4A5364;
+      --muted: #B6BAC4;
+      --text: var(--spuma);
+      --carou-ink: #FF7A70;
+      --placuta-ink: #7DB4FF;
+      --track: #313743;
+      --focus: var(--chihlimbar);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #22262E;
+    --card: #2B303A;
+    --sponsored: #313743;
+    --hairline: #3A404B;
+    --hairline-strong: #4A5364;
+    --muted: #B6BAC4;
+    --text: var(--spuma);
+    --carou-ink: #FF7A70;
+    --placuta-ink: #7DB4FF;
+    --track: #313743;
+    --focus: var(--chihlimbar);
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html {
+    font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-variation-settings: "wdth" 100;
+    background: var(--bg);
+    color: var(--text);
+    scroll-behavior: smooth;
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.5;
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection { background: rgba(179, 38, 30, .15); color: var(--carou-ink); }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  svg { display: block; flex-shrink: 0; }
+  a { color: inherit; }
+  h1, h2, h3, p { margin: 0; }
+
+  button:focus-visible, a:focus-visible, input:focus-visible, [tabindex="0"]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .on-sticla :focus-visible { outline-color: var(--chihlimbar); }
+
+  /* ---------- tipografie (font-display / font-display-light din globals.css) ---------- */
+  .font-display {
+    font-variation-settings: "wdth" 62, "wght" 800;
+    font-stretch: 62%;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+  }
+  .font-display-light {
+    font-variation-settings: "wdth" 62, "wght" 300;
+    font-stretch: 62%;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+
+  .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 32px; } }
+
+  /* ---------- insigne (BrandPrimitives) ---------- */
+  .badge-placuta {
+    display: inline-flex; align-items: center; white-space: nowrap; line-height: 1;
+    background: var(--placuta); color: #FFFFFF;
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .88);
+    border: 2px solid var(--placuta); border-radius: 3px;
+    font-weight: 600; font-size: 12px; padding: 4px 10px;
+  }
+  .badge-placuta.xs { font-size: 11px; padding: 2px 8px; }
+  .badge-trap {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; line-height: 1;
+    font-weight: 600; font-size: 12px; padding: 4px 10px; border-radius: 3px;
+  }
+  .badge-trap.possible { background: var(--mustar); color: var(--cafea); }
+  .badge-trap.severe { background: var(--carou); color: #FFFFFF; }
+  .badge-trap svg { width: 14px; height: 14px; }
+  .chip {
+    display: inline-flex; align-items: center; white-space: nowrap; line-height: 1.2;
+    font-weight: 600; font-size: 11px; padding: 2px 8px; border-radius: 3px;
+    border: 1px solid var(--hairline-strong); color: var(--muted); background: var(--bg);
+  }
+  .sponsored-note {
+    display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--sponsored); color: var(--muted);
+    font-size: 12px; padding: 6px 10px; border-radius: 4px; margin-top: 10px;
+  }
+  .sponsored-note b { color: var(--text); font-weight: 600; }
+
+  /* CarouStrip: țesătură pe 2 rânduri în stânga, apoi Carou plin. O singură dată pe pagină. */
+  .carou-strip { display: flex; height: 10px; overflow: hidden; }
+  .carou-strip .weave { display: grid; grid-template-columns: repeat(3, 5px); grid-template-rows: repeat(2, 5px); grid-auto-flow: column; flex: 0 0 auto; }
+  .carou-strip .weave i:nth-child(1) { background: #FAF5F0; }
+  .carou-strip .weave i:nth-child(2) { background: #E08A84; }
+  .carou-strip .weave i:nth-child(3) { background: #E08A84; }
+  .carou-strip .weave i:nth-child(4) { background: #C94A42; }
+  .carou-strip .weave i:nth-child(5) { background: #C94A42; }
+  .carou-strip .weave i:nth-child(6) { background: #B3261E; }
+  .carou-strip .solid { flex: 1; background: var(--carou); }
+
+  /* LocalVsTouristBars */
+  .lvt { display: grid; gap: 10px; }
+  .lvt .row { display: flex; align-items: center; gap: 12px; }
+  .lvt .who { width: 96px; flex: 0 0 auto; font-size: 13px; font-weight: 600; }
+  .lvt .track { flex: 1; height: 8px; border-radius: 2px; overflow: hidden; background: var(--track); }
+  .lvt .fill { height: 100%; }
+  .lvt .fill.local { background: var(--placuta); }
+  .lvt .fill.tourist { background: var(--tourist-bar); }
+  .lvt .val { width: 32px; text-align: right; font-size: 19px; line-height: 1; }
+  .lvt-note { font-size: 12px; color: var(--muted); }
+
+  /* butoane și câmpuri */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 48px; padding: 0 20px;
+    font: inherit; font-weight: 600; font-size: 16px;
+    background: var(--carou); color: #FFFFFF;
+    border: 0; border-radius: 4px; cursor: pointer;
+    transition: transform 150ms cubic-bezier(.23,1,.32,1), background-color 150ms cubic-bezier(.23,1,.32,1);
+  }
+  .btn:hover { background: #9E1F18; }
+  .btn:active { transform: scale(.97); }
+  .btn[disabled] { opacity: .65; cursor: progress; }
+  @media (prefers-reduced-motion: reduce) { .btn:active { transform: none; } }
+
+  /* ---------- antet ---------- */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; }
+  .marks { display: flex; align-items: center; gap: 4px 20px; flex-wrap: wrap; min-width: 0; }
+  .wordmark { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; text-decoration: none; border-radius: 4px; }
+  .wordmark .name { display: inline-flex; align-items: baseline; line-height: 1; font-size: 24px; white-space: nowrap; }
+  .wordmark .name .font-display-light { opacity: .9; }
+  @media (min-width: 640px) { .wordmark .name { font-size: 28px; } }
+  @media (max-width: 374px) { .wordmark .name { font-size: 20px; } .wordmark svg { width: 24px; height: 24px; } }
+  .top .link {
+    font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 4px;
+    color: var(--carou-ink); white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center;
+  }
+  @media (max-width: 560px) { .top .link { display: none; } }
+  .top .right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+  /* Comutator mod luminos / întunecat (ca în Navbar.tsx) */
+  .theme-toggle {
+    width: 44px; height: 44px; border-radius: 9999px; border: 0; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--text); cursor: pointer;
+    transition: transform 150ms cubic-bezier(.23,1,.32,1), background-color 150ms cubic-bezier(.23,1,.32,1);
+  }
+  .theme-toggle:hover { background: var(--card); }
+  .theme-toggle:active { transform: scale(.97); }
+  .theme-toggle svg { width: 16px; height: 16px; }
+  .theme-toggle .sun { display: none; color: var(--mustar); }
+  .is-dark .theme-toggle .sun { display: block; }
+  .is-dark .theme-toggle .moon { display: none; }
+  @media (prefers-reduced-motion: reduce) { .theme-toggle:active { transform: none; } }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 32px 0 56px; }
+  @media (min-width: 920px) {
+    .hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 64px; align-items: start; }
+    .hero { padding-top: 56px; }
+  }
+  .eyebrow { font-weight: 600; font-size: 14px; color: var(--muted); margin-bottom: 14px; }
+  .eyebrow b { color: var(--carou-ink); font-weight: 600; }
+  h1 { font-size: clamp(48px, 9.5vw, 88px); line-height: .95; margin-bottom: 20px; }
+  h1 .accent { color: var(--carou-ink); }
+  .lede { font-size: 17px; max-width: 32em; margin-bottom: 28px; }
+  .lede b { font-weight: 600; }
+
+  .signup { max-width: 520px; }
+  .signup .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .signup input[type="email"] {
+    flex: 1 1 220px; min-width: 0; min-height: 48px; padding: 0 12px;
+    font: inherit; font-size: 16px; color: var(--text); background: var(--bg);
+    border: 1px solid var(--hairline-strong); border-radius: 4px;
+  }
+  .signup input[type="email"]::placeholder { color: var(--muted); opacity: 1; }
+  .signup input[type="email"]:hover { border-color: var(--muted); }
+  .signup input[aria-invalid="true"] { border-color: var(--carou-ink); }
+  .prefs { display: flex; gap: 4px 20px; flex-wrap: wrap; margin: 12px 0 0; padding: 0; border: 0; font-size: 14px; }
+  .prefs legend { padding: 0; margin-bottom: 2px; font-weight: 600; font-size: 13px; color: var(--muted); }
+  .prefs label { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; font-weight: 600; }
+  .prefs input { width: 18px; height: 18px; margin: 0; accent-color: var(--carou); }
+  .fine { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .status { margin-top: 10px; font-weight: 600; font-size: 14px; }
+  .status:empty { display: none; }
+  .status.ok { color: var(--text); display: flex; gap: 8px; align-items: center; }
+  .status.ok::before { content: "✓"; color: var(--carou-ink); font-weight: 800; }
+  .status.err { color: var(--carou-ink); }
+  .signup.done .row, .signup.done .prefs { display: none; }
+
+  /* exemplul din hero: un local pe Google vs la noi */
+  .example { margin-top: 48px; }
+  @media (min-width: 920px) { .example { margin-top: 0; } }
+  .example .cap { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .venue {
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 4px; padding: 20px;
+    display: grid; gap: 18px;
+  }
+  .venue .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .venue h3 { font-size: 28px; line-height: 1.05; }
+  .venue .where { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .venue .score { text-align: right; }
+  .venue .score .big { font-size: 72px; line-height: .85; display: block; }
+  .venue .score small { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 6px; white-space: nowrap; }
+  .venue .google { font-size: 13px; color: var(--muted); }
+  .venue .google b { color: var(--text); font-weight: 600; }
+  .trapcard { border-top: 3px solid var(--carou); padding-top: 14px; display: grid; gap: 10px; }
+  .trapcard .line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .trapcard .idx { font-size: 24px; line-height: 1; }
+  .trapcard ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+
+  /* ---------- secțiuni ---------- */
+  section { padding: 72px 0; }
+  .s-head { max-width: 38em; margin-bottom: 36px; }
+  .s-head h2 { font-size: clamp(38px, 6vw, 56px); line-height: 1; margin-bottom: 12px; }
+  .s-head p { font-size: 17px; color: var(--muted); }
+
+  /* ce primești: listă, fără carduri */
+  .features { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--hairline); }
+  @media (min-width: 700px) { .features { grid-template-columns: 1fr 1fr; column-gap: 48px; } }
+  @media (min-width: 1000px) { .features { grid-template-columns: 1fr 1fr 1fr; } }
+  .feature { padding: 22px 0; border-bottom: 1px solid var(--hairline); }
+  .feature h3 { font-size: 26px; line-height: 1.05; margin-bottom: 8px; }
+  .feature p { font-size: 15px; color: var(--muted); }
+  .feature p b { color: var(--text); font-weight: 600; }
+
+  /* review-uri cântărite */
+  .weigh { background: var(--card); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); }
+  .vs { display: grid; gap: 0; grid-template-columns: 1fr; border-top: 1px solid var(--hairline-strong); }
+  @media (min-width: 780px) { .vs { grid-template-columns: 1fr 1fr; } .vs .review + .review { border-left: 1px solid var(--hairline-strong); padding-left: 32px; } .vs .review:first-child { padding-right: 32px; } }
+  .review { padding: 24px 0; display: grid; gap: 12px; align-content: start; border-bottom: 1px solid var(--hairline-strong); }
+  .review .who { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+  .review .who b { font-weight: 600; }
+  .review .stars { font-size: 13px; color: var(--muted); }
+  .review .stars span { color: var(--text); letter-spacing: 1px; }
+  .review blockquote { margin: 0; font-size: 17px; line-height: 1.45; }
+  .review dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; }
+  .review dt { color: var(--muted); }
+  .review dd { margin: 0; }
+  .review .weight { display: flex; align-items: baseline; gap: 10px; }
+  .review .weight span { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .review .weight strong { font-size: 40px; line-height: 1; }
+  .review.bot .weight strong { color: var(--muted); }
+  .review.elena .weight strong { color: var(--placuta-ink); }
+  .punch { margin-top: 28px; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.1; max-width: 26em; }
+  .punch .accent { color: var(--carou-ink); }
+
+  /* TOP DRINK: Sticlă, Spumă, Chihlimbar */
+  .on-sticla { background: var(--sticla); color: var(--spuma); }
+  .on-sticla .s-head p, .on-sticla .meta { color: #C9C1AE; }
+  .drink .grid { display: grid; gap: 40px; align-items: center; }
+  @media (min-width: 860px) { .drink .grid { grid-template-columns: 1fr auto; gap: 64px; } }
+  .drink ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid #285443; }
+  .drink li { padding: 16px 0; border-bottom: 1px solid #285443; }
+  .drink li b { display: block; font-size: 22px; line-height: 1.1; margin-bottom: 4px; }
+  .drink li span { color: #C9C1AE; font-size: 15px; }
+  .drink-card { display: grid; justify-items: center; gap: 14px; text-align: center; }
+  .coaster-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 168px; height: 168px; border-radius: 9999px;
+    background: var(--spuma); color: var(--sticla);
+    border: 5px solid var(--carton);
+    box-shadow: inset 0 0 0 4px rgba(185, 138, 94, .25);
+  }
+  .coaster-badge span { font-size: 76px; line-height: 1; }
+  .drink-card .when { font-size: 14px; font-weight: 600; }
+  .crowd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .crowd .seg { display: flex; gap: 4px; }
+  .crowd .seg i { width: 20px; height: 6px; border-radius: 1px; background: #285443; }
+  .crowd .seg i.on { background: var(--chihlimbar); }
+  .crowd span { font-size: 12px; color: rgba(244, 238, 226, .75); }
+
+  /* planul */
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .step { display: grid; grid-template-columns: 40px 1fr; gap: 20px; position: relative; padding-bottom: 40px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before { content: ""; position: absolute; left: 19px; top: 44px; bottom: 4px; width: 2px; background: var(--hairline); }
+  .step:last-child::before { display: none; }
+  .dot {
+    width: 40px; height: 40px; border-radius: 4px;
+    display: grid; place-items: center; font-size: 22px; line-height: 1;
+    border: 2px solid var(--hairline-strong); color: var(--muted); background: var(--bg);
+  }
+  .step.done .dot { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .step.now .dot { background: var(--carou); border-color: var(--carou); color: #FFFFFF; }
+  .step h3 { font-size: 30px; line-height: 1.05; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 4px; }
+  .step .state { font-variation-settings: "wdth" 100; font-stretch: 100%; letter-spacing: 0; font-weight: 600; font-size: 12px; padding: 3px 8px; border-radius: 3px; line-height: 1.2; }
+  .step.done .state { border: 1px solid var(--text); color: var(--text); }
+  .step.now .state { background: var(--carou); color: #FFFFFF; }
+  .step.later .state { border: 1px solid var(--hairline-strong); color: var(--muted); }
+  .step .sub { color: var(--muted); font-size: 15px; margin-bottom: 10px; }
+  .step ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 15px; }
+  @media (min-width: 760px) { .step ul { grid-template-columns: 1fr 1fr; column-gap: 32px; } }
+
+  /* ce promitem: listă numerotată, fără carduri */
+  .rules { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; counter-reset: r; border-top: 1px solid var(--hairline); }
+  @media (min-width: 720px) { .rules { grid-template-columns: 1fr 1fr; column-gap: 48px; } }
+  .rules li { counter-increment: r; display: grid; grid-template-columns: 36px 1fr; gap: 12px; padding: 18px 0; border-bottom: 1px solid var(--hairline); }
+  .rules li::before {
+    content: counter(r);
+    font-variation-settings: "wdth" 62, "wght" 800; font-stretch: 62%; font-weight: 800;
+    font-size: 34px; line-height: .9; color: var(--carou-ink);
+  }
+  .rules b { display: block; font-size: 16px; font-weight: 600; }
+  .rules span { color: var(--muted); font-size: 15px; }
+
+  /* apel final */
+  .final .inner { border-top: 3px solid var(--carou); padding-top: 32px; display: grid; gap: 28px; }
+  @media (min-width: 880px) { .final .inner { grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; } }
+  .final h2 { font-size: clamp(40px, 6vw, 60px); line-height: 1; margin-bottom: 12px; }
+  .final p.intro { color: var(--muted); font-size: 17px; }
+
+  footer { padding: 24px 0 48px; }
+  footer .wrap { display: flex; justify-content: space-between; align-items: center; gap: 12px 24px; flex-wrap: wrap; border-top: 1px solid var(--hairline); padding-top: 20px; font-size: 13px; color: var(--muted); }
+  footer .mini { display: inline-flex; align-items: baseline; font-size: 18px; color: var(--text); }
+</style>
+</head>
+<body>
+
+<header class="wrap top">
+  <nav class="marks" aria-label="TOP FOOD și TOP DRINK, Timișoara">
+    <a class="wordmark" href="#" aria-label="topfood/timișoara">
+      <!-- CarouMark -->
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="5" fill="#B3261E" stroke="#9E1F18" stroke-width="2"/><rect x="4" y="4" width="12" height="12" rx="1.5" fill="#D96B63"/><rect x="16" y="4" width="12" height="12" rx="1.5" fill="#C44037"/><rect x="4" y="16" width="12" height="12" rx="1.5" fill="#C44037"/><rect x="16" y="16" width="12" height="12" rx="1.5" fill="#B3261E"/></svg>
+      <span class="name"><span class="font-display">topfood</span><span class="font-display-light">/timișoara</span></span>
+    </a>
+    <a class="wordmark" href="#topdrink" aria-label="topdrink/timișoara">
+      <!-- CoasterMark -->
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M20.5 13.5H24C25.933 13.5 27.5 15.067 27.5 17V21.5C27.5 23.433 25.933 25 24 25H20.5" stroke="#B98A5E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="5" y="10" width="16" height="18" rx="3.5" fill="#F2A33A" stroke="#B98A5E" stroke-width="2"/><line x1="9.5" y1="15.5" x2="9.5" y2="24" stroke="#17382C" stroke-opacity="0.18" stroke-width="1.6" stroke-linecap="round"/><line x1="13.5" y1="15.5" x2="13.5" y2="24" stroke="#17382C" stroke-opacity="0.18" stroke-width="1.6" stroke-linecap="round"/><path d="M5.5 11.5C4.5 11.5 4 10.5 4.3 9.2C4.7 7.3 6.5 6.2 8.3 6.6C9.3 4.8 11.8 4.2 13.7 5.2C15.2 4.3 17.5 4.8 18.4 6.5C20.3 6.2 21.8 7.6 21.8 9.5C21.8 10.7 21.2 11.5 20.2 11.5H18.5V13.2C18.5 13.9 17.9 14.4 17.2 14.4C16.5 14.4 16 13.9 16 13.2V11.5H5.5Z" fill="#F4EEE2" stroke="#B98A5E" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      <span class="name"><span class="font-display">topdrink</span><span class="font-display-light">/timișoara</span></span>
+    </a>
+  </nav>
+  <div class="right">
+    <a class="link" href="#anunta-ma">Anunță-mă la lansare</a>
+    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Comută la mod întunecat" title="Mod întunecat">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- CarouStrip: singura dată pe pagină -->
+<div class="carou-strip" aria-hidden="true">
+  <div class="weave"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="solid"></div>
+</div>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow"><b>În curând</b> · Timișoara e primul oraș</p>
+        <h1 class="font-display">Unde mănânci bine, <span class="accent">după localnici.</span></h1>
+        <p class="lede">Pe Google vezi câte stele are un local. La noi vezi <b>cine</b> le-a dat, <b>de ce</b> contează sau nu, și dacă e locul potrivit <b>pentru tine</b>. Restaurante pe topfood, baruri și cluburi pe topdrink.</p>
+
+        <form class="signup" id="anunta-ma" data-signup novalidate>
+          <div class="row">
+            <label for="email-1" class="hp">Adresa de email</label>
+            <input id="email-1" type="email" name="email" inputmode="email" autocomplete="email" placeholder="nume@exemplu.ro" required>
+            <button class="btn" type="submit">Anunță-mă la lansare</button>
+          </div>
+          <fieldset class="prefs">
+            <legend>Ce te interesează?</legend>
+            <label><input type="checkbox" name="interes" value="food" checked> TOP FOOD</label>
+            <label><input type="checkbox" name="interes" value="drink" checked> TOP DRINK</label>
+          </fieldset>
+          <div class="hp" aria-hidden="true"><label>Nu completa <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+          <p class="status" role="status" aria-live="polite"></p>
+          <p class="fine">Îți scriem o singură dată, când site-ul e live. Fără spam, nu dăm emailul nimănui.</p>
+        </form>
+      </div>
+
+      <div class="example">
+        <p class="cap">Exemplu: același local, pe Google și la noi</p>
+        <article class="venue" aria-label="Exemplu: Terasa Grand Unirii">
+          <div class="head">
+            <div>
+              <h3 class="font-display">Terasa Grand Unirii</h3>
+              <p class="where">Cetate · lângă Piața Unirii</p>
+              <p class="google" style="margin-top:12px">Pe Google: <b class="num">4,6★</b> din 1.240 de review-uri</p>
+            </div>
+            <div class="score" aria-label="Scor onest 5,1 din 10">
+              <span class="big font-display num">5,1</span>
+              <small>Scor Onest din 10</small>
+            </div>
+          </div>
+          <div>
+            <div class="lvt" aria-label="Scor separat pentru localnici și turiști">
+              <div class="row">
+                <div class="who"><span class="badge-placuta xs">Localnici</span></div>
+                <div class="track"><div class="fill local" style="width:42%"></div></div>
+                <span class="val font-display num">4,2</span>
+              </div>
+              <div class="row">
+                <div class="who">Turiști</div>
+                <div class="track"><div class="fill tourist" style="width:89%"></div></div>
+                <span class="val font-display num">8,9</span>
+              </div>
+            </div>
+            <p class="lvt-note" style="margin-top:8px">Diferență de 4,7 puncte: turiștii îl laudă, localnicii nu.</p>
+          </div>
+          <div class="trapcard">
+            <div class="line">
+              <span class="badge-trap possible">
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2L14.4 13.4H1.6L8 2Z" stroke="#3A2418" stroke-width="1.5" stroke-linejoin="round"/><rect x="7.35" y="6" width="1.3" height="3.8" rx="0.5" fill="#3A2418"/><circle cx="8" cy="11.3" r="0.8" fill="#3A2418"/></svg>
+                <span>Posibilă capcană turistică</span>
+              </span>
+              <span class="idx font-display num">64 din 100</span>
+            </div>
+            <ul>
+              <li>preț cu 60% peste media orașului</li>
+              <li>70% din review-uri în limbi străine</li>
+              <li>localnicii îl notează mult mai jos</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <section id="ce-facem" aria-labelledby="feat-h">
+    <div class="wrap">
+      <div class="s-head">
+        <h2 class="font-display" id="feat-h">Ce primești</h2>
+        <p>Un clasament în care fiecare scor are o explicație, iar banii nu cumpără locul în top.</p>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <h3 class="font-display">Scor Onest</h3>
+          <p>O notă de la 0 la 10. <b>Review-urile localnicilor verificați contează dublu</b>, cele plătite de influenceri foarte puțin, iar cele care par false aproape deloc.</p>
+        </div>
+        <div class="feature">
+          <h3 class="font-display">Localnici și turiști, separat</h3>
+          <p>Ce zic oamenii din oraș și ce zic cei veniți pentru o seară, pe rânduri diferite. Autorii verificați au plăcuța <span class="badge-placuta xs">Localnic din Iosefin</span></p>
+        </div>
+        <div class="feature">
+          <h3 class="font-display">Tourist Trap Index</h3>
+          <p>Un indice de la 0 la 100, <b>cu motivele la vedere</b>: prețuri, limba review-urilor, câți clienți nu mai revin.</p>
+        </div>
+        <div class="feature">
+          <h3 class="font-display">„De ce?” la orice scor</h3>
+          <p>Un buton care îți arată din ce e făcută nota: câte review-uri, de la cine și cu ce greutate.</p>
+        </div>
+        <div class="feature">
+          <h3 class="font-display">Topul lunii</h3>
+          <p>Calculat pe 1 ale lunii, apoi înghețat. Plus Localnicul lunii, Revelația lunii și Angajatul lunii.</p>
+        </div>
+        <div class="feature">
+          <h3 class="font-display">Reclamă, dar cinstită</h3>
+          <p>Localurile pot plăti doar pentru un loc marcat clar. <b>Plata nu schimbă scorul și nici poziția.</b></p>
+          <span class="sponsored-note"><b>Sponsorizat.</b> Nu schimbă scorul.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="weigh" aria-labelledby="weigh-h">
+    <div class="wrap">
+      <div class="s-head">
+        <h2 class="font-display" id="weigh-h">Nu ștergem review-uri. Le cântărim.</h2>
+        <p>Fiecare review trece prin 6 semnale de fals și primește o greutate. Două review-uri la același local:</p>
+      </div>
+      <div class="vs">
+        <article class="review bot">
+          <div class="who"><b>cont creat ieri</b><span class="chip">1 review, fără poze</span></div>
+          <p class="stars"><span aria-hidden="true">★★★★★</span> 5 din 5</p>
+          <blockquote>„Super! Recomand!”</blockquote>
+          <dl>
+            <dt>Semnale</dt><dd>rafală, text copiat, cont nou, generic</dd>
+            <dt>Șansa de fals</dt><dd class="num">73%</dd>
+          </dl>
+          <div class="weight"><span>greutate</span><strong class="font-display num">0,08</strong></div>
+        </article>
+        <article class="review elena">
+          <div class="who"><b>Doamna Elena</b><span class="badge-placuta">Localnic din Iosefin</span></div>
+          <p class="stars"><span aria-hidden="true">★★★</span> 3 din 5</p>
+          <blockquote>„Ciorbă de burtă bună, porție mare, dar servirea a durat 40 de minute.”</blockquote>
+          <dl>
+            <dt>Semnale</dt><dd>niciunul · vizită confirmată cu GPS</dd>
+            <dt>Șansa de fals</dt><dd class="num">0%</dd>
+          </dl>
+          <div class="weight"><span>greutate</span><strong class="font-display num">2,6</strong></div>
+        </article>
+      </div>
+      <p class="punch font-display">Un localnic verificat cântărește cât <span class="accent">~30 de boți.</span> 20 de review-uri false de 5★ în 24 de ore urcă scorul cu sub 0,2.</p>
+    </div>
+  </section>
+
+  <section class="drink on-sticla" id="topdrink" aria-labelledby="drink-h">
+    <div class="wrap grid">
+      <div>
+        <div class="s-head">
+          <h2 class="font-display" id="drink-h">Pentru seara de vineri: <span class="font-display">topdrink</span><span class="font-display-light">/timișoara</span></h2>
+          <p>Același motor, pentru baruri și cluburi. Cu ce contează când ieși seara.</p>
+        </div>
+        <ul>
+          <li><b class="font-display">Scor de vineri noaptea</b><span>Un bar poate fi liniștit marți și cel mai bun loc din oraș sâmbătă la 1. Le notăm separat.</span></li>
+          <li><b class="font-display">Vibe check live</b><span>Cât de plin e acum, spus de oamenii care sunt acolo. Expiră după 2 ore.</span></li>
+          <li><b class="font-display">Ce e în weekend</b><span>DJ, concerte și evenimente, într-un singur loc.</span></li>
+        </ul>
+      </div>
+      <div class="drink-card">
+        <!-- CoasterScore: suportul de bere apare o singură dată -->
+        <div class="coaster-badge" aria-label="Scor onest 8,4 din 10, vineri–sâmbătă noaptea"><span class="font-display num">8,4</span></div>
+        <p class="when">vineri–sâmbătă noaptea</p>
+        <div class="crowd">
+          <div class="seg" aria-label="Grad de ocupare 4 din 5"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+          <span>plin acum · acum 20 min</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="planul" aria-labelledby="plan-h">
+    <div class="wrap">
+      <div class="s-head">
+        <h2 class="font-display" id="plan-h">Planul</h2>
+        <p>Suntem o echipă de 4 din Timișoara. Prima versiune a mers la hackathon; acum o pregătim pentru oraș.</p>
+      </div>
+      <ol class="steps">
+        <li class="step done">
+          <div class="dot font-display" aria-hidden="true">1</div>
+          <div>
+            <h3 class="font-display">Prototipul <span class="state">Gata</span></h3>
+            <p class="sub">Construit la hackathon, pe 30 de localuri din Timișoara.</p>
+            <ul>
+              <li>Scor Onest, localnici vs turiști, Tourist Trap Index</li>
+              <li>Paginile topfood/timișoara și topdrink/timișoara</li>
+              <li>Insigna de localnic prin check-in GPS</li>
+              <li>Caruselul Sponsorizat, fără efect pe top</li>
+              <li>Topul lunar, mini-blog și „notează angajatul”</li>
+              <li>Linkuri TikTok / Instagram cu eticheta „reclamă?”</li>
+            </ul>
+          </div>
+        </li>
+        <li class="step now">
+          <div class="dot font-display" aria-hidden="true">2</div>
+          <div>
+            <h3 class="font-display">Lansarea în Timișoara <span class="state">În lucru</span></h3>
+            <p class="sub">Când e gata, primești emailul nostru.</p>
+            <ul>
+              <li>Toate localurile reale din oraș, nu doar 30</li>
+              <li>Cont cu emailul de la facultate (UVT, UPT)</li>
+              <li>Pagini pentru topul lunii, categorii și weekend</li>
+              <li>Protecție mai bună împotriva boților</li>
+              <li>Localuri salvate în cont, pe orice telefon</li>
+              <li>Imagine cu topul lunii, gata de distribuit</li>
+            </ul>
+          </div>
+        </li>
+        <li class="step later">
+          <div class="dot font-display" aria-hidden="true">3</div>
+          <div>
+            <h3 class="font-display">După lansare <span class="state">Urmează</span></h3>
+            <p class="sub">Ce ne-ați cerut cel mai des.</p>
+            <ul>
+              <li>Filtru „acces fără trepte” și toaletă accesibilă</li>
+              <li>Filtru „bun pentru lucru”: Wi-Fi, prize, liniște</li>
+              <li>Login cu Google</li>
+              <li>Pentru owneri: Google Business, Instagram, TikTok</li>
+            </ul>
+          </div>
+        </li>
+        <li class="step later">
+          <div class="dot font-display" aria-hidden="true">4</div>
+          <div>
+            <h3 class="font-display">Alte orașe <span class="state">Mai târziu</span></h3>
+            <p class="sub">Un oraș nou înseamnă doar o configurare nouă. Spune-ne unde vrei să ajungem după Timișoara.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="weigh" aria-labelledby="prom-h">
+    <div class="wrap">
+      <div class="s-head">
+        <h2 class="font-display" id="prom-h">Ce promitem</h2>
+        <p>Reguli scrise în cod, nu doar pe site.</p>
+      </div>
+      <ol class="rules">
+        <li><div><b>Banii nu cumpără scor.</b><span>Plata nu schimbă nota și nici locul în top.</span></div></li>
+        <li><div><b>Owner-ul nu șterge review-uri.</b><span>Poate doar să răspundă sau să raporteze. Decide un om din echipă.</span></div></li>
+        <li><div><b>Fiecare scor are o explicație.</b><span>Apeși „De ce?” și vezi din ce e făcut.</span></div></li>
+        <li><div><b>Localnicii și turiștii, separat.</b><span>Ca să alegi după oamenii care seamănă cu tine.</span></div></li>
+        <li><div><b>Fără scraping.</b><span>Datele vin doar din surse oficiale sau de la voi.</span></div></li>
+        <li><div><b>Nu-ți urmărim traseul.</b><span>Din GPS păstrăm doar „ziua X, în oraș”. Angajații apar doar cu acordul lor.</span></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="final" aria-labelledby="final-h">
+    <div class="wrap">
+      <div class="inner">
+        <div>
+          <h2 class="font-display" id="final-h">Fii printre primii.</h2>
+          <p class="intro">Lasă-ne emailul și îți scriem în ziua în care topfood/timișoara și topdrink/timișoara sunt live.</p>
+        </div>
+        <form class="signup" data-signup novalidate>
+          <div class="row">
+            <label for="email-2" class="hp">Adresa de email</label>
+            <input id="email-2" type="email" name="email" inputmode="email" autocomplete="email" placeholder="nume@exemplu.ro" required>
+            <button class="btn" type="submit">Anunță-mă</button>
+          </div>
+          <fieldset class="prefs">
+            <legend>Ce te interesează?</legend>
+            <label><input type="checkbox" name="interes" value="food" checked> TOP FOOD</label>
+            <label><input type="checkbox" name="interes" value="drink" checked> TOP DRINK</label>
+          </fieldset>
+          <div class="hp" aria-hidden="true"><label>Nu completa <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+          <p class="status" role="status" aria-live="polite"></p>
+          <p class="fine">Un singur email, la lansare. Te poți dezabona răspunzând la el.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="mini"><span class="font-display">topfood</span><span class="font-display-light">/timișoara</span></span>
+    <span>Făcut în Timișoara, pentru Timișoara.</span>
+  </div>
+</footer>
+
+<script>
+  /*
+   * Adresa unde ajung emailurile. Pune aici URL-ul Web App-ului din Google Apps Script
+   * (vezi landing/README.md și landing/colecteaza-emailuri.gs). Se termină în /exec.
+   * Cât timp e gol, pagina rulează în „mod test”: nu trimite nimic, doar arată mesajul.
+   */
+  const SIGNUP_ENDPOINT = "";
+
+  /* ---------- mod luminos / întunecat ---------- */
+  const root = document.documentElement;
+  const toggle = document.getElementById("theme-toggle");
+  const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function isDark() {
+    const t = root.getAttribute("data-theme");
+    return t ? t === "dark" : systemDark.matches;
+  }
+  function syncTheme() {
+    const dark = isDark();
+    root.classList.toggle("is-dark", dark);
+    toggle.setAttribute("aria-label", dark ? "Comută la mod luminos" : "Comută la mod întunecat");
+    toggle.title = dark ? "Mod luminos" : "Mod întunecat";
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
+      m.content = dark ? "#22262E" : "#FFFFFF";
+      m.removeAttribute("media");
+    });
+  }
+  toggle.addEventListener("click", () => {
+    const dark = !isDark();
+    root.setAttribute("data-theme", dark ? "dark" : "light");
+    try { localStorage.setItem("topfood-dark-mode", String(dark)); } catch (_) {}
+    syncTheme();
+  });
+  // Dacă omul n-a ales nimic, urmăm sistemul și când se schimbă.
+  systemDark.addEventListener("change", syncTheme);
+  syncTheme();
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  function setStatus(form, text, kind) {
+    const el = form.querySelector(".status");
+    el.textContent = text;
+    el.className = "status" + (kind ? " " + kind : "");
+  }
+
+  async function submitSignup(form) {
+    const email = form.email.value.trim().toLowerCase();
+    const interes = [...form.querySelectorAll('input[name="interes"]:checked')].map(i => i.value);
+
+    if (form.website.value) return; // honeypot: un bot a completat câmpul ascuns
+    if (!EMAIL_RE.test(email)) {
+      form.email.setAttribute("aria-invalid", "true");
+      setStatus(form, "Scrie o adresă de email validă.", "err");
+      form.email.focus();
+      return;
+    }
+    form.email.removeAttribute("aria-invalid");
+    if (interes.length === 0) {
+      setStatus(form, "Bifează măcar unul: TOP FOOD sau TOP DRINK.", "err");
+      return;
+    }
+
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    setStatus(form, "Se trimite…");
+
+    const body = new URLSearchParams({
+      email,
+      interes: interes.join(","),
+      sursa: location.hostname || "local",
+      limba: navigator.language || "",
+    });
+
+    try {
+      if (SIGNUP_ENDPOINT) {
+        // no-cors: Apps Script nu trimite antete CORS pe POST; cererea ajunge oricum.
+        await fetch(SIGNUP_ENDPOINT, { method: "POST", mode: "no-cors", body });
+        setStatus(form, "Gata! Îți scriem când suntem live.", "ok");
+      } else {
+        console.warn("[landing] SIGNUP_ENDPOINT e gol, emailul nu a fost trimis:", Object.fromEntries(body));
+        setStatus(form, "Mod test: emailul nu a fost salvat. Configurează SIGNUP_ENDPOINT.", "ok");
+      }
+      form.classList.add("done");
+      try { localStorage.setItem("tftd-signup", email); } catch (_) {}
+    } catch (err) {
+      console.error(err);
+      setStatus(form, "Nu am putut trimite. Verifică internetul și încearcă din nou.", "err");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.querySelectorAll("form[data-signup]").forEach(form => {
+    form.addEventListener("submit", e => { e.preventDefault(); submitSignup(form); });
+  });
+
+  // Dacă omul s-a înscris deja de pe acest dispozitiv, îi spunem asta.
+  try {
+    const saved = localStorage.getItem("tftd-signup");
+    if (saved) {
+      document.querySelectorAll("form[data-signup]").forEach(form => {
+        form.classList.add("done");
+        setStatus(form, "Ești pe listă cu " + saved + ". Îți scriem la lansare.", "ok");
+      });
+    }
+  } catch (_) {}
+</script>
+</body>
+</html>
