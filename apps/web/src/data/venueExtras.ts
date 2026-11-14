@@ -1,6 +1,7 @@
 import {
   MenuCategory,
   Restaurant,
+  UserPreferenceKey,
   VenueFacilities,
   VenueWarnings,
   WeeklyHoursEntry,
@@ -1065,6 +1066,49 @@ const VENUE_WARNINGS_FACILITIES: Record<string, VenueProfileExtras> = {
   },
 };
 
+interface PreferenceVoteCount {
+  yes: number;
+  no: number;
+}
+
+const PREFERENCE_FACILITY_LABELS: Array<{
+  key: UserPreferenceKey;
+  label: string;
+}> = [
+  { key: 'goodWifi', label: 'Wi-Fi bun' },
+  { key: 'goodForWork', label: 'Bun de lucrat' },
+  { key: 'quiet', label: 'Liniștit' },
+  { key: 'petFriendly', label: 'Pet-friendly' },
+  { key: 'softLighting', label: 'Lumină plăcută' },
+  { key: 'heatedTerrace', label: 'Terasă încălzită' },
+];
+
+function countPreferenceVotes(
+  reviews: Restaurant['reviews']
+): Record<UserPreferenceKey, PreferenceVoteCount> {
+  const counts: Record<UserPreferenceKey, PreferenceVoteCount> = {
+    accessible: { yes: 0, no: 0 },
+    outlets: { yes: 0, no: 0 },
+    goodWifi: { yes: 0, no: 0 },
+    goodForWork: { yes: 0, no: 0 },
+    quiet: { yes: 0, no: 0 },
+    petFriendly: { yes: 0, no: 0 },
+    softLighting: { yes: 0, no: 0 },
+    heatedTerrace: { yes: 0, no: 0 },
+  };
+
+  for (const review of reviews) {
+    if (!review.preferenceAnswers) continue;
+    for (const key of Object.keys(counts) as UserPreferenceKey[]) {
+      const answer = review.preferenceAnswers[key];
+      if (answer === true) counts[key].yes += 1;
+      else if (answer === false) counts[key].no += 1;
+    }
+  }
+
+  return counts;
+}
+
 export function getVenueWarnings(restaurant: Restaurant): VenueWarnings {
   const staticWarnings =
     restaurant.warnings ?? VENUE_WARNINGS_FACILITIES[restaurant.id]?.warnings ?? {};
@@ -1081,6 +1125,11 @@ export function getVenueWarnings(restaurant: Restaurant): VenueWarnings {
     (r) => r.noiseLevel === 'zgomotos'
   ).length;
 
+  const votes = countPreferenceVotes(restaurant.reviews);
+  const quietNoVotes = votes.quiet.no > votes.quiet.yes ? votes.quiet.no : 0;
+  const brightLightNoVotes =
+    votes.softLighting.no > votes.softLighting.yes ? votes.softLighting.no : 0;
+
   return {
     unsafeFeeling:
       staticWarnings.unsafeFeeling ??
@@ -1091,16 +1140,62 @@ export function getVenueWarnings(restaurant: Restaurant): VenueWarnings {
       staticWarnings.veryNoisy ??
       (noisyVotes > 0
         ? `Semnalat ca foarte zgomotos de ${noisyVotes} ${noisyVotes === 1 ? 'vizitator' : 'vizitatori'}.`
+        : quietNoVotes > 0
+        ? `Semnalat ca gălăgios de ${quietNoVotes} ${quietNoVotes === 1 ? 'vizitator' : 'vizitatori'}.`
         : undefined),
-    brightLights: staticWarnings.brightLights,
+    brightLights:
+      staticWarnings.brightLights ??
+      (brightLightNoVotes > 0
+        ? `Semnalat cu lumină stridentă de ${brightLightNoVotes} ${brightLightNoVotes === 1 ? 'vizitator' : 'vizitatori'}.`
+        : undefined),
   };
 }
 
 export function getVenueFacilities(restaurant: Restaurant): VenueFacilities {
-  return (
+  const baseFacilities: VenueFacilities =
     restaurant.facilities ??
     VENUE_WARNINGS_FACILITIES[restaurant.id]?.facilities ?? {
       otherFacilities: ['Plată cu cardul'],
+    };
+
+  const votes = countPreferenceVotes(restaurant.reviews);
+
+  let disabilityFriendly = baseFacilities.disabilityFriendly;
+  if (votes.accessible.yes > votes.accessible.no) {
+    disabilityFriendly =
+      typeof baseFacilities.disabilityFriendly === 'string' &&
+      baseFacilities.disabilityFriendly
+        ? baseFacilities.disabilityFriendly
+        : true;
+  } else if (votes.accessible.no > votes.accessible.yes) {
+    disabilityFriendly = false;
+  }
+
+  let hasOutlets = baseFacilities.hasOutlets;
+  if (votes.outlets.yes > votes.outlets.no) {
+    hasOutlets = true;
+  } else if (votes.outlets.no > votes.outlets.yes) {
+    hasOutlets = false;
+  }
+
+  let otherFacilities = [...(baseFacilities.otherFacilities ?? [])];
+  for (const { key, label } of PREFERENCE_FACILITY_LABELS) {
+    const { yes, no } = votes[key];
+    const lowerLabel = label.toLowerCase();
+    if (yes > no) {
+      if (!otherFacilities.some((item) => item.toLowerCase() === lowerLabel)) {
+        otherFacilities.push(label);
+      }
+    } else if (no > yes) {
+      otherFacilities = otherFacilities.filter(
+        (item) => item.toLowerCase() !== lowerLabel
+      );
     }
-  );
+  }
+
+  return {
+    disabilityFriendly,
+    hasOutlets,
+    otherFacilities: Array.from(new Set(otherFacilities)),
+  };
 }
