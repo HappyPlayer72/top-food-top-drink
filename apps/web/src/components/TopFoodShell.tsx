@@ -69,14 +69,13 @@ function buildUrlForState(
   if (navSection !== 'top') {
     params.set('section', navSection);
   }
-  if (venueSlugOrId) {
-    params.set('venue', venueSlugOrId);
-  }
   if (showLogin) {
     params.set('login', '1');
   }
+  // Localul deschis are URL propriu (/topfood/timisoara/{slug}), bun pentru Google și pentru partajat
+  const path = venueSlugOrId ? `${basePath}/${encodeURIComponent(venueSlugOrId)}` : basePath;
   const qs = params.toString();
-  return qs ? `${basePath}?${qs}` : basePath;
+  return qs ? `${path}?${qs}` : path;
 }
 
 export interface TopFoodShellProps {
@@ -279,7 +278,9 @@ export function TopFoodShell({
           ? 'scarnavii'
           : initialSection;
 
-      const venueParam = params.get('venue');
+      // /topfood/timisoara/{slug} sau vechiul ?venue={slug}
+      const pathSlug = /^\/top(food|drink)\/[^/]+\/([^/?#]+)/.exec(pathname)?.[2];
+      const venueParam = params.get('venue') ?? (pathSlug ? decodeURIComponent(pathSlug) : null);
       const matchedVenue = venueParam
         ? initialFood.concat(initialDrink).find(
             (r) => r.slug === venueParam || r.id === venueParam
