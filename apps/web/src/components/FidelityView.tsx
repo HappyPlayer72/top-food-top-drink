@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 import {
   ArrowLeft,
   Beer,
   Cat,
   Check,
   Coffee,
+  Copy,
   Croissant,
   Gift,
   Heart,
@@ -97,104 +99,41 @@ function renderLoyaltyIcon(
   return <IconComp className={className} strokeWidth={strokeWidth} />;
 }
 
-function hashString(input: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < input.length; i += 1) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function buildQrMatrix(seed: string): boolean[][] {
-  const size = 21;
-  const grid: boolean[][] = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => false),
-  );
-  const reserved: boolean[][] = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => false),
-  );
-
-  const drawFinder = (startR: number, startC: number) => {
-    for (let r = -1; r <= 7; r += 1) {
-      for (let c = -1; c <= 7; c += 1) {
-        const rr = startR + r;
-        const cc = startC + c;
-        if (rr < 0 || rr >= size || cc < 0 || cc >= size) continue;
-        reserved[rr][cc] = true;
-        if (r === -1 || r === 7 || c === -1 || c === 7) {
-          grid[rr][cc] = false;
-        } else {
-          const isBorder = r === 0 || r === 6 || c === 0 || c === 6;
-          const isCenter = r >= 2 && r <= 4 && c >= 2 && c <= 4;
-          grid[rr][cc] = isBorder || isCenter;
-        }
-      }
-    }
-  };
-
-  drawFinder(0, 0);
-  drawFinder(0, size - 7);
-  drawFinder(size - 7, 0);
-
-  for (let i = 8; i <= size - 9; i += 1) {
-    reserved[6][i] = true;
-    reserved[i][6] = true;
-    grid[6][i] = i % 2 === 0;
-    grid[i][6] = i % 2 === 0;
-  }
-
-  let state = hashString(seed || 'TOPFOOD-QR');
-  for (let r = 0; r < size; r += 1) {
-    for (let c = 0; c < size; c += 1) {
-      if (reserved[r][c]) continue;
-      state ^= state << 13;
-      state ^= state >>> 17;
-      state ^= state << 5;
-      grid[r][c] = ((state >>> 0) % 100) < 48;
-    }
-  }
-
-  return grid;
-}
-
-function DeterministicQrSvg({
-  seed,
+export function RealQrSvg({
+  value,
   fgColor = '#3A2418',
   bgColor = '#FFFFFF',
   className = 'w-28 h-28',
 }: {
-  seed: string;
+  value: string;
   fgColor?: string;
   bgColor?: string;
   className?: string;
 }) {
-  const matrix = useMemo(() => buildQrMatrix(seed), [seed]);
-  const size = matrix.length;
+  const { size, path } = useMemo(() => {
+    const qr = QRCode.create(value || 'TOPFOOD-QR', { errorCorrectionLevel: 'M' });
+    const n = qr.modules.size;
+    const parts: string[] = [];
+    for (let r = 0; r < n; r += 1) {
+      for (let c = 0; c < n; c += 1) {
+        if (qr.modules.get(r, c)) {
+          parts.push(`M${c + 1},${r + 1}h1v1h-1z`);
+        }
+      }
+    }
+    return { size: n, path: parts.join('') };
+  }, [value]);
 
   return (
     <svg
       viewBox={`0 0 ${size + 2} ${size + 2}`}
       className={className}
       role="img"
-      aria-label={`Cod QR digital pentru ${seed}`}
+      aria-label={`Cod QR digital pentru ${value}`}
       shapeRendering="crispEdges"
     >
       <rect x={0} y={0} width={size + 2} height={size + 2} fill={bgColor} rx={1.2} />
-      {matrix.map((row, r) =>
-        row.map((on, c) =>
-          on ? (
-            <rect
-              key={`${r}-${c}`}
-              x={c + 1}
-              y={r + 1}
-              width={1}
-              height={1}
-              fill={fgColor}
-            />
-          ) : null,
-        ),
-      )}
+      <path d={path} fill={fgColor} />
     </svg>
   );
 }
@@ -250,8 +189,13 @@ function FidelityWallet({
   const [programs, setPrograms] = useState<LoyaltyProgram[]>(DEFAULT_PROGRAMS);
   const [hydrated, setHydrated] = useState(false);
   const [expandedQrProgramId, setExpandedQrProgramId] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [redeemingProgramId, setRedeemingProgramId] = useState<string | null>(null);
+  const [justStampedProgramId, setJustStampedProgramId] = useState<string | null>(null);
+  const [copiedQrId, setCopiedQrId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastIsError, setToastIsError] = useState(false);
+  const scannerAnchorRef = useRef<HTMLDivElement>(null);
 
   /** Reîncarcă portofelul din backend; false = backend indisponibil (rămânem pe localStorage). */
   const refreshFromBackend = async (): Promise<boolean> => {
@@ -305,53 +249,96 @@ function FidelityWallet({
     }, 10000);
   };
 
-  /** Ștampilă / premiu pe backend (același apel: cardul plin + scanare = premiul). */
-  const stampOnBackend = async (id: string) => {
-    if (!currentUser) {
-      onRequireLogin?.();
-      return;
-    }
-    const res = await stampFidelity(id);
-    showToast(res.ok ? res.message : res.error, !res.ok);
-    await refreshFromBackend();
+  const triggerStampPop = (programId: string) => {
+    setJustStampedProgramId(programId);
+    window.setTimeout(() => {
+      setJustStampedProgramId((prev) => (prev === programId ? null : prev));
+    }, 700);
   };
 
-  const handleScanStamp = (id: string) => {
-    if (useBackend) {
-      void stampOnBackend(id);
-      return;
-    }
-    setPrograms((prev) =>
-      prev.map((prog) => {
-        if (prog.id !== id) return prog;
-        if (prog.stampsCollected >= prog.stampsRequired) return prog;
-        const nextStamps = prog.stampsCollected + 1;
-        showToast(
-          nextStamps >= prog.stampsRequired
-            ? `Card complet la ${prog.venueName}! Poți revendica recompensa.`
-            : `+1 ștampilă la ${prog.venueName} (${nextStamps}/${prog.stampsRequired}).`,
-        );
-        return { ...prog, stampsCollected: nextStamps };
-      }),
-    );
+  const openScanner = () => {
+    setExpandedQrProgramId(null);
+    setScannerOpen(true);
+    requestAnimationFrame(() => {
+      scannerAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   };
 
-  const handleRedeem = (id: string) => {
+  const handleDemoQrScan = async (
+    code: string,
+  ): Promise<{ ok: boolean; message: string; programId?: string }> => {
+    const clean = code.trim().toUpperCase();
+    const matched = programs.find(
+      (p) => p.qrSeed.toUpperCase() === clean || p.id.toUpperCase() === clean,
+    );
+    if (!matched) {
+      return {
+        ok: false,
+        message: 'Codul QR nu corespunde niciunui local din portofel.',
+      };
+    }
+    if (matched.stampsCollected >= matched.stampsRequired) {
+      return {
+        ok: false,
+        message: `Cardul la ${matched.venueName} e deja complet! Apasă „Revendică recompensa”.`,
+      };
+    }
+    const nextStamps = matched.stampsCollected + 1;
+    setPrograms((prev) =>
+      prev.map((prog) =>
+        prog.id === matched.id ? { ...prog, stampsCollected: nextStamps } : prog,
+      ),
+    );
+    triggerStampPop(matched.id);
+    return {
+      ok: true,
+      programId: matched.id,
+      message:
+        nextStamps >= matched.stampsRequired
+          ? `Card complet la ${matched.venueName}! Poți revendica recompensa.`
+          : `+1 ștampilă la ${matched.venueName} (${nextStamps}/${matched.stampsRequired}).`,
+    };
+  };
+
+  const handleRedeem = async (id: string) => {
+    if (redeemingProgramId) return;
     if (useBackend) {
-      void stampOnBackend(id);
+      if (!currentUser) {
+        onRequireLogin?.();
+        return;
+      }
+      const res = await stampFidelity(id);
+      if (!res.ok) {
+        showToast(res.error, true);
+        return;
+      }
+      setRedeemingProgramId(id);
+      showToast(res.message, false);
+      window.setTimeout(() => {
+        setRedeemingProgramId((prev) => (prev === id ? null : prev));
+        void refreshFromBackend();
+      }, 850);
       return;
     }
-    setPrograms((prev) =>
-      prev.map((prog) => {
-        if (prog.id !== id || prog.stampsCollected < prog.stampsRequired) return prog;
-        showToast(`Recompensă revendicată la ${prog.venueName}! Cardul a fost resetat.`);
-        return {
-          ...prog,
-          stampsCollected: 0,
-          redeemedCount: prog.redeemedCount + 1,
-        };
-      }),
-    );
+
+    const target = programs.find((p) => p.id === id);
+    if (!target || target.stampsCollected < target.stampsRequired) return;
+
+    setRedeemingProgramId(id);
+    window.setTimeout(() => {
+      setPrograms((prev) =>
+        prev.map((prog) => {
+          if (prog.id !== id || prog.stampsCollected < prog.stampsRequired) return prog;
+          return {
+            ...prog,
+            stampsCollected: 0,
+            redeemedCount: prog.redeemedCount + 1,
+          };
+        }),
+      );
+      setRedeemingProgramId((prev) => (prev === id ? null : prev));
+      showToast(`Recompensă revendicată la ${target.venueName}! Cardul a fost resetat.`);
+    }, 850);
   };
 
   const expandedProgram = programs.find((p) => p.id === expandedQrProgramId) ?? null;
@@ -438,14 +425,20 @@ function FidelityWallet({
         </p>
       </div>
 
-      {useBackend && currentUser && (
-        <QrScanPanel
-          isDrink={isDrink}
-          onResult={(message, isError) => {
-            showToast(message, isError);
-            void refreshFromBackend();
-          }}
-        />
+      {currentUser && (
+        <div ref={scannerAnchorRef}>
+          <QrScanPanel
+            isDrink={isDrink}
+            open={scannerOpen}
+            onOpenChange={setScannerOpen}
+            onCustomScan={useBackend ? undefined : handleDemoQrScan}
+            onResult={(message, isError, programId) => {
+              showToast(message, isError);
+              if (!isError && programId) triggerStampPop(programId);
+              if (useBackend) void refreshFromBackend();
+            }}
+          />
+        </div>
       )}
 
       {/* Toast Notification — zona live există mereu, se schimbă doar conținutul */}
@@ -481,11 +474,43 @@ function FidelityWallet({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {programs.map((program) => {
             const isComplete = program.stampsCollected >= program.stampsRequired;
+            const isRedeeming = redeemingProgramId === program.id;
+            const isJustStamped = justStampedProgramId === program.id;
             return (
               <article
                 key={program.id}
-                className={`rounded-2xl border p-5 sm:p-6 shadow-sm transition-all flex flex-col justify-between ${cardSurface}`}
+                className={`relative overflow-hidden rounded-2xl border p-5 sm:p-6 shadow-sm transition-all flex flex-col justify-between ${cardSurface} ${
+                  isRedeeming
+                    ? isDrink
+                      ? 'loyalty-reward-celebrate ring-2 ring-[#F2A33A]'
+                      : 'loyalty-reward-celebrate ring-2 ring-[#E0A526]'
+                    : ''
+                }`}
               >
+                {isRedeeming && (
+                  <>
+                    <div
+                      aria-hidden="true"
+                      className="loyalty-shine-sweep pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-[#E0A526]/25 to-transparent"
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="loyalty-sparkle-burst pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center"
+                    >
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md ${
+                          isDrink
+                            ? 'bg-[#F2A33A] text-[#17382C]'
+                            : 'bg-[#E0A526] text-[#3A2418]'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Recompensă revendicată!
+                      </span>
+                    </div>
+                  </>
+                )}
+
                 <div>
                   {/* Card Header + Mini QR */}
                   <div className="flex items-start justify-between gap-4 mb-4">
@@ -523,8 +548,8 @@ function FidelityWallet({
                           : 'bg-white border-[#E8E2D9]'
                       }`}
                     >
-                      <DeterministicQrSvg
-                        seed={program.qrSeed}
+                      <RealQrSvg
+                        value={program.qrSeed}
                         fgColor={program.accentColor}
                         className="w-16 h-16"
                       />
@@ -561,6 +586,9 @@ function FidelityWallet({
                     <div className="grid grid-cols-5 gap-2.5">
                       {Array.from({ length: program.stampsRequired }).map((_, idx) => {
                         const stamped = idx < program.stampsCollected;
+                        const animateStamp =
+                          isRedeeming ||
+                          (isJustStamped && idx === program.stampsCollected - 1);
                         return (
                           <div
                             key={idx}
@@ -570,11 +598,12 @@ function FidelityWallet({
                                 : isDrink
                                   ? 'border-dashed border-[#2C5A48] bg-[#17382C]/60 text-[#5C806E]'
                                   : 'border-dashed border-[#D9D0C3] bg-[#FAF8F5] text-[#C8BEB0]'
-                            }`}
+                            } ${animateStamp ? 'loyalty-stamp-pop' : ''}`}
                             style={
                               stamped
                                 ? {
                                     backgroundColor: program.accentColor,
+                                    animationDelay: isRedeeming ? `${idx * 35}ms` : undefined,
                                   }
                                 : undefined
                             }
@@ -603,17 +632,27 @@ function FidelityWallet({
                   {isComplete ? (
                     <button
                       type="button"
-                      onClick={() => handleRedeem(program.id)}
-                      className="btn-press flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95"
+                      onClick={() => void handleRedeem(program.id)}
+                      disabled={isRedeeming}
+                      className="btn-press flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-90"
                       style={{ backgroundColor: program.accentColor }}
                     >
-                      <Gift className="w-4 h-4" />
-                      Revendică recompensa
+                      {isRedeeming ? (
+                        <>
+                          <Sparkles className="w-4 h-4 animate-pulse" />
+                          Se revendică…
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="w-4 h-4" />
+                          Revendică recompensa
+                        </>
+                      )}
                     </button>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => handleScanStamp(program.id)}
+                      onClick={openScanner}
                       className={`btn-press flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
                         isDrink
                           ? 'bg-[#17382C] border-[#F2A33A]/50 text-[#F4EEE2] hover:bg-[#1E4738]'
@@ -621,7 +660,7 @@ function FidelityWallet({
                       }`}
                     >
                       <ScanLine className="w-4 h-4" />
-                      Scanează la casă (+1 ștampilă)
+                      Scanează codul QR
                     </button>
                   )}
 
@@ -646,11 +685,11 @@ function FidelityWallet({
       {/* Expanded Counter QR Modal */}
       {expandedProgram && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="modal-backdrop-enter fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
           onClick={() => setExpandedQrProgramId(null)}
         >
           <div
-            className={`w-full max-w-sm rounded-2xl border p-6 shadow-xl text-center ${cardSurface}`}
+            className={`modal-panel-enter w-full max-w-sm rounded-2xl border p-6 shadow-xl text-center ${cardSurface}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -675,42 +714,76 @@ function FidelityWallet({
               </button>
             </div>
 
-            <div className="inline-block p-4 rounded-2xl bg-white border border-[#E8E2D9] mb-4 shadow-xs">
-              <DeterministicQrSvg
-                seed={expandedProgram.qrSeed}
+            <div className="inline-block p-4 rounded-2xl bg-white border border-[#E8E2D9] mb-3 shadow-xs">
+              <RealQrSvg
+                value={expandedProgram.qrSeed}
                 fgColor={expandedProgram.accentColor}
                 className="w-52 h-52"
               />
             </div>
+
+            {!useBackend && (
+              <div className="mb-3 flex items-center justify-center gap-2">
+                <code className={`text-[11px] font-mono px-2 py-1 rounded border ${subtleSurface}`}>
+                  {expandedProgram.qrSeed}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(expandedProgram.qrSeed);
+                    setCopiedQrId(expandedProgram.id);
+                    window.setTimeout(() => setCopiedQrId(null), 2000);
+                  }}
+                  className={`btn-press inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border ${subtleSurface}`}
+                  aria-label="Copiază codul QR"
+                >
+                  {copiedQrId === expandedProgram.id ? (
+                    <>
+                      <Check className="w-3 h-3 text-[#2D5130]" />
+                      Copiat
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      Copiază
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
 
             <p className="text-sm font-semibold mb-1">
               {expandedProgram.stampsCollected} / {expandedProgram.stampsRequired}{' '}
               ștampile colectate
             </p>
             <p className={`text-xs mb-5 ${mutedText}`}>
-              Arată acest cod la casă sau scanează-l pentru o nouă ștampilă.
+              {useBackend
+                ? 'Arată acest cod la casă sau scanează codul QR afișat de local pentru o nouă ștampilă.'
+                : 'Scanează acest cod QR sau introdu-l în scaner pentru a primi o ștampilă.'}
             </p>
 
             <div className="flex gap-2">
               {expandedProgram.stampsCollected < expandedProgram.stampsRequired ? (
                 <button
                   type="button"
-                  onClick={() => handleScanStamp(expandedProgram.id)}
-                  className="btn-press flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+                  onClick={openScanner}
+                  className="btn-press flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white"
                   style={{ backgroundColor: expandedProgram.accentColor }}
                 >
-                  +1 ștampilă acum
+                  <ScanLine className="w-4 h-4" />
+                  Scanează codul QR
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => {
-                    handleRedeem(expandedProgram.id);
                     setExpandedQrProgramId(null);
+                    void handleRedeem(expandedProgram.id);
                   }}
-                  className="btn-press flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+                  className="btn-press flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white"
                   style={{ backgroundColor: expandedProgram.accentColor }}
                 >
+                  <Gift className="w-4 h-4" />
                   Revendică recompensa
                 </button>
               )}
