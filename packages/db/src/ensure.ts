@@ -16,8 +16,6 @@ export async function ensureExtendedSchema(db: Db): Promise<void> {
   if (existing) return existing;
 
   const promise = (async () => {
-    await db.execute(sql`ALTER TABLE reviews ADD COLUMN IF NOT EXISTS receipt_photo_url text`);
-    await db.execute(sql`ALTER TABLE reviews ADD COLUMN IF NOT EXISTS receipt_status text`);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS saved_venues (
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,

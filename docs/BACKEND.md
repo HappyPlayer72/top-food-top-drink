@@ -76,3 +76,17 @@ Joburile active din [`apps/worker/src/main.ts`](../apps/worker/src/main.ts):
 4. `actualizeaza-ratinguri` (`0 4 * * *`) — reîmprospătare Google/TripAdvisor la 04:00
 5. `descopera-locale` (`0 3 * * 1`) — descoperire localuri noi luni la 03:00
 6. `leaderboard-lunar` (`5 0 1 * *`) — înghețarea clasamentului pe luna anterioară pe 1 ale lunii la 00:05
+
+## Vizită verificată (review ×1,3)
+
+| Ce face userul | Funcție |
+| --- | --- |
+| „Sunt aici acum” la local (max. 100 m; se salvează doar ziua) | `visits.checkInAtVenue(db, userId, venueId, { lat, lng })` (demo: `{ simulate: true }`, în site prin `DEMO_VISIT_GPS`). Review-ul din aceeași zi devine verificat și dacă check-in-ul vine după |
+| Atașează poza bonului la review-ul lui | `visits.submitReceipt(db, userId, reviewId, bytes)` (JPEG/PNG/WebP, max 2 MB; același bon nu merge de două ori) |
+| Admin: coada de bonuri, poza, decizia | `visits.receiptQueue`, `visits.receiptImage`, `visits.decideReceipt(db, adminId, proofId, approve, note)` → aprobat: `verifiedVisit` + recalcul; poza se șterge oricum |
+
+Tabelul nou `visit_proofs` și coloana `reviews.verified_via` (`gps` / `receipt`) vin din migrarea `0009_saved_views_visits_antibot`. Pozele fără decizie după 30 de zile se șterg în jobul de noapte `recalculeaza-scoruri`. `venuePage` dă `verifiedVia` pe fiecare review, iar `scoreExplanation.verifiedVisitCount` câte review-uri au vizita verificată.
+
+## Anti-bot la review-uri
+
+Algoritmul complet: [`docs/ANTI-BOT.md`](ANTI-BOT.md). Pe scurt: `writeReview(db, userId, input, now, client)` cu `client = { formToken, honeypot, clientHash }` trece prin poarta din `antibot.ts` (token de formular din `antibot.issueReviewFormToken`, câmp capcană, limite per cont/dispozitiv). Analiza adaugă semnalele de bot la `fakeSignals`; un review aproape sigur bot primește `status: "flagged"` și un raport automat în `/admin` („Păstrează” îl publică și îl marchează `bot_cleared`). Migrarea `0009_saved_views_visits_antibot`: tabelul `review_submissions` + `reviews.bot_cleared`. După o decizie pe un review, `refreshAfterModeration(db, reviewId)` recalculează scorul.

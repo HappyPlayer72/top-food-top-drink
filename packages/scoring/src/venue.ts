@@ -22,6 +22,8 @@ export type VenueScores = SplitScores & {
     touristCount: number;
     enoughData: boolean;
     trapLevel: TrapResult["level"];
+    /** Review-uri cu vizita dovedită (GPS la local sau bon), cântărite ×1,3. */
+    verifiedVisitCount: number;
     trapReasons: TrapResult["reasons"];
     trapInputs: TrapInput;
   };
@@ -55,6 +57,7 @@ export function scoreVenue(reviews: VenueReview[], ctx: VenueContext, now: Date 
       touristCount: split.tourists.reviewCount,
       enoughData: split.overall.enoughData,
       trapLevel: trap.level,
+      verifiedVisitCount: reviews.filter((r) => r.verifiedVisit).length,
       trapReasons: trap.reasons,
       /** Valorile brute ale semnalelor, și când nu dau puncte (pentru „De ce?” detaliat). */
       trapInputs,

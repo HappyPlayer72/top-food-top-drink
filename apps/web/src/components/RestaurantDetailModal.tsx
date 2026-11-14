@@ -12,7 +12,6 @@ import {
   BookOpen,
   Bookmark,
   Calendar,
-  Camera,
   Check,
   ChevronLeft,
   Clock,
@@ -58,6 +57,9 @@ import {
   PartnerBadge,
   TrapBadge,
 } from './BrandPrimitives';
+import { EMPTY_VISIT_PROOF, VisitProofField, type VisitProofState } from './VisitProofField';
+import { attachReceipt } from '@/app/actions/visits';
+import { reviewFormToken } from '@/app/actions/user';
 
 export interface RestaurantDetailModalProps {
   restaurant: Restaurant | null;
@@ -65,8 +67,10 @@ export interface RestaurantDetailModalProps {
   onClose: () => void;
   onAddReview: (
     restaurantId: string,
-    review: Review & { receiptPhotoUrl?: string }
-  ) => void | Promise<{ ok: boolean; message?: string; error?: string }>;
+    review: Review,
+    /** Anti-bot: tokenul formularului și câmpul capcană (docs/ANTI-BOT.md). */
+    antiBot?: { formToken?: string; website?: string }
+  ) => void | Promise<{ ok: boolean; message?: string; error?: string; reviewId?: string; verifiedVisit?: boolean }>;
   onEditReview?: (
     restaurantId: string,
     reviewId: string,
@@ -76,6 +80,8 @@ export interface RestaurantDetailModalProps {
     restaurantId: string,
     reviewId: string
   ) => Promise<{ ok: boolean; message?: string; error?: string }>;
+  /** Cu backend: formularul arată „Dovedește vizita” (check-in GPS sau bon, ×1,3). */
+  canVerifyVisit?: boolean;
   /** Cu backend: votul „util” se salvează și întoarce numărul real */
   onVoteHelpful?: (
     reviewId: string
@@ -152,6 +158,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   onConsumeInitialReviewOpen,
   myQuickVote,
   onQuickVote,
+  canVerifyVisit = false,
 }) => {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilterTab>('verified-local');
   const [showScoreFormula, setShowScoreFormula] = useState(false);
@@ -174,11 +181,14 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [noiseLevel, setNoiseLevel] = useState<NoiseLevel | null>(null);
   const [praisedEmployee, setPraisedEmployee] = useState<string>('');
   const [reviewText, setReviewText] = useState('');
-  const [receiptPhotoUrl, setReceiptPhotoUrl] = useState<string | null>(null);
-  const [receiptBusy, setReceiptBusy] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState('');
   const [videoStatus, setVideoStatus] = useState<{ text: string; error: boolean } | null>(null);
   const [videoBusy, setVideoBusy] = useState(false);
+  const [visitProof, setVisitProof] = useState<VisitProofState>(EMPTY_VISIT_PROOF);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  /** Anti-bot: token semnat de server la deschiderea formularului + câmpul capcană nevăzut de oameni. */
+  const formTokenRef = useRef<string | undefined>(undefined);
+  const honeypotRef = useRef<HTMLInputElement | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
   /** Întrebările structurate din review (Da / Nu / Nu am observat), trimise odată cu review-ul. */
@@ -217,10 +227,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setShowGoogleCompare(false);
     setIsReviewDrawerOpen(false);
     setAnswers({});
+    setVisitProof(EMPTY_VISIT_PROOF);
     setHelpfulVotedKeys({});
     setPraisedEmployee('');
     setReviewText('');
-    setReceiptPhotoUrl(null);
     setVideoUrlInput('');
     setVideoStatus(null);
     const initialGrade = Math.min(
@@ -236,6 +246,21 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       modalOverlayRef.current.scrollTop = 0;
     }
   }, [restaurant?.id]);
+
+  const venueIdForToken = restaurant?.venueId;
+  const refreshFormToken = React.useCallback(() => {
+    formTokenRef.current = undefined;
+    if (!canVerifyVisit || !venueIdForToken || !currentUser) return;
+    reviewFormToken(venueIdForToken)
+      .then((r) => {
+        if (r.ok) formTokenRef.current = r.token;
+      })
+      .catch(() => undefined);
+  }, [canVerifyVisit, venueIdForToken, currentUser]);
+
+  useEffect(() => {
+    if (isReviewDrawerOpen) refreshFormToken();
+  }, [isReviewDrawerOpen, refreshFormToken]);
 
   useEffect(() => {
     if (!restaurant || !initialReviewOpen) return;
@@ -491,7 +516,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           ? currentUser.neighborhood
           : undefined,
       weightMultiplier: currentUser.weightMultiplier,
-      isVerifiedVisit: currentUser.role === 'verified-local',
+      isVerifiedVisit: false,
       isPaidCollab: false,
       foodScore: finalGrade,
       trapEstimatePct: markAsTrap
@@ -508,18 +533,34 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       answers: Object.keys(answers).length ? answers : undefined,
     };
 
-    const result = await onAddReview(restaurant.id, {
-      ...newReview,
-      ...(receiptPhotoUrl ? { receiptPhotoUrl } : {}),
-    });
-    if (result && !result.ok) {
-      setFormError(result.error ?? 'Review-ul nu s-a putut publica. Încearcă din nou.');
-      return;
+    setIsSubmittingReview(true);
+    let result: Awaited<ReturnType<typeof onAddReview>>;
+    let receiptNotice = '';
+    try {
+      result = await onAddReview(restaurant.id, newReview, {
+        formToken: formTokenRef.current,
+        website: honeypotRef.current?.value,
+      });
+      if (result && !result.ok) {
+        setFormError(result.error ?? 'Review-ul nu s-a putut publica. Încearcă din nou.');
+        refreshFormToken();
+        return;
+      }
+      // Bonul pleacă după review (are nevoie de ID-ul lui); review-ul e publicat oricum.
+      if (result?.reviewId && visitProof.receipt && !result.verifiedVisit) {
+        const fd = new FormData();
+        fd.set('reviewId', result.reviewId);
+        fd.set('receipt', visitProof.receipt, 'bon.jpg');
+        const r = await attachReceipt(fd);
+        receiptNotice = ` ${r.ok ? r.message : `Bonul nu s-a trimis: ${r.error}`}`;
+      }
+    } finally {
+      setIsSubmittingReview(false);
     }
+    setVisitProof(EMPTY_VISIT_PROOF);
     setReviewFilter(currentUser.role);
     setIsReviewDrawerOpen(false);
     setReviewText('');
-    setReceiptPhotoUrl(null);
     setPraisedEmployee('');
     setMarkAsTrap(false);
     // Butoanele rapide revin la voturile salvate (sau goale, fără backend).
@@ -527,7 +568,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setNoiseLevel(NOISE_LEVELS.find((l) => l.value === myQuickVote?.noise)?.id ?? null);
     setAnswers({});
     setSubmittedNotice(
-      result?.message ??
+      result?.message ? result.message + receiptNotice :
       `Review publicat ca ${currentUser.name} (${formatScore(
         currentUser.weightMultiplier
       )}×)${
@@ -886,7 +927,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     <strong>2,0× localnic verificat</strong>,{' '}
                     <strong>1,0× turist</strong> și{' '}
                     <strong>0,2× influencer</strong> (colaborările plătite nu domină
-                    media). Localurile cu puține review-uri sunt trase ușor spre media
+                    media). O <strong>vizită verificată</strong> (check-in la local sau bonul
+                    verificat de un admin) adaugă <strong>×1,3</strong>
+                    {restaurant.verifiedVisitCount !== undefined &&
+                      ` (${restaurant.verifiedVisitCount} ${restaurant.verifiedVisitCount === 1 ? 'review are' : 'review-uri au'} vizita verificată aici)`}
+                    . Localurile cu puține review-uri sunt trase ușor spre media
                     orașului, ca un singur vot extrem să nu deformeze clasamentul.
                   </p>
                 </div>
@@ -1794,6 +1839,20 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                               Turist
                             </span>
                           )}
+                          {rev.isVerifiedVisit && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[11px] font-semibold border ${
+                                isDrink
+                                  ? 'bg-[#1E4335] border-[#2D5947] text-[#A7F3D0]'
+                                  : 'bg-[#ECF7F0] border-[#BCE3CB] text-[#1E6B43]'
+                              }`}
+                            >
+                              <Check className="w-3 h-3" aria-hidden="true" />
+                              Vizită verificată
+                              {rev.verifiedVia === 'gps' ? ' · check-in' : rev.verifiedVia === 'receipt' ? ' · bon' : ''}
+                              <span className="sr-only">, review-ul cântărește ×1,3</span>
+                            </span>
+                          )}
                           {rev.markedAsTouristTrap && (
                             <TrapBadge
                               variant="severe"
@@ -2540,6 +2599,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               </div>
 
               <form onSubmit={handleReviewSubmit} className="space-y-4">
+                {/* Capcană anti-bot: nevăzută și nefocusabilă pentru oameni; scripturile o completează */}
+                <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+                  <label htmlFor="rev-website">Website</label>
+                  <input ref={honeypotRef} id="rev-website" name="website" type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+                </div>
                 {/* Account-derived author identity ("Cine scrie?") — no influencer option */}
                 <div className="space-y-1.5">
                   <span className="text-[13px] font-semibold block">
@@ -2743,6 +2807,15 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   </div>
                 )}
 
+                {canVerifyVisit && restaurant.venueId && (
+                  <VisitProofField
+                    venueId={restaurant.venueId}
+                    value={visitProof}
+                    onChange={setVisitProof}
+                    isDrink={isDrink}
+                  />
+                )}
+
                 <div className="space-y-1">
                   <label
                     htmlFor="rev-text"
@@ -2780,51 +2853,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   }
                   dark={isDrink}
                 />
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="rev-receipt"
-                    className="flex items-center gap-1.5 text-[12px] font-semibold"
-                  >
-                    <Camera className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Fotografie bon fiscal (opțional — după aprobare primești ×1,3)</span>
-                  </label>
-                  <input
-                    id="rev-receipt"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    disabled={receiptBusy}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) {
-                        setReceiptPhotoUrl(null);
-                        return;
-                      }
-                      setReceiptBusy(true);
-                      setFormError(null);
-                      try {
-                        const compressed = await compressReceiptFile(file);
-                        setReceiptPhotoUrl(compressed);
-                      } catch {
-                        setFormError('Nu am putut procesa fotografia bonului. Încearcă un JPG/PNG mai mic.');
-                      } finally {
-                        setReceiptBusy(false);
-                      }
-                    }}
-                    className="block w-full text-[12px]"
-                  />
-                  {receiptPhotoUrl && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <img src={receiptPhotoUrl} alt="Previzualizare bon fiscal" className="h-14 w-14 rounded border object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setReceiptPhotoUrl(null)}
-                        className="text-[12px] font-semibold underline"
-                      >
-                        Scoate bonul
-                      </button>
-                    </div>
-                  )}
-                </div>
 
                 {formError && (
                   <p
@@ -2842,13 +2870,14 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
                 <button
                   type="submit"
-                  className={`btn-press w-full min-h-[48px] py-3 rounded-[4px] font-bold text-[15px] ${
+                  disabled={isSubmittingReview}
+                  className={`btn-press w-full min-h-[48px] py-3 rounded-[4px] font-bold text-[15px] disabled:opacity-70 ${
                     isDrink
                       ? 'bg-[#F2A33A] text-[#17382C]'
                       : 'bg-[#B3261E] text-white'
                   }`}
                 >
-                  Publică review-ul
+                  {isSubmittingReview ? 'Se publică…' : 'Publică review-ul'}
                 </button>
               </form>
             </div>
@@ -2861,31 +2890,3 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 };
 
 export default RestaurantDetailModal;
-
-async function compressReceiptFile(file: File): Promise<string> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error('read_failed'));
-    reader.readAsDataURL(file);
-  });
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => reject(new Error('decode_failed'));
-    el.src = dataUrl;
-  });
-  const maxDim = 960;
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height, 1));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(img.width * scale));
-  canvas.height = Math.max(1, Math.round(img.height * scale));
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return dataUrl;
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  for (const quality of [0.78, 0.62, 0.48]) {
-    const out = canvas.toDataURL('image/jpeg', quality);
-    if (out.length <= 380_000) return out;
-  }
-  throw new Error('too_large');
-}

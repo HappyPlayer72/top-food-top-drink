@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { moderation, monetization, ServiceError } from '@tftd/api';
+import { moderation, monetization, ServiceError, visits } from '@tftd/api';
 import { createAd, decideClaim, decideMatch, decideReceipt, decideReport, decideSuspicious, deleteAd } from './actions';
 import { currentUserId, getDb } from './server';
 import { ClaimDetails, MatchDetails, ReceiptDetails, ReportDetails, SuspiciousAccountDetails } from './details';
@@ -13,11 +13,13 @@ export default async function AdminPage() {
 
   let items: Awaited<ReturnType<typeof moderation.queue>>;
   let ads: Awaited<ReturnType<typeof monetization.listAdSlots>>;
+  let receipts: Awaited<ReturnType<typeof visits.receiptQueue>>;
   try {
     const db = getDb();
-    [items, ads] = await Promise.all([
+    [items, ads, receipts] = await Promise.all([
       moderation.queue(db, userId),
       monetization.listAdSlots(db, userId),
+      visits.receiptQueue(db, userId),
     ]);
   } catch (error) {
     if (error instanceof ServiceError && error.code === 'forbidden') {
@@ -29,15 +31,6 @@ export default async function AdminPage() {
   return (
     <div className="doodle-wallpaper min-h-screen"><main className="mx-auto max-w-4xl space-y-10 p-6 text-cafea">
       <header><Link href="/topfood/timisoara">← Înapoi la top</Link><h1 className="mt-4 text-3xl font-bold">Moderare</h1><p>Elemente care așteaptă o decizie.</p></header>
-      <section className="space-y-4" aria-labelledby="receipts"><h2 id="receipts" className="text-2xl font-bold">Bonuri fiscale de verificat</h2>
-        {!items.receipts.length && <p>Nu există bonuri în așteptare.</p>}
-        {items.receipts.map((rec) => <article key={rec.id} className="space-y-3 rounded border bg-hartie/80 p-4"><ReceiptDetails receipt={rec} />
-          <form action={decideReceipt} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={rec.id} />
-            <button className="rounded border bg-patrunjel px-3 py-2 text-white" name="decision" value="approve">Aprobă bon (vizită verificată ×1,3)</button>
-            <button className="rounded border px-3 py-2" name="decision" value="reject">Respinge bon</button>
-          </form>
-        </article>)}
-      </section>
       <section className="space-y-4" aria-labelledby="suspicious"><h2 id="suspicious" className="text-2xl font-bold">Conturi suspecte</h2>
         {!items.suspiciousAccounts.length && <p>Nu există conturi semnalate momentan.</p>}
         {items.suspiciousAccounts.map((acc) => <article key={acc.userId} className="space-y-3 rounded border bg-hartie/80 p-4"><SuspiciousAccountDetails account={acc} />
@@ -50,23 +43,31 @@ export default async function AdminPage() {
       <section className="space-y-4" aria-labelledby="reports"><h2 id="reports" className="text-2xl font-bold">Rapoarte și contestații</h2>
         {!items.reports.length && <p>Nu există rapoarte în așteptare.</p>}
         {items.reports.map((r) => <article key={r.id} className="space-y-2 rounded border p-4">
-          <p><strong>{r.targetType === 'review' ? 'Review raportat' : r.targetType === 'trap_appeal' ? 'Contestație capcană turistică' : `Raport: ${r.targetType}`}</strong></p>
+          <p><strong>{r.targetType === 'review' ? (r.reportedBy ? 'Review raportat' : 'Review reținut de filtrul anti-bot (nu apare și nu contează până decizi)') : r.targetType === 'trap_appeal' ? 'Contestație capcană turistică' : `Raport: ${r.targetType}`}</strong></p>
           <ReportDetails report={r} />
-          <form action={decideReport} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={r.id} /><label>Notă <input className="rounded border p-2" name="note" maxLength={1000} /></label>
-            {r.targetType === 'review' ? <><button className="rounded border px-3 py-2" name="decision" value="hide">Ascunde review</button><button className="rounded border px-3 py-2" name="decision" value="keep">Păstrează review</button></> : <><button className="rounded border px-3 py-2" name="decision" value="accept">Acceptă</button><button className="rounded border px-3 py-2" name="decision" value="reject">Respinge</button></>}
+          <form className="flex flex-wrap gap-2"><input type="hidden" name="id" value={r.id} /><label>Notă <input className="rounded border p-2" name="note" maxLength={1000} /></label>
+            {r.targetType === 'review' ? <><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'hide')}>Ascunde review</button><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'keep')}>Păstrează review</button></> : <><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'accept')}>Acceptă</button><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'reject')}>Respinge</button></>}
           </form>
+        </article>)}
+      </section>
+      <section className="space-y-4" aria-labelledby="receipts"><h2 id="receipts" className="text-2xl font-bold">Bonuri pentru vizită verificată</h2>
+        <p>Aprobă doar dacă bonul e de la acest local și din jurul datei vizitei. Aprobat, review-ul cântărește ×1,3. Poza se șterge după decizie.</p>
+        {!receipts.length && <p>Nu există bonuri în așteptare.</p>}
+        {receipts.map((p) => <article key={p.id} className="space-y-3 rounded border p-4"><ReceiptDetails proof={p} />
+          <form className="flex flex-wrap items-end gap-2"><input type="hidden" name="id" value={p.id} /><label className="flex flex-col">Notă (opțional) <input className="rounded border p-2" name="note" maxLength={500} placeholder="ex. bon de la alt local" /></label>
+            <button className="rounded border px-3 py-2" formAction={decideReceipt.bind(null, 'approve')}>Aprobă vizita</button><button className="rounded border px-3 py-2" formAction={decideReceipt.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
       </section>
       <section className="space-y-4" aria-labelledby="matches"><h2 id="matches" className="text-2xl font-bold">Potriviri de localuri</h2>
         {!items.matches.length && <p>Nu există potriviri în așteptare.</p>}
         {items.matches.map((m) => <article key={m.id} className="space-y-2 rounded border p-4"><MatchDetails match={m} />
-          <form action={decideMatch} className="flex gap-2"><input type="hidden" name="id" value={m.id} /><button className="rounded border px-3 py-2" name="decision" value="confirm">Confirmă potrivirea</button><button className="rounded border px-3 py-2" name="decision" value="reject">Respinge</button></form>
+          <form className="flex gap-2"><input type="hidden" name="id" value={m.id} /><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'confirm')}>Confirmă potrivirea</button><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
       </section>
       <section className="space-y-4" aria-labelledby="claims"><h2 id="claims" className="text-2xl font-bold">Revendicări</h2>
         {!items.claims.length && <p>Nu există revendicări în așteptare.</p>}
         {items.claims.map((c) => <article key={c.id} className="space-y-2 rounded border p-4"><ClaimDetails claim={c} />
-          <form action={decideClaim} className="flex gap-2"><input type="hidden" name="id" value={c.id} /><button className="rounded border px-3 py-2" name="decision" value="approve">Aprobă</button><button className="rounded border px-3 py-2" name="decision" value="reject">Respinge</button></form>
+          <form className="flex gap-2"><input type="hidden" name="id" value={c.id} /><button className="rounded border px-3 py-2" formAction={decideClaim.bind(null, 'approve')}>Aprobă</button><button className="rounded border px-3 py-2" formAction={decideClaim.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
       </section>
       <section className="space-y-4" aria-labelledby="ads"><h2 id="ads" className="text-2xl font-bold">Bannere reclamă (SlotReclamă)</h2>

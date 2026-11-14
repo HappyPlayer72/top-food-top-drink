@@ -154,6 +154,7 @@ export async function venuePage(
       authorType: reviews.authorType,
       isPaid: reviews.isPaid,
       verifiedVisit: reviews.verifiedVisit,
+      verifiedVia: reviews.verifiedVia,
       externalAuthor: reviews.externalAuthor,
       author: { username: users.username, displayName: users.displayName, neighborhood: users.localNeighborhood, roles: users.roles, avatarUrl: users.avatarUrl, followers: users.followers },
       servedBy: employees.firstName,

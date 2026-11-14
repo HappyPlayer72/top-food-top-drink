@@ -189,6 +189,7 @@ async function main() {
       postedAt: r.postedAt,
       visitWeekendNight: r.visitWeekendNight,
       verifiedVisit: r.verifiedVisit,
+      verifiedVia: r.verifiedVisit ? ("gps" as const) : null,
       servedByEmployeeId: r.servedBy ? (employeeIds.get(r.servedBy) ?? null) : null,
     })),
   );

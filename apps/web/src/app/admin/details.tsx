@@ -1,5 +1,5 @@
 import React from 'react';
-import type { moderation } from '@tftd/api';
+import type { moderation, visits } from '@tftd/api';
 
 type Queue = Awaited<ReturnType<typeof moderation.queue>>;
 const value = (v: string | null | undefined) => v?.trim() || 'Indisponibil';
@@ -43,19 +43,6 @@ export function ClaimDetails({ claim }: { claim: Queue['claims'][number] }) {
   </div>;
 }
 
-export function ReceiptDetails({ receipt }: { receipt: Queue['receipts'][number] }) {
-  return <div className="space-y-2">
-    <p><strong>Local:</strong> {value(receipt.venue.name)} · {value(receipt.venue.address)}</p>
-    <p><strong>Autor:</strong> {value(receipt.author?.displayName)}{receipt.author?.username ? ` (@${receipt.author.username})` : ''} · <strong>Notă:</strong> {receipt.rating}/10 · <strong>Trimis la:</strong> {date(receipt.postedAt)}</p>
-    <p><strong>Review:</strong> {value(receipt.text)}</p>
-    {receipt.receiptPhotoUrl ? (
-      <div className="mt-2">
-        <img src={receipt.receiptPhotoUrl} alt={`Bon fiscal pentru ${receipt.venue.name}`} className="max-h-64 rounded border border-cafea/20 object-contain" />
-      </div>
-    ) : null}
-  </div>;
-}
-
 export function SuspiciousAccountDetails({ account }: { account: Queue['suspiciousAccounts'][number] }) {
   return <div className="space-y-2">
     <p><strong>Cont:</strong> {value(account.displayName)} (@{account.username})</p>
@@ -63,5 +50,21 @@ export function SuspiciousAccountDetails({ account }: { account: Queue['suspicio
     <ul className="list-disc pl-6">
       {account.reasons.map((reason, i) => <li key={i}>{reason}</li>)}
     </ul>
+  </div>;
+}
+
+type Receipt = Awaited<ReturnType<typeof visits.receiptQueue>>[number];
+
+export function ReceiptDetails({ proof }: { proof: Receipt }) {
+  const r = proof.review;
+  return <div className="grid gap-4 sm:grid-cols-[minmax(0,240px)_1fr]">
+    <a href={`/admin/bon/${proof.id}`} target="_blank" rel="noreferrer" className="block">
+      <img src={`/admin/bon/${proof.id}`} alt={`Bonul trimis de ${proof.user.displayName} pentru ${proof.venue.name}`} className="max-h-80 w-full rounded border object-contain" />
+    </a>
+    <div className="space-y-2">
+      <p><strong>Local:</strong> {value(proof.venue.name)} · {value(proof.venue.address)}</p>
+      <p><strong>Autor:</strong> {value(proof.user.displayName)} (@{proof.user.username}) · <strong>Vizita:</strong> {r.visitedAt ? date(new Date(r.visitedAt)) : 'Indisponibil'} · <strong>Trimis:</strong> {date(proof.createdAt)}</p>
+      <p><strong>Notă:</strong> {r.rating}/10</p><p><strong>Review:</strong> {value(r.text)}</p>
+    </div>
   </div>;
 }

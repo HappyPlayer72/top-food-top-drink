@@ -227,6 +227,8 @@ export interface Review {
    */
   weightMultiplier: number;
   isVerifiedVisit: boolean;
+  /** Cum a fost dovedită vizita: check-in GPS la local sau bonul aprobat de admin. */
+  verifiedVia?: 'gps' | 'receipt';
   isPaidCollab?: boolean;
   /** Independent Score 1: Food & Experience Quality (0.0 – 10.0) */
   foodScore: number;
@@ -380,6 +382,8 @@ export interface Restaurant {
   touristTrapIndex: number;
   trapTier: TrapTier;
   trapReasons: string[];
+  /** Câte review-uri au vizita dovedită (GPS sau bon), cântărite ×1,3. */
+  verifiedVisitCount?: number;
   trapBreakdown: TrapBreakdown;
   aspectScores: AspectScores;
 

@@ -34,9 +34,7 @@ export async function queue(db: Db, adminId: string) {
   const reviewVenue = alias(venues, "review_venue");
   const appealVenue = alias(venues, "appeal_venue");
   const reviewAuthor = alias(users, "review_author");
-  const receiptVenue = alias(venues, "receipt_venue");
-  const receiptAuthor = alias(users, "receipt_author");
-  const [openReports, pendingMatches, pendingClaims, pendingReceipts, nativeReviews, decidedSuspicious] = await Promise.all([
+  const [openReports, pendingMatches, pendingClaims, nativeReviews, decidedSuspicious] = await Promise.all([
     db.select({
       report: reports,
       review: { rating: reviews.rating, text: reviews.text, postedAt: reviews.postedAt, source: reviews.source, externalAuthor: reviews.externalAuthor },
@@ -55,20 +53,6 @@ export async function queue(db: Db, adminId: string) {
     db.select({ claim: ownerClaims, venue: { name: venues.name, address: venues.address }, user: { username: users.username, displayName: users.displayName } })
       .from(ownerClaims).innerJoin(venues, eq(venues.id, ownerClaims.venueId)).innerJoin(users, eq(users.id, ownerClaims.userId))
       .where(and(eq(ownerClaims.status, "pending"), eq(ownerClaims.method, "cui"))).orderBy(asc(ownerClaims.createdAt)),
-    db.select({
-      id: reviews.id,
-      venueId: reviews.venueId,
-      rating: reviews.rating,
-      text: reviews.text,
-      postedAt: reviews.postedAt,
-      receiptPhotoUrl: reviews.receiptPhotoUrl,
-      venue: { name: receiptVenue.name, address: receiptVenue.address },
-      author: { username: receiptAuthor.username, displayName: receiptAuthor.displayName },
-    }).from(reviews)
-      .innerJoin(receiptVenue, eq(receiptVenue.id, reviews.venueId))
-      .leftJoin(receiptAuthor, eq(receiptAuthor.id, reviews.authorId))
-      .where(eq(reviews.receiptStatus, "pending"))
-      .orderBy(asc(reviews.createdAt)),
     db.select({
       userId: reviews.authorId,
       username: users.username,
@@ -145,13 +129,13 @@ export async function queue(db: Db, adminId: string) {
     reports: openReports.map(({ report, review, reviewVenue, author, venue }) => ({ ...report, review: review ? { ...review, venue: reviewVenue, author } : null, venue })),
     matches: pendingMatches.map(({ match, venue }) => ({ ...match, venue })),
     claims: pendingClaims.map(({ claim, venue, user }) => ({ ...claim, venue, user })),
-    receipts: pendingReceipts,
     suspiciousAccounts,
   };
 }
 
 /**
- * Decizia pe un raport. Pentru review-uri: `hide` îl ascunde (nu se șterge), `keep` îl lasă publicat.
+ * Decizia pe un raport. Pentru review-uri: `hide` îl ascunde (nu se șterge), `keep` îl lasă publicat
+ * (un review reținut de filtrul anti-bot devine publicat și marcat „verificat de om”).
  * Pentru contestații Tourist Trap: `accept` / `reject` (recalcularea o face scoring-ul; aici rămâne decizia scrisă).
  */
 export async function resolveReport(db: Db, adminId: string, reportId: string, decision: "hide" | "keep" | "accept" | "reject", note: string) {
@@ -161,6 +145,14 @@ export async function resolveReport(db: Db, adminId: string, reportId: string, d
   if (r.status !== "open") throw invalid("Raportul a fost deja rezolvat.");
   if (r.targetType === "review" && decision === "hide") {
     await db.update(reviews).set({ status: "hidden" }).where(eq(reviews.id, r.targetId));
+  }
+  // Reținut de filtrul anti-bot, dar adminul zice că e om: îl publicăm și analiza nu-l mai reține.
+  // `analyzedAt: null` → se reanalizează (fără semnalele de bot) și scorul se recalculează.
+  if (r.targetType === "review" && decision === "keep") {
+    await db
+      .update(reviews)
+      .set({ status: "published", botCleared: true, analyzedAt: null })
+      .where(and(eq(reviews.id, r.targetId), eq(reviews.status, "flagged")));
   }
   // Local adăugat de mână de un user: `accept` îl publică, `reject` îl închide
   if (r.targetType === "venue" && (decision === "accept" || decision === "reject")) {
@@ -202,25 +194,6 @@ export async function report(db: Db, userId: string, target: { type: "review" | 
   if (reason.trim().length < 10) throw invalid("Spune pe scurt de ce raportezi (minim 10 caractere).");
   const [r] = await db.insert(reports).values({ targetType: target.type, targetId: target.id, reportedBy: userId, reason: reason.trim() }).returning();
   return r!;
-}
-
-/** Verificare bon fiscal atașat unui review: aprobarea marchează vizita verificată (pondere ×1.3) și recalculează scorul. */
-export async function decideReceipt(db: Db, adminId: string, reviewId: string, approve: boolean) {
-  await assertAdmin(db, adminId);
-  await ensureExtendedSchema(db);
-  const [rev] = await db.select({ id: reviews.id, venueId: reviews.venueId }).from(reviews).where(eq(reviews.id, reviewId));
-  if (!rev) throw notFound("Review-ul");
-  await db
-    .update(reviews)
-    .set({
-      verifiedVisit: approve,
-      receiptStatus: approve ? "approved" : "rejected",
-    })
-    .where(eq(reviews.id, reviewId));
-  if (approve) {
-    const [v] = await db.select({ citySlug: venues.citySlug, vertical: venues.vertical }).from(venues).where(eq(venues.id, rev.venueId));
-    if (v) await recalculateCity(db, v.citySlug, v.vertical);
-  }
 }
 
 /** Decizie pe un cont suspect: ignorare sau ascunderea review-urilor suspecte + recalculare scor. */

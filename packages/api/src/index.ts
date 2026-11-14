@@ -7,6 +7,8 @@ export * from "./actions.ts";
 export * from "./community.ts";
 export * from "./hours.ts";
 export { myQuickVotes } from "./features.ts";
+export * as visits from "./visits.ts";
+export * as antibot from "./antibot.ts";
 export * as accounts from "@tftd/accounts";
 export * as owner from "@tftd/owner";
 export * as moderation from "@tftd/moderation";

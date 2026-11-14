@@ -602,8 +602,9 @@ export function TopFoodShell({
 
   const handleAddReview = async (
     restaurantId: string,
-    newReview: Review & { receiptPhotoUrl?: string }
-  ): Promise<{ ok: boolean; message?: string; error?: string }> => {
+    newReview: Review,
+    antiBot?: { formToken?: string; website?: string }
+  ): Promise<{ ok: boolean; message?: string; error?: string; reviewId?: string; verifiedVisit?: boolean }> => {
     const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
     if (backendOnline && venue?.venueId) {
       const res = await submitReview({
@@ -613,11 +614,11 @@ export function TopFoodShell({
         answers: newReview.answers,
         weekendNight:
           venue.vertical === 'drink' ? drinkFilters.includes('vineri-noaptea') : undefined,
-        receiptPhotoUrl: newReview.receiptPhotoUrl,
+        ...antiBot,
       });
       if (res.ok) {
         router.refresh();
-        return { ok: true, message: res.message };
+        return { ok: true, message: res.message, reviewId: res.reviewId, verifiedVisit: res.verifiedVisit };
       }
       if (!res.offline) return { ok: false, error: res.error };
     }
@@ -972,6 +973,7 @@ export function TopFoodShell({
         onAddReview={handleAddReview}
         onEditReview={handleEditReview}
         onDeleteReview={handleDeleteReview}
+        canVerifyVisit={backendOnline}
         onVoteHelpful={handleVoteHelpful}
         myQuickVote={selectedRestaurant?.venueId ? myQuickVotes[selectedRestaurant.venueId] : undefined}
         onQuickVote={
