@@ -114,6 +114,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [showHours, setShowHours] = useState(false);
   const [showGoogleCompare, setShowGoogleCompare] = useState(false);
   const [isReviewDrawerOpen, setIsReviewDrawerOpen] = useState(false);
+  const [activeQuickVote, setActiveQuickVote] = useState<'safety' | 'noise' | null>(null);
   const [localSaved, setLocalSaved] = useState(false);
   const [helpfulVotedKeys, setHelpfulVotedKeys] = useState<Record<string, boolean>>({});
 
@@ -1523,7 +1524,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           )}
         </div>
 
-        {/* BOTTOM STICKY BAR: Scrie un review + Bookmark */}
+        {/* BOTTOM STICKY BAR: Scrie un review + Siguranță + Gălăgie + Bookmark */}
         <div
           className={`sticky bottom-0 z-40 border-t ${
             isDrink
@@ -1531,7 +1532,117 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               : 'bg-white/95 border-[#E6DFD5]'
           } backdrop-blur-sm`}
         >
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-3">
+          {activeQuickVote && (
+            <div
+              className={`border-b ${
+                isDrink
+                  ? 'border-[#285443] bg-[#122B22]'
+                  : 'border-[#E6DFD5] bg-[#FAF8F5]'
+              }`}
+            >
+              <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[13px] font-semibold flex items-center gap-1.5">
+                    {activeQuickVote === 'safety' ? (
+                      <>
+                        <ShieldCheck className="w-4 h-4 opacity-80" />
+                        <span>Te-ai simțit în siguranță?</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-4 h-4 opacity-80" />
+                        <span>E gălăgie?</span>
+                      </>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveQuickVote(null)}
+                    className={`text-[12px] font-medium px-2 py-0.5 rounded-[4px] ${
+                      isDrink
+                        ? 'text-[#F4EEE2]/70 hover:text-[#F4EEE2]'
+                        : 'text-[#6E5649] hover:text-[#3A2418]'
+                    }`}
+                  >
+                    Închide
+                  </button>
+                </div>
+
+                {activeQuickVote === 'safety' ? (
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[1, 2, 3, 4, 5].map((lvl) => {
+                        const active = safetyScore === lvl;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => {
+                              setSafetyScore((prev) => (prev === lvl ? null : lvl));
+                              setActiveQuickVote(null);
+                            }}
+                            aria-pressed={active}
+                            aria-label={`Siguranță ${lvl} din 5`}
+                            className={`btn-press min-h-[40px] rounded-[4px] border text-[13px] font-bold ${
+                              active
+                                ? isDrink
+                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
+                                : isDrink
+                                ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                            }`}
+                          >
+                            {lvl}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div
+                      className={`flex justify-between text-[10px] ${
+                        isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
+                      }`}
+                    >
+                      <span>Nesigur</span>
+                      <span>Foarte sigur</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {NOISE_OPTIONS.map((opt) => {
+                      const active = noiseLevel === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setNoiseLevel((prev) =>
+                              prev === opt.id ? null : opt.id
+                            );
+                            setActiveQuickVote(null);
+                          }}
+                          aria-pressed={active}
+                          className={`btn-press min-h-[40px] px-2 rounded-[4px] border text-[12px] font-semibold ${
+                            active
+                              ? isDrink
+                                ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                                : 'bg-[#3A2418] text-white border-[#3A2418]'
+                              : isDrink
+                              ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                              : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => {
@@ -1539,9 +1650,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   onRequireLogin?.();
                   return;
                 }
+                setActiveQuickVote(null);
                 setIsReviewDrawerOpen(true);
               }}
-              className={`btn-press flex-1 min-h-[48px] py-3 px-4 sm:px-5 rounded-[4px] font-bold text-[15px] hover:opacity-90 ${
+              className={`btn-press flex-1 min-w-[160px] min-h-[48px] py-3 px-4 sm:px-5 rounded-[4px] font-bold text-[15px] hover:opacity-90 ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#B3261E] text-white'
@@ -1550,6 +1662,56 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               {currentUser
                 ? 'Scrie un review'
                 : 'Intră în cont ca să scrii un review'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setActiveQuickVote((prev) =>
+                  prev === 'safety' ? null : 'safety'
+                )
+              }
+              aria-pressed={activeQuickVote === 'safety'}
+              className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
+                safetyScore !== null || activeQuickVote === 'safety'
+                  ? isDrink
+                    ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
+                    : 'bg-[#3A2418] border-[#3A2418] text-white'
+                  : isDrink
+                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                  : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span>
+                {safetyScore !== null
+                  ? `Siguranță ${safetyScore}/5`
+                  : 'Te-ai simțit în siguranță?'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setActiveQuickVote((prev) => (prev === 'noise' ? null : 'noise'))
+              }
+              aria-pressed={activeQuickVote === 'noise'}
+              className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
+                noiseLevel !== null || activeQuickVote === 'noise'
+                  ? isDrink
+                    ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
+                    : 'bg-[#3A2418] border-[#3A2418] text-white'
+                  : isDrink
+                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                  : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+              }`}
+            >
+              <Volume2 className="w-4 h-4 shrink-0" />
+              <span>
+                {noiseLevel !== null
+                  ? NOISE_LABELS[noiseLevel]
+                  : 'E gălăgie?'}
+              </span>
             </button>
 
             <button
@@ -1819,86 +1981,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       {markAsTrap ? 'Activ' : 'Opțional'}
                     </span>
                   </button>
-                </div>
-
-                {/* Safety & Noise Level */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <span className="text-[13px] font-semibold flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 opacity-80" />
-                      <span>Cât de sigur te-ai simțit?</span>
-                    </span>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[1, 2, 3, 4, 5].map((lvl) => {
-                        const active = safetyScore === lvl;
-                        return (
-                          <button
-                            key={lvl}
-                            type="button"
-                            onClick={() =>
-                              setSafetyScore((prev) => (prev === lvl ? null : lvl))
-                            }
-                            aria-pressed={active}
-                            aria-label={`Siguranță ${lvl} din 5`}
-                            className={`btn-press min-h-[40px] rounded-[4px] border text-[13px] font-bold ${
-                              active
-                                ? isDrink
-                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
-                                : isDrink
-                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-                            }`}
-                          >
-                            {lvl}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div
-                      className={`flex justify-between text-[10px] ${
-                        isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
-                      }`}
-                    >
-                      <span>Nesigur</span>
-                      <span>Foarte sigur</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="text-[13px] font-semibold flex items-center gap-1.5">
-                      <Volume2 className="w-3.5 h-3.5 opacity-80" />
-                      <span>Cât de zgomotos este?</span>
-                    </span>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {NOISE_OPTIONS.map((opt) => {
-                        const active = noiseLevel === opt.id;
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() =>
-                              setNoiseLevel((prev) =>
-                                prev === opt.id ? null : opt.id
-                              )
-                            }
-                            aria-pressed={active}
-                            className={`btn-press min-h-[40px] px-2 rounded-[4px] border text-[12px] font-semibold ${
-                              active
-                                ? isDrink
-                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
-                                : isDrink
-                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
                 </div>
 
                 {restaurant.team && restaurant.team.length > 0 && (
