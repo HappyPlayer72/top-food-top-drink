@@ -832,3 +832,16 @@ details[open] > .owner-summary .owner-chevron { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
   .owner-chevron { transition: none; }
 }
+
+/* Topurile tematice: accent (--tema), suprafață (--tema-bg) și text pe accent (--tema-ink).
+   Salvie / Prună / Vișină; nu albastrul de localnic și nu Muștarul de capcană. AA verificat în toate cele 3 contexte. */
+.tema-accesibilitate { --tema: #2F5D45; --tema-bg: #EEF3EC; --tema-ink: #FFFFFF; }
+.tema-lucru { --tema: #5B3A7A; --tema-bg: #F3EFF6; --tema-ink: #FFFFFF; }
+.tema-iesiri { --tema: #9C2A6B; --tema-bg: #F8EEF3; --tema-ink: #FFFFFF; }
+html.dark .tema-accesibilitate { --tema: #9CCBB0; --tema-bg: #2A3A33; --tema-ink: #22262E; }
+html.dark .tema-lucru { --tema: #C9B3E6; --tema-bg: #302C3A; --tema-ink: #22262E; }
+html.dark .tema-iesiri { --tema: #F0A6CF; --tema-bg: #3A2B33; --tema-ink: #22262E; }
+/* Pe Sticlă (TOP DRINK), în ambele moduri; după regulile html.dark ca să câștige la specificitate egală. */
+html .tema-sticla.tema-accesibilitate { --tema: #A8D5BA; --tema-bg: #1D4436; --tema-ink: #17382C; }
+html .tema-sticla.tema-lucru { --tema: #D2C0EA; --tema-bg: #24403A; --tema-ink: #17382C; }
+html .tema-sticla.tema-iesiri { --tema: #F3B1D6; --tema-bg: #2A3F33; --tema-ink: #17382C; }

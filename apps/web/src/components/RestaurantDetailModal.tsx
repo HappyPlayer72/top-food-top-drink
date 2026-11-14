@@ -41,8 +41,8 @@ import {
 } from '../data/venueExtras';
 import {
   AvertizareaCard,
-  CarouStrip,
-  CoasterScore,
+  MugScore,
+  PlateScore,
   CrowdMeter,
   EmployeeEcusonCard,
   InfluencerBadge,
@@ -593,7 +593,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
         }`}
       >
-        {/* TOP BREADCRUMB BAR (No CarouMark here so CarouStrip appears only once under score) */}
+        {/* TOP BREADCRUMB BAR (fără CarouMark aici: scorul e pe farfurie / halbă) */}
         <header
           className={`sticky top-0 z-30 border-b pt-[env(safe-area-inset-top)] ${
             isDrink
@@ -731,46 +731,23 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 )}
               </div>
 
-              {/* Right: Score + Single CarouStrip (food) or CoasterScore (drink) */}
-              <div className="shrink-0 flex flex-col items-end">
-                {isDrink ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <CoasterScore score={restaurant.foodQualityScore} size="lg" />
-                    <span className="text-[11px] text-[#F4EEE2]/70">
-                      Scor onest din 10
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowScoreFormula((prev) => !prev)}
-                      aria-expanded={showScoreFormula}
-                      aria-controls="scor-onest-formula"
-                      className="btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold text-[#F2A33A] underline underline-offset-2 hover:opacity-80"
-                    >
-                      {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="min-w-[92px] min-[375px]:min-w-[108px] sm:min-w-[116px] flex flex-col items-end">
-                    <span className="font-display text-[48px] min-[375px]:text-[58px] sm:text-[68px] leading-[0.88] text-[#3A2418] tabular-nums">
-                      {formatScore(restaurant.foodQualityScore)}
-                    </span>
-                    <div className="w-full mt-2 mb-1">
-                      <CarouStrip height={8} />
-                    </div>
-                    <span className="text-[11px] text-[#6E5649]">
-                      Scor onest din 10
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowScoreFormula((prev) => !prev)}
-                      aria-expanded={showScoreFormula}
-                      aria-controls="scor-onest-formula"
-                      className="btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold text-[#6E5649] hover:text-[#3A2418] underline underline-offset-2"
-                    >
-                      {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
-                    </button>
-                  </div>
-                )}
+              {/* Dreapta: scorul ca în clasament — farfurie (food) / halbă (drink) + „Scor Onest” */}
+              <div className="shrink-0 flex flex-col items-center gap-2">
+                {isDrink ? <MugScore score={restaurant.foodQualityScore} size="lg" /> : <PlateScore score={restaurant.foodQualityScore} size="lg" />}
+                <span aria-hidden="true" className={`text-[13px] font-bold leading-none whitespace-nowrap ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
+                  Scor Onest
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowScoreFormula((prev) => !prev)}
+                  aria-expanded={showScoreFormula}
+                  aria-controls="scor-onest-formula"
+                  className={`btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold underline underline-offset-2 ${
+                    isDrink ? 'text-[#F2A33A] hover:opacity-80' : 'text-[#6E5649] hover:text-[#3A2418]'
+                  }`}
+                >
+                  {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
+                </button>
               </div>
             </div>
 
@@ -1189,11 +1166,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             {hasAnyWarning && (
               <div className="space-y-2">
                 <h3
-                  className={`text-[12px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                  className={`text-[14px] font-bold flex items-center gap-1.5 ${
                     isDrink ? 'text-[#FCA5A5]' : 'text-[#B3261E]'
                   }`}
                 >
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  {/* Triunghiul e rezervat capcanelor turistice; aici e un semn de avertizare pentru vizitatori. */}
+                  <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>Avertizări pentru vizitatori</span>
                 </h3>
                 <ul className="space-y-1.5">
@@ -1247,11 +1225,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <h3
-                  className={`text-[12px] font-bold uppercase tracking-wider ${
-                    isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
+                  className={`text-[14px] font-bold ${
+                    isDrink ? 'text-[#F2A33A]' : 'text-[#3A2418]'
                   }`}
                 >
-                  Facilități & accesibilitate
+                  Facilități și accesibilitate
                 </h3>
               </div>
               {restaurant.features ? (

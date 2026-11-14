@@ -25,8 +25,6 @@ import {
   recalculateRestaurantWithReview,
 } from '../data/restaurants';
 import { LoginScreen } from './LoginScreen';
-import { LocalVerificationPanel } from './LocalVerificationPanel';
-import { PreferencesPanel } from './PreferencesPanel';
 import { Navbar } from './Navbar';
 import { EditorialListView } from './EditorialListView';
 import { MapView } from './MapView';
@@ -441,13 +439,6 @@ export function TopFoodShell({
     setStatusMessage('Te-ai deconectat. Navighezi ca vizitator.');
   };
 
-  const handleSelectUser = (userId: string) => {
-    setCurrentUserId(userId);
-    const matched = accounts.find((u) => u.id === userId);
-    if (matched) {
-      setStatusMessage(`Cont activ schimbat: ${matched.name}`);
-    }
-  };
 
   const handleToggleFoodFilter = (f: FoodQuickFilter) => {
     setFoodFilters((prev) =>
@@ -733,29 +724,8 @@ export function TopFoodShell({
         onToggleSave={handleToggleSave}
         onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
         currentUser={currentUser}
-        availableUsers={accounts}
-        onSelectUser={handleSelectUser}
         onOpenLogin={handleOpenLogin}
         onLogout={handleLogout}
-        profileExtra={
-          currentUser ? (
-            <>
-              {backendOnline && currentUser.role !== 'verified-local' && (
-                <LocalVerificationPanel vertical={vertical} onVerified={setStatusMessage} />
-              )}
-              <PreferencesPanel
-                key={currentUser.id}
-                user={currentUser}
-                dark={vertical === 'drink'}
-                backendOnline={backendOnline}
-                onSaved={(u) => {
-                  setAccounts((prev) => prev.map((acc) => (acc.id === u.id ? u : acc)));
-                  if (backendOnline) router.refresh();
-                }}
-              />
-            </>
-          ) : null
-        }
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode((prev) => !prev)}
       />
