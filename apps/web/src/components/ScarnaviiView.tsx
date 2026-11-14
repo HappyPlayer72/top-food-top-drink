@@ -27,6 +27,8 @@ export interface ScarnaviiViewProps {
   onBack: () => void;
   onSelectRestaurant: (r: Restaurant) => void;
   signedIn: boolean;
+  /** Numele celui logat, pus automat la masă în jocuri. */
+  userName?: string | null;
   onRequireLogin: () => void;
 }
 
@@ -100,22 +102,20 @@ const SCARNAVII_LIST: ScarnaviiItem[] = [
   {
     id: 'table-dares',
     category: 'minigame',
-    title: 'Roata Provocărilor la Masă',
+    title: 'Roata provocărilor',
     tag: 'Minigame',
     shortTab: 'Provocări',
-    description:
-      'Provocări spontane pentru gașca de la masă — de la comenzi pe nevăzute și schimburi de farfurii până la turnul telefoanelor.',
+    description: 'Învârtiți roata cât așteptați comanda și faceți ce iese.',
     ctaLabel: 'Învârte roata',
     icon: Flame,
   },
   {
     id: 'who-pays',
     category: 'minigame',
-    title: 'Cine plătește toată masa?',
+    title: 'Cine plătește?',
     tag: 'Minigame · 6 moduri',
     shortTab: 'Cine plătește',
-    description:
-      'Ruletă, Eliminare, Cartea Neagră, Bomba cu Ceas, Barbut cu 2 zaruri sau Împărțire Haotică în procente — alegeți cum decideți nota.',
+    description: 'Ruleta, zarurile sau bomba aleg cine achită nota mesei.',
     ctaLabel: 'Joacă cu masa',
     icon: Receipt,
   },
@@ -128,6 +128,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
   onBack,
   onSelectRestaurant,
   signedIn,
+  userName,
   onRequireLogin,
 }) => {
   const isDrink = vertical === 'drink';
@@ -305,7 +306,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
             onSelectRestaurant={onSelectRestaurant}
           />
         ) : activeMode === 'who-pays' ? (
-          <WhoPaysMinigame vertical={vertical} />
+          <WhoPaysMinigame vertical={vertical} myName={userName} />
         ) : activeMode === 'taste-duel' ? (
           <OutingPoll
             vertical={vertical}
@@ -313,7 +314,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
             onSelectRestaurant={onSelectRestaurant}
           />
         ) : activeMode === 'table-dares' ? (
-          <TableDaresMinigame vertical={vertical} />
+          <TableDaresMinigame vertical={vertical} myName={userName} />
         ) : (
           <section
             aria-label="Lista de Scârnăvii"

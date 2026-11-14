@@ -1,552 +1,207 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Check,
-  Dices,
-  Flame,
-  Plus,
-  RotateCcw,
-  Sparkles,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Crown, Flame } from 'lucide-react';
 import { Vertical } from '../../types';
+import { PASS_PENALTIES, TABLE_DARES, type DareTier } from './table/dares';
+import { SpinWheel, prefersReducedMotion, type WheelSegment } from './table/SpinWheel';
+import { StickyAction } from './table/StickyAction';
+import { TableSeats } from './table/TableSeats';
+import { nextTurn, pickDareRound } from './table/tableGames';
+import { tableTheme, type TableTheme } from './table/theme';
+import { useTablePlayers } from './table/useTablePlayers';
 
 export interface TableDaresMinigameProps {
   vertical: Vertical;
+  /** Numele celui logat; intră automat la masă. */
+  myName?: string | null;
 }
 
-type DareIntensity = 'all' | 'chill' | 'spicy' | 'chaos';
-type DareTier = Exclude<DareIntensity, 'all'>;
+type Intensity = 'all' | DareTier;
+type Phase = 'idle' | 'spinning' | 'result' | 'scored';
 
-interface TableDare {
-  id: string;
-  tier: DareTier;
-  vertical: 'both' | Vertical;
-  title: string;
-  rule: string;
-}
-
-interface TablePlayer {
-  id: string;
-  name: string;
-  points: number;
-  passes: number;
-}
-
-const DEFAULT_TABLE_PLAYERS: TablePlayer[] = [
-  { id: 'tp-1', name: 'Andreea', points: 0, passes: 0 },
-  { id: 'tp-2', name: 'Radu', points: 0, passes: 0 },
-  { id: 'tp-3', name: 'Elena', points: 0, passes: 0 },
+const TIERS: { id: DareTier; level: number; label: string; tone: WheelSegment['tone'] }[] = [
+  { id: 'chill', level: 1, label: 'Cuminte', tone: 'a' },
+  { id: 'spicy', level: 2, label: 'Condimentat', tone: 'b' },
+  { id: 'chaos', level: 3, label: 'Haotic', tone: 'c' },
 ];
+const tierOf = (id: DareTier) => TIERS.find((t) => t.id === id) ?? TIERS[0];
+const dareById = new Map(TABLE_DARES.map((d) => [d.id, d]));
 
-const TABLE_DARES: TableDare[] = [
-  {
-    id: 'd-1',
-    tier: 'chill',
-    vertical: 'both',
-    title: 'Turnul Telefoanelor',
-    rule: 'Toată lumea pune telefonul cu ecranul în jos pe mijlocul mesei 15 minute. Cine atinge primul telefonul plătește o rundă de apă sau cafea.',
-  },
-  {
-    id: 'd-2',
-    tier: 'chill',
-    vertical: 'food',
-    title: 'Compliment pentru Bucătărie',
-    rule: 'Când vine ospătarul, transmite-i un compliment sincer și specific despre cel mai bun preparat de pe masă.',
-  },
-  {
-    id: 'd-3',
-    tier: 'chill',
-    vertical: 'drink',
-    title: 'Compliment la Bar',
-    rule: 'Întreabă barmanul care este băutura lui preferată de făcut în tura de azi și notează recomandarea pentru următoarea rundă.',
-  },
-  {
-    id: 'd-4',
-    tier: 'spicy',
-    vertical: 'food',
-    title: 'Comandă pe Nevăzute',
-    rule: 'Persoana din dreapta ta îți alege următorul fel de mâncare sau desert din meniu (în același buget).',
-  },
-  {
-    id: 'd-5',
-    tier: 'spicy',
-    vertical: 'drink',
-    title: 'Alegerea Barmanului',
-    rule: 'La următoarea comandă nu te uiți în meniu — îi spui doar „ceva acrișor” sau „ceva amărui” și bei ce aduce.',
-  },
-  {
-    id: 'd-6',
-    tier: 'spicy',
-    vertical: 'food',
-    title: 'Schimb de Farfurii',
-    rule: 'Faci schimb de farfurie pentru două guri cu persoana de vizavi și dai o notă de la 1 la 10 în fața mesei.',
-  },
-  {
-    id: 'd-7',
-    tier: 'spicy',
-    vertical: 'drink',
-    title: 'Schimb de Pahare (Degustare)',
-    rule: 'Descrii gustul băuturii vecinului din stânga ca un somelier profesionist, folosind minimum trei arome imaginare.',
-  },
-  {
-    id: 'd-8',
-    tier: 'chill',
-    vertical: 'both',
-    title: 'Oracolul Notei de Plată',
-    rule: 'Fiecare estimează în gând totalul notei. Cel mai îndepărtat de suma reală la final strânge paharele spre marginea mesei.',
-  },
-  {
-    id: 'd-9',
-    tier: 'spicy',
-    vertical: 'both',
-    title: 'Interdicția Cuvântului „Bun”',
-    rule: 'Timp de 10 minute nu ai voie să spui cuvântul „bun” sau „fain”. Dacă scapi, adaugi +5 lei la bacșiș.',
-  },
-  {
-    id: 'd-10',
-    tier: 'chaos',
-    vertical: 'food',
-    title: 'Mână Stângă / Mână Opusă',
-    rule: 'Mănânci următoarele 5 minute exclusiv cu mâna nedominantă. Fără trișat!',
-  },
-  {
-    id: 'd-11',
-    tier: 'chaos',
-    vertical: 'drink',
-    title: 'Toastul Improvizat',
-    rule: 'Ridici paharul și ții un toast de 15 secunde pentru un motiv complet absurd ales de persoana din fața ta.',
-  },
-  {
-    id: 'd-12',
-    tier: 'chaos',
-    vertical: 'both',
-    title: 'Regizorul Mesei',
-    rule: 'Faci o poză de grup cu toată masa folosind doar unghiul de jos (stil selfie cu hamsterul) înainte să vină comanda.',
-  },
-  {
-    id: 'd-13',
-    tier: 'chill',
-    vertical: 'food',
-    title: 'Detectivul de Ingrediente',
-    rule: 'Cu ochii închiși, guști o îmbucătură aleasă de cineva de la masă și încerci să ghicești 3 ingrediente.',
-  },
-  {
-    id: 'd-14',
-    tier: 'spicy',
-    vertical: 'both',
-    title: 'Recenzie Live în 2 Fraze',
-    rule: 'Rostești cu voce tare o mini-recenzie de localnic pentru locul în care sunteți — ca și cum ar fi pentru radio.',
-  },
-  {
-    id: 'd-15',
-    tier: 'chaos',
-    vertical: 'food',
-    title: 'Veto pe Sosuri',
-    rule: 'Restul mesei decide dacă ai voie să folosești sosuri la porția curentă sau trebuie să o mănânci simplă timp de 5 minute.',
-  },
-  {
-    id: 'd-16',
-    tier: 'chaos',
-    vertical: 'drink',
-    title: 'Runda de Apă Obligatorie',
-    rule: 'Toată masa bea un pahar întreg de apă înainte de următoarea comandă — hidratare de localnic responsabil!',
-  },
-  {
-    id: 'd-17',
-    tier: 'chill',
-    vertical: 'both',
-    title: 'Schimb de Locuri',
-    rule: 'Schimbi locul la masă cu persoana care a vorbit cel mai puțin în ultimele 10 minute.',
-  },
-  {
-    id: 'd-18',
-    tier: 'spicy',
-    vertical: 'both',
-    title: 'Secretul Cartonașului',
-    rule: 'Spui care a fost cea mai mare capcană turistică în care ai mâncat sau băut vreodată și cât a costat.',
-  },
-  {
-    id: 'd-19',
-    tier: 'chaos',
-    vertical: 'both',
-    title: 'Dublu sau Nimic la Bacșiș',
-    rule: 'La următoarea rundă de „Cine plătește”, alegi o persoană care pornește cu șansă dublă — sau preiei tu provocarea următoare.',
-  },
-  {
-    id: 'd-20',
-    tier: 'chill',
-    vertical: 'drink',
-    title: 'Povestea Primului Local',
-    rule: 'Povestești în 30 de secunde prima seară memorabilă pe care ai avut-o într-un bar din Timișoara.',
-  },
-];
-
-const TIER_LABELS: Record<DareIntensity, string> = {
-  all: 'Toate',
-  chill: 'Cuminte',
-  spicy: 'Condimentat',
-  chaos: 'Haotic',
-};
-
-function tierBadgeLabel(tier: DareTier): string {
-  if (tier === 'chill') return 'Cuminte';
-  if (tier === 'spicy') return 'Condimentat';
-  return 'Haotic';
+function Peppers({ level, className = '' }: { level: number; className?: string }) {
+  return (
+    <span className={`inline-flex ${className}`} aria-hidden="true">
+      {Array.from({ length: level }, (_, i) => (
+        <Flame key={i} className="w-4 h-4 -mx-0.5" fill="currentColor" />
+      ))}
+    </span>
+  );
 }
 
-export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
-  vertical,
-}) => {
-  const isDrink = vertical === 'drink';
+function IntensityPicker({ value, onChange, theme }: { value: Intensity; onChange: (v: Intensity) => void; theme: TableTheme }) {
+  const options: { id: Intensity; level: number; label: string }[] = [...TIERS, { id: 'all', level: 0, label: 'Toate' }];
+  return (
+    <div role="group" aria-label="Cât de picant?" className="space-y-2">
+      <h2 className="font-display text-[24px] leading-none">Cât de picant?</h2>
+      <div className="grid grid-cols-4 gap-2">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={value === o.id}
+            onClick={() => onChange(o.id)}
+            className={`btn-press min-h-[60px] rounded-[6px] border-2 flex flex-col items-center justify-center gap-1 px-1 ${value === o.id ? theme.seatActive : theme.seat}`}
+          >
+            {o.level > 0 ? <Peppers level={o.level} /> : <span className="text-[14px] font-bold leading-4">1–3</span>}
+            <span className="text-[12px] font-semibold leading-tight">{o.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-  const [intensity, setIntensity] = useState<DareIntensity>('all');
-  const [players, setPlayers] = useState<TablePlayer[]>(DEFAULT_TABLE_PLAYERS);
-  const [newName, setNewName] = useState('');
-  const [usePlayerTracker, setUsePlayerTracker] = useState(true);
+export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({ vertical, myName }) => {
+  const theme = tableTheme(vertical);
+  const { players, add, rename, remove } = useTablePlayers(myName);
+  const [intensity, setIntensity] = useState<Intensity>('all');
+  const [round, setRound] = useState<{ segmentIds: string[]; targetIndex: number; spinKey: number; playerId: string | null } | null>(null);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [penalty, setPenalty] = useState<string | null>(null);
+  const [scores, setScores] = useState<Record<string, { points: number; passes: number }>>({});
+  const lastPlayerId = useRef<string | null>(null);
+  const cardTitleRef = useRef<HTMLHeadingElement>(null);
 
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [currentDare, setCurrentDare] = useState<TableDare | null>(null);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [roundOutcome, setRoundOutcome] = useState<'done' | 'pass' | null>(null);
+  const pool = useMemo(
+    () => TABLE_DARES.filter((d) => (d.vertical === 'both' || d.vertical === vertical) && (intensity === 'all' || d.tier === intensity)),
+    [intensity, vertical],
+  );
 
-  const spinTimeoutRef = useRef<number | null>(null);
+  // Înainte de prima învârtire: primele felii din pool, în ordinea din fișier (fără random la randare).
+  const segmentIds = round?.segmentIds ?? pool.slice(0, 8).map((d) => d.id);
+  const segments: WheelSegment[] = segmentIds.map((id) => {
+    const dare = dareById.get(id)!;
+    const tier = tierOf(dare.tier);
+    return { id, label: '', marks: tier.level, tone: tier.tone };
+  });
+  const dare = round && phase !== 'spinning' && phase !== 'idle' ? dareById.get(round.segmentIds[round.targetIndex]) ?? null : null;
+  // Dacă jucătorul de la rând a fost scos, provocarea rămâne „pentru cine vrea” și nu se mai punctează.
+  const turnPlayer = round?.playerId ? players.find((p) => p.id === round.playerId) ?? null : null;
 
   useEffect(() => {
-    return () => {
-      if (spinTimeoutRef.current !== null) {
-        window.clearTimeout(spinTimeoutRef.current);
-      }
-    };
-  }, []);
+    if (phase !== 'result') return;
+    cardTitleRef.current?.focus({ preventScroll: true });
+    cardTitleRef.current?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }, [phase, round?.spinKey]);
 
-  const pool = useMemo(() => {
-    return TABLE_DARES.filter((d) => {
-      const verticalMatch = d.vertical === 'both' || d.vertical === vertical;
-      const tierMatch = intensity === 'all' || d.tier === intensity;
-      return verticalMatch && tierMatch;
-    });
-  }, [intensity, vertical]);
-
-  const handleAddPlayer = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newName.trim();
-    if (!trimmed || players.length >= 12) return;
-    setPlayers((prev) => [
-      ...prev,
-      {
-        id: `tp-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-        name: trimmed,
-        points: 0,
-        passes: 0,
-      },
-    ]);
-    setNewName('');
+  const spin = () => {
+    if (phase === 'spinning' || pool.length === 0) return;
+    const lastDare = round ? round.segmentIds[round.targetIndex] : null;
+    const picked = pickDareRound(pool.map((d) => d.id), lastDare);
+    const playerId = nextTurn(players.map((p) => p.id), lastPlayerId.current);
+    lastPlayerId.current = playerId;
+    setRound({ ...picked, spinKey: (round?.spinKey ?? 0) + 1, playerId });
+    setPenalty(null);
+    setPhase('spinning');
   };
 
-  const handleRemovePlayer = (id: string) => {
-    setPlayers((prev) => prev.filter((p) => p.id !== id));
-    if (selectedPlayerId === id) setSelectedPlayerId(null);
-  };
-
-  const spinDare = () => {
-    if (isSpinning || pool.length === 0) return;
-    setIsSpinning(true);
-    setRoundOutcome(null);
-
-    const candidates =
-      pool.length > 1 && currentDare
-        ? pool.filter((d) => d.id !== currentDare.id)
-        : pool;
-    const pickedDare =
-      candidates[Math.floor(Math.random() * candidates.length)] ?? pool[0];
-
-    const pickedPlayer =
-      usePlayerTracker && players.length > 0
-        ? players[Math.floor(Math.random() * players.length)]
-        : null;
-
-    if (spinTimeoutRef.current !== null) {
-      window.clearTimeout(spinTimeoutRef.current);
+  const mark = (outcome: 'done' | 'pass') => {
+    if (phase !== 'result') return;
+    if (turnPlayer) {
+      setScores((prev) => {
+        const s = prev[turnPlayer.id] ?? { points: 0, passes: 0 };
+        return { ...prev, [turnPlayer.id]: outcome === 'done' ? { ...s, points: s.points + 1 } : { ...s, passes: s.passes + 1 } };
+      });
     }
-    spinTimeoutRef.current = window.setTimeout(() => {
-      setCurrentDare(pickedDare);
-      setSelectedPlayerId(pickedPlayer?.id ?? null);
-      setIsSpinning(false);
-    }, 320);
+    if (outcome === 'pass') setPenalty(PASS_PENALTIES[Math.floor(Math.random() * PASS_PENALTIES.length)]);
+    setPhase('scored');
   };
 
-  const markOutcome = (outcome: 'done' | 'pass') => {
-    if (!selectedPlayerId || roundOutcome !== null) return;
-    setRoundOutcome(outcome);
-    setPlayers((prev) =>
-      prev.map((p) => {
-        if (p.id !== selectedPlayerId) return p;
-        return outcome === 'done'
-          ? { ...p, points: p.points + 1 }
-          : { ...p, passes: p.passes + 1 };
-      })
-    );
-  };
-
-  const resetScores = () => {
-    setPlayers((prev) => prev.map((p) => ({ ...p, points: 0, passes: 0 })));
-    setRoundOutcome(null);
-  };
-
-  const assignedPlayer = players.find((p) => p.id === selectedPlayerId) ?? null;
+  // Clasamentul se construiește din jucătorii de acum, deci scorul celor scoși dispare.
+  const board = players
+    .map((p) => ({ ...p, ...(scores[p.id] ?? { points: 0, passes: 0 }) }))
+    .sort((a, b) => b.points - a.points);
+  const leaderPoints = board[0]?.points ?? 0;
+  const btn = 'btn-press rounded-[6px] disabled:opacity-60';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 pb-4">
+      <header className="space-y-1">
+        <h1 className="font-display text-[38px] sm:text-[48px] leading-[0.94]">Roata provocărilor</h1>
+        <p className={`text-[15px] ${theme.muted}`}>Învârtiți roata cât așteptați comanda.</p>
+      </header>
+
       <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Flame
-            className={`w-4 h-4 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}
-          />
-          <h1 className="font-display text-[38px] sm:text-[48px] leading-[0.94]">
-            Roata Provocărilor la Masă
-          </h1>
-        </div>
-        <p
-          className={`text-[13px] sm:text-[14px] ${
-            isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
-          }`}
-        >
-          Sunteți deja la masă și așteptați comanda? Alegeți intensitatea și
-          trageți o provocare spontană pentru gașcă.
-        </p>
+        <TableSeats players={players} theme={theme} min={0} onAdd={add} onRename={rename} onRemove={remove} />
+        {players.length === 0 && <p className={`text-[14px] ${theme.muted}`}>Opțional: pe nume, cu scor.</p>}
       </div>
 
-      {/* Controls */}
-      <div
-        className={`rounded-[6px] border p-4 space-y-4 ${
-          isDrink
-            ? 'bg-[#143025] border-[#285443]'
-            : 'bg-[#FAF8F5] border-[#E6DFD5]'
-        }`}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {(['all', 'chill', 'spicy', 'chaos'] as const).map((tier) => (
-              <button
-                key={tier}
-                type="button"
-                onClick={() => setIntensity(tier)}
-                className={`btn-press px-3 py-1.5 rounded-[4px] text-[12px] font-semibold border ${
-                  intensity === tier
-                    ? isDrink
-                      ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                      : 'bg-[#3A2418] text-white border-[#3A2418]'
-                    : isDrink
-                    ? 'border-[#2D5947] text-[#F4EEE2]/80'
-                    : 'border-[#D6CFC5] text-[#3A2418]'
-                }`}
-              >
-                {TIER_LABELS[tier]}
-              </button>
-            ))}
-          </div>
+      <IntensityPicker value={intensity} onChange={setIntensity} theme={theme} />
 
-          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={usePlayerTracker}
-              onChange={(e) => setUsePlayerTracker(e.target.checked)}
-              className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
-            />
-            <span>Alege și jucătorul + scor</span>
-          </label>
-        </div>
+      <SpinWheel segments={segments} targetIndex={round?.targetIndex ?? null} spinKey={round?.spinKey ?? 0} onDone={() => setPhase('result')} theme={theme} />
 
-        {/* Optional Player Tracker */}
-        {usePlayerTracker && (
-          <div className="space-y-2.5">
-            <form onSubmit={handleAddPlayer} className="flex gap-2">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Adaugă nume la masă..."
-                aria-label="Adaugă nume la masă"
-                className={`flex-1 px-3 py-2 rounded-[4px] border text-[13px] focus:outline-none ${
-                  isDrink
-                    ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder-[#F4EEE2]/45'
-                    : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder-[#8C7B70]'
-                }`}
-              />
-              <button
-                type="submit"
-                disabled={!newName.trim() || players.length >= 12}
-                className={`btn-press inline-flex items-center gap-1 px-3.5 py-2 rounded-[4px] text-[13px] font-bold disabled:opacity-45 ${
-                  isDrink
-                    ? 'bg-[#1E4335] border border-[#2D5947] text-[#F4EEE2]'
-                    : 'bg-[#3A2418] text-white'
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                <span>Adaugă</span>
-              </button>
-            </form>
-
-            <div className="flex flex-wrap gap-2">
-              {players.map((p) => {
-                const isSelected = p.id === selectedPlayerId;
-                return (
-                  <div
-                    key={p.id}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[4px] border text-[12px] font-semibold ${
-                      isSelected
-                        ? isDrink
-                          ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                          : 'bg-[#B3261E] text-white border-[#B3261E]'
-                        : isDrink
-                        ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
-                        : 'bg-white border-[#D6CFC5] text-[#3A2418]'
-                    }`}
-                  >
-                    <span>{p.name}</span>
-                    <span className="tabular-nums opacity-80">
-                      {p.points}p
-                      {p.passes > 0 ? ` · ${p.passes} pas` : ''}
-                    </span>
-                    {players.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePlayer(p.id)}
-                        aria-label={`Elimină ${p.name}`}
-                        className="opacity-65 hover:opacity-100"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={spinDare}
-            disabled={isSpinning || pool.length === 0}
-            className={`btn-press inline-flex items-center gap-2 px-5 py-3 rounded-[4px] font-bold text-[14px] disabled:opacity-45 ${
-              isDrink
-                ? 'bg-[#F2A33A] text-[#17382C] hover:brightness-105'
-                : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
-            }`}
-          >
-            <Dices className={`w-4 h-4 ${isSpinning ? 'animate-spin' : ''}`} />
-            <span>
-              {isSpinning
-                ? 'Se trage provocarea...'
-                : currentDare
-                ? 'Altă provocare'
-                : 'Învârte roata provocărilor'}
-            </span>
-          </button>
-
-          {usePlayerTracker && players.some((p) => p.points > 0 || p.passes > 0) && (
-            <button
-              type="button"
-              onClick={resetScores}
-              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-3 rounded-[4px] border text-[13px] font-semibold ${
-                isDrink
-                  ? 'border-[#2D5947] text-[#F4EEE2]'
-                  : 'border-[#D6CFC5] text-[#3A2418]'
-              }`}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Resetează scorul</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Drawn Dare Card */}
-      {currentDare && (
-        <div
-          className={`rounded-[6px] border p-5 sm:p-6 space-y-4 stagger-fade-in ${
-            isDrink
-              ? 'bg-[#17382C] border-[#F2A33A]'
-              : 'bg-white border-[#B3261E] shadow-sm'
-          }`}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] text-[11px] font-bold uppercase tracking-wide ${
-                currentDare.tier === 'chaos'
-                  ? 'bg-[#B3261E] text-white'
-                  : currentDare.tier === 'spicy'
-                  ? 'bg-[#E0A526] text-[#3A2418]'
-                  : isDrink
-                  ? 'bg-[#F2A33A]/20 text-[#F2A33A]'
-                  : 'bg-[#F2EFE9] text-[#3A2418]'
-              }`}
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Nivel: {tierBadgeLabel(currentDare.tier)}</span>
-            </span>
-
-            {assignedPlayer && (
-              <span className="text-[13px] font-bold">
-                Pentru:{' '}
-                <span className={isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}>
-                  {assignedPlayer.name}
-                </span>
-              </span>
+      <div aria-live="polite">
+        {dare && (
+          <article className={`stagger-fade-in rounded-[6px] border-2 p-5 space-y-3 ${theme.surfaceRaised}`}>
+            <p className={`text-[15px] font-semibold ${theme.accent}`}>{turnPlayer ? `E rândul lui ${turnPlayer.name}` : 'Pentru cine vrea'}</p>
+            <h3 ref={cardTitleRef} tabIndex={-1} className="font-display text-[30px] leading-tight outline-none">
+              {dare.title}
+            </h3>
+            <p className="text-[16px] leading-relaxed">{dare.rule}</p>
+            <p className={`inline-flex items-center gap-1.5 text-[14px] font-semibold ${theme.muted}`}>
+              <Peppers level={tierOf(dare.tier).level} className={theme.accent} />
+              {tierOf(dare.tier).label}
+            </p>
+            {penalty && (
+              <p className={`rounded-[4px] border p-3 text-[15px] ${theme.surface}`}>
+                <span className="font-bold">Pedeapsă: </span>
+                {penalty}.
+              </p>
             )}
+          </article>
+        )}
+      </div>
+
+      <StickyAction>
+        {phase === 'result' ? (
+          <>
+            <button type="button" onClick={() => mark('done')} className={`${btn} ${theme.primary}`}>
+              {turnPlayer ? 'Am făcut-o! +1' : 'Am făcut-o!'}
+            </button>
+            <button type="button" onClick={() => mark('pass')} className={`${btn} border-2 ${theme.seat}`}>
+              Dau pas
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={spin} disabled={phase === 'spinning' || pool.length === 0} className={`${btn} ${theme.primary}`}>
+            {phase === 'spinning' ? 'Se învârte…' : phase === 'scored' ? 'Următoarea provocare' : 'Învârte roata'}
+          </button>
+        )}
+      </StickyAction>
+
+      {board.length > 0 && (
+        <section aria-label="Clasamentul mesei" className={`rounded-[6px] border p-4 space-y-2 ${theme.surface}`}>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-display text-[22px] leading-none">Clasamentul mesei</h2>
+            <button type="button" onClick={() => setScores({})} className={`min-h-11 px-2 text-[14px] font-semibold underline underline-offset-4 ${theme.muted}`}>
+              Ia-o de la zero
+            </button>
           </div>
-
-          <h3 className="font-display text-[28px] sm:text-[32px] leading-tight">
-            {currentDare.title}
-          </h3>
-
-          <p className="text-[14px] sm:text-[15px] leading-relaxed">
-            {currentDare.rule}
-          </p>
-
-          {assignedPlayer && (
-            <div className="flex flex-wrap items-center gap-2.5 pt-1">
-              <button
-                type="button"
-                disabled={roundOutcome !== null}
-                onClick={() => markOutcome('done')}
-                className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold disabled:opacity-50 ${
-                  isDrink
-                    ? 'bg-[#F2A33A] text-[#17382C]'
-                    : 'bg-[#3A2418] text-white'
-                }`}
-              >
-                <Check className="w-4 h-4" />
-                <span>+1 Îndeplinit</span>
-              </button>
-              <button
-                type="button"
-                disabled={roundOutcome !== null}
-                onClick={() => markOutcome('pass')}
-                className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] border text-[13px] font-semibold disabled:opacity-50 ${
-                  isDrink
-                    ? 'border-[#2D5947] text-[#F4EEE2]'
-                    : 'border-[#D6CFC5] text-[#6E5649]'
-                }`}
-              >
-                <X className="w-4 h-4" />
-                <span>Pas / Penalizare</span>
-              </button>
-              {roundOutcome && (
-                <span className="text-[12px] font-semibold opacity-80">
-                  {roundOutcome === 'done'
-                    ? `Punct acordat lui ${assignedPlayer.name}!`
-                    : `${assignedPlayer.name} a dat pas.`}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+          <ol className="space-y-1">
+            {board.map((p) => (
+              <li key={p.id} className="flex items-center gap-2 text-[15px]">
+                {leaderPoints > 0 && p.points === leaderPoints ? (
+                  <Crown className={`w-4 h-4 ${theme.accent}`} aria-label="Lider" />
+                ) : (
+                  <span className="w-4" />
+                )}
+                <span className="flex-1 truncate">{p.name}</span>
+                <span className="font-bold tabular-nums">{p.points} p</span>
+                {p.passes > 0 && <span className={`text-[13px] ${theme.muted}`}>· {p.passes} pas</span>}
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
     </div>
   );
