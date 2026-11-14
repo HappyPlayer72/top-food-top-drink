@@ -269,8 +269,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <div className="space-y-2 sm:space-y-3">
               <h1 className="font-display text-[32px] sm:text-[42px] lg:text-[46px] leading-[1.02]">
                 {isDrink
-                  ? 'Unde ies timișorenii, fără capcane.'
-                  : 'Unde mănâncă timișorenii, nu turiștii.'}
+                  ? 'Unde bei în Timișoara fără să-ți pară rău de notă.'
+                  : 'Timișoara pe gustate, nu pe ghicite.'}
               </h1>
               <p
                 className={`text-[14px] sm:text-[15px] leading-relaxed ${

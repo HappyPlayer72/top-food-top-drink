@@ -6,14 +6,20 @@ import {
   ChevronLeft,
   Compass,
   Dices,
+  Flame,
+  Radar,
   Receipt,
   Shuffle,
   Sparkles,
+  Swords,
 } from 'lucide-react';
 import { Restaurant, Vertical } from '../types';
 import { PreferenceRecommender } from './scarnavii/PreferenceRecommender';
 import { MysteryDirections } from './scarnavii/MysteryDirections';
 import { WhoPaysMinigame } from './scarnavii/WhoPaysMinigame';
+import { TasteDuelMinigame } from './scarnavii/TasteDuelMinigame';
+import { TrapBlitzMinigame } from './scarnavii/TrapBlitzMinigame';
+import { TableDaresMinigame } from './scarnavii/TableDaresMinigame';
 
 export interface ScarnaviiViewProps {
   vertical: Vertical;
@@ -22,12 +28,22 @@ export interface ScarnaviiViewProps {
   onSelectRestaurant: (r: Restaurant) => void;
 }
 
-type ScarnaviiModeId = 'preferences' | 'mystery' | 'who-pays';
+type ScarnaviiModeId =
+  | 'preferences'
+  | 'mystery'
+  | 'who-pays'
+  | 'taste-duel'
+  | 'trap-blitz'
+  | 'table-dares';
+
+type CategoryFilter = 'all' | 'minigame' | 'explore';
 
 interface ScarnaviiItem {
   id: ScarnaviiModeId;
+  category: Exclude<CategoryFilter, 'all'>;
   title: string;
   tag: string;
+  shortTab: string;
   description: string;
   ctaLabel: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -35,31 +51,70 @@ interface ScarnaviiItem {
 
 const SCARNAVII_LIST: ScarnaviiItem[] = [
   {
+    id: 'who-pays',
+    category: 'minigame',
+    title: 'Cine plătește toată masa?',
+    tag: 'Minigame · 6 moduri',
+    shortTab: 'Cine plătește',
+    description:
+      'Ruletă, Eliminare, Cartea Neagră, Bomba cu Ceas, Barbut cu 2 zaruri sau Împărțire Haotică în procente — alegeți cum decideți nota.',
+    ctaLabel: 'Joacă cu masa',
+    icon: Receipt,
+  },
+  {
+    id: 'taste-duel',
+    category: 'minigame',
+    title: 'Turneul Poftelor (Duel 1 la 1)',
+    tag: 'Minigame',
+    shortTab: 'Turneu 1v1',
+    description:
+      'Votați la masă între 4 sau 8 localuri în dueluri eliminatorii până când rămâne un singur campion (sau dați cu banul 50/50).',
+    ctaLabel: 'Pornește turneul',
+    icon: Swords,
+  },
+  {
+    id: 'trap-blitz',
+    category: 'minigame',
+    title: 'Radar de Capcane (Quiz)',
+    tag: 'Minigame',
+    shortTab: 'Quiz Capcane',
+    description:
+      '5 runde rapide pe date reale din Timișoara: ghiciți care local este comoară de localnic și care e capcană turistică.',
+    ctaLabel: 'Testează-ți instinctul',
+    icon: Radar,
+  },
+  {
+    id: 'table-dares',
+    category: 'minigame',
+    title: 'Roata Provocărilor la Masă',
+    tag: 'Minigame',
+    shortTab: 'Provocări',
+    description:
+      'Provocări spontane pentru gașca de la masă — de la comenzi pe nevăzute și schimburi de farfurii până la turnul telefoanelor.',
+    ctaLabel: 'Învârte roata',
+    icon: Flame,
+  },
+  {
     id: 'preferences',
+    category: 'explore',
     title: 'Recomandare doar pe preferințe',
     tag: 'Potrivire',
+    shortTab: 'Preferințe',
     description:
-      'Alegi bugetul, specificul, cartierul și starea de azi — iar noi îți dăm un singur local potrivit, fără să pierzi timp prin liste.',
+      'Alegi bugetul, specificul, cartierul, contextul și starea de azi — iar noi îți dăm localul potrivit, fără să pierzi timp prin liste.',
     ctaLabel: 'Alege preferințele',
     icon: Sparkles,
   },
   {
     id: 'mystery',
+    category: 'explore',
     title: 'Destinație secretă (doar indicații)',
     tag: 'Aventură',
+    shortTab: 'Busolă secretă',
     description:
-      'Te trimitem la un local random din oraș doar pe bază de busolă, direcție și distanță. Îi afli numele abia când ajungi la ușă.',
+      'Te trimitem la un local random din oraș doar pe bază de busolă, direcție, distanță și indicii progresive. Îi afli numele abia la ușă.',
     ctaLabel: 'Pornește spre necunoscut',
     icon: Compass,
-  },
-  {
-    id: 'who-pays',
-    title: 'Cine plătește toată masa?',
-    tag: 'Minigame',
-    description:
-      'Sunteți mai mulți la masă și nu vreți să împărțiți bonul? Adăugați numele și lăsați ruleta sau eliminarea să decidă cine achită tot.',
-    ctaLabel: 'Joacă cu masa',
-    icon: Receipt,
   },
 ];
 
@@ -72,6 +127,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
   const isDrink = vertical === 'drink';
 
   const [activeMode, setActiveMode] = useState<ScarnaviiModeId | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [isRolling, setIsRolling] = useState(false);
   const [rollingIndex, setRollingIndex] = useState<number>(0);
 
@@ -85,15 +141,22 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
     };
   }, []);
 
+  const visibleList =
+    categoryFilter === 'all'
+      ? SCARNAVII_LIST
+      : SCARNAVII_LIST.filter((item) => item.category === categoryFilter);
+
   const handleRollScarnavie = () => {
     if (isRolling) return;
     setIsRolling(true);
 
+    const pool = activeMode ? SCARNAVII_LIST : visibleList;
     const candidates = activeMode
-      ? SCARNAVII_LIST.filter((item) => item.id !== activeMode)
-      : SCARNAVII_LIST;
+      ? pool.filter((item) => item.id !== activeMode)
+      : pool;
     const finalPick =
       candidates[Math.floor(Math.random() * candidates.length)] ??
+      pool[0] ??
       SCARNAVII_LIST[0];
 
     let step = 0;
@@ -102,7 +165,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
 
     rollIntervalRef.current = window.setInterval(() => {
       step += 1;
-      setRollingIndex(step % SCARNAVII_LIST.length);
+      setRollingIndex(step % pool.length);
     }, 80);
 
     rollTimeoutRef.current = window.setTimeout(() => {
@@ -182,8 +245,9 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
               isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
             }`}
           >
-            Trei moduri spontane de a ieși în oraș: alegere după preferințe,
-            aventură pe nevăzute sau jocul care decide cine plătește masa.
+            Șase moduri spontane și minigames pentru ieșit în oraș: ruletă și
+            barbut pentru notă, duel 1v1 între localuri, quiz de capcane,
+            provocări la masă, recomandări sau aventură pe busolă.
           </p>
         </section>
 
@@ -209,7 +273,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span>{item.tag}</span>
+                  <span>{item.shortTab}</span>
                 </button>
               );
             })}
@@ -231,11 +295,53 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
           />
         ) : activeMode === 'who-pays' ? (
           <WhoPaysMinigame vertical={vertical} />
+        ) : activeMode === 'taste-duel' ? (
+          <TasteDuelMinigame
+            vertical={vertical}
+            restaurants={restaurants}
+            onSelectRestaurant={onSelectRestaurant}
+          />
+        ) : activeMode === 'trap-blitz' ? (
+          <TrapBlitzMinigame
+            vertical={vertical}
+            restaurants={restaurants}
+            onSelectRestaurant={onSelectRestaurant}
+          />
+        ) : activeMode === 'table-dares' ? (
+          <TableDaresMinigame vertical={vertical} />
         ) : (
           <section
             aria-label="Lista de Scârnăvii"
-            className="space-y-3"
+            className="space-y-4"
           >
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  { id: 'all', label: 'Toate (6)' },
+                  { id: 'minigame', label: 'Minigames la masă (4)' },
+                  { id: 'explore', label: 'Explorare & Decizie (2)' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setCategoryFilter(tab.id)}
+                  className={`btn-press px-3.5 py-1.5 rounded-[4px] text-[12px] font-semibold border ${
+                    categoryFilter === tab.id
+                      ? isDrink
+                        ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                        : 'bg-[#3A2418] text-white border-[#3A2418]'
+                      : isDrink
+                      ? 'border-[#2D5947] text-[#F4EEE2]/80 hover:border-[#F2A33A]/60'
+                      : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             {isRolling && (
               <div
                 className={`rounded-[6px] border p-4 flex items-center gap-3 ${
@@ -250,13 +356,14 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
                   }`}
                 />
                 <span className="font-display text-[20px]">
-                  Se alege: {SCARNAVII_LIST[rollingIndex].title}...
+                  Se alege:{' '}
+                  {(visibleList[rollingIndex] ?? SCARNAVII_LIST[0]).title}...
                 </span>
               </div>
             )}
 
             <div className="grid gap-3.5">
-              {SCARNAVII_LIST.map((item, idx) => {
+              {visibleList.map((item, idx) => {
                 const Icon = item.icon;
                 const isHighlighted = isRolling && rollingIndex === idx;
 

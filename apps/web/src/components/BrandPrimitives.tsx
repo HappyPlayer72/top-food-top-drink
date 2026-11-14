@@ -188,7 +188,7 @@ export const BrandWordmark: React.FC<{
         />
       )}
       <span
-        className={`inline-flex items-baseline leading-none truncate ${
+        className={`inline-flex items-baseline leading-none max-md:truncate md:whitespace-nowrap ${
           compact
             ? 'text-[19px] min-[375px]:text-[22px]'
             : 'text-[20px] min-[375px]:text-[24px] sm:text-[28px]'

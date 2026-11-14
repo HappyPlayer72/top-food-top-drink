@@ -54,8 +54,8 @@ const USER_ACCOUNTS: UserAccount[] = [
 ];
 
 const VERTICAL_TITLES: Record<Vertical, string> = {
-  food: 'topfood/timișoara — Unde mănâncă timișorenii, nu turiștii',
-  drink: 'topdrink/timișoara — Unde ies timișorenii, fără capcane',
+  food: 'topfood/timișoara — Timișoara pe gustate, nu pe ghicite',
+  drink: 'topdrink/timișoara — Unde bei fără să-ți pară rău de notă',
 };
 
 function buildUrlForState(

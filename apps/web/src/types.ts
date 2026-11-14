@@ -124,6 +124,8 @@ export interface AspectScores {
   atmosphere: number;
 }
 
+export type NoiseLevel = 'linistit' | 'moderat' | 'animat' | 'zgomotos';
+
 export interface Review {
   id?: string;
   authorName: string;
@@ -159,6 +161,10 @@ export interface Review {
   ownerReplyAuthor?: string;
   /** Optional employee praised in this visit ("Rate the Employee / Angajatul lunii") */
   praisedEmployee?: string;
+  /** How safe the reviewer felt (1–5) */
+  safetyScore?: number;
+  /** Perceived noise level at the venue */
+  noiseLevel?: NoiseLevel;
 }
 
 export interface OwnerPost {
@@ -218,6 +224,24 @@ export interface TopReviewer {
   helpfulVotes: number;
 }
 
+export interface VenueWarnings {
+  /** Venue or surrounding area can feel unsafe (e.g. poorly lit street at night) */
+  unsafeFeeling?: string;
+  /** Very noisy environment (loud music, echo, crowded room) */
+  veryNoisy?: string;
+  /** Very bright or harsh lighting (important for sensory sensitivity) */
+  brightLights?: string;
+}
+
+export interface VenueFacilities {
+  /** Wheelchair / step-free access & accessible restroom */
+  disabilityFriendly?: boolean | string;
+  /** Power outlets available at tables */
+  hasOutlets?: boolean;
+  /** Other notable facilities (Wi-Fi, pet-friendly, baby changing, bike rack, etc.) */
+  otherFacilities?: string[];
+}
+
 export interface Restaurant {
   id: string;
   /** UUID-ul din baza de date (lipsește la datele statice); îl folosesc acțiunile din backend. */
@@ -275,6 +299,10 @@ export interface Restaurant {
   crowdSegments?: 1 | 2 | 3 | 4 | 5;
   crowdLabel?: string;
   drinkTags?: DrinkQuickFilter[];
+
+  // --- Warnings & Practical Facilities ---
+  warnings?: VenueWarnings;
+  facilities?: VenueFacilities;
 
   // --- Reviews & Owner Kitchen Story & Team ---
   reviewCounts?: {
