@@ -1,6 +1,6 @@
 /** Cele 5 joburi programate (apps/worker/README.md). Fiecare poate rula și o singură dată din linia de comandă. */
-import { eq, isNull } from "drizzle-orm";
-import { cities, reviews, socialSubmissions, venues, type Db } from "@tftd/db";
+import { and, eq, isNull, lt } from "drizzle-orm";
+import { cities, reviewSubmissions, reviews, socialSubmissions, venues, visitProofs, type Db } from "@tftd/db";
 import { discoverVenues, processSubmission, refreshCity } from "@tftd/ingestion";
 import { freezeMonth, lastMonth } from "@tftd/leaderboard";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
@@ -52,6 +52,21 @@ export const JOBS = {
           .innerJoin(venues, eq(venues.id, reviews.venueId))
           .where(isNull(reviews.analyzedAt))
       : await db.select({ venueId: venues.id, citySlug: venues.citySlug, vertical: venues.vertical }).from(venues);
+    if (!opts.onlyNew) {
+      // GDPR: pozele bonurilor fără decizie după 30 de zile se șterg (rămâne doar hash-ul).
+      const stale = await db
+        .update(visitProofs)
+        .set({ status: "expired", image: null, decidedAt: new Date() })
+        .where(and(eq(visitProofs.status, "pending"), lt(visitProofs.createdAt, new Date(Date.now() - 30 * 86_400_000))))
+        .returning({ id: visitProofs.id });
+      if (stale.length) log("recalculeaza-scoruri", `${stale.length} bonuri expirate, poze șterse`);
+      // GDPR: amprentele de trimitere (anti-bot) se păstrează 90 de zile
+      const old = await db
+        .delete(reviewSubmissions)
+        .where(lt(reviewSubmissions.createdAt, new Date(Date.now() - 90 * 86_400_000)))
+        .returning({ id: reviewSubmissions.reviewId });
+      if (old.length) log("recalculeaza-scoruri", `${old.length} amprente anti-bot șterse`);
+    }
     if (!targets.length) return;
     for (const t of targets) await analyzeVenueReviews(db, t.venueId, { onlyNew: opts.onlyNew });
     const pairs = new Set(targets.map((t) => `${t.citySlug}|${t.vertical}`));

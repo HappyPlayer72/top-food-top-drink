@@ -29,6 +29,20 @@
       "when": 1794657249207,
       "tag": "0003_venue_owner_icon",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794662477620,
+      "tag": "0004_visit_proofs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794664011185,
+      "tag": "0005_anti_bot",
+      "breakpoints": true
     }
   ]
 }

@@ -32,6 +32,9 @@ const multiPolygon = customType<{ data: string }>({
   dataType: () => "geometry(MultiPolygon, 4326)",
 });
 
+/** Bytes brute (poza bonului). Se șterg după decizia adminului (GDPR). */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+
 const point = () => geometry({ type: "point", mode: "xy", srid: 4326 });
 const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow();
 
@@ -55,6 +58,8 @@ export const paymentStatus = pgEnum("payment_status", ["pending", "paid", "faile
 export const reportTarget = pgEnum("report_target", ["review", "venue", "owner_claim", "trap_appeal", "user", "post"]);
 export const reportStatus = pgEnum("report_status", ["open", "resolved", "rejected"]);
 export const matchStatus = pgEnum("match_status", ["pending", "confirmed", "rejected"]);
+/** Cum s-a dovedit vizita la local (pondere ×1,3): check-in GPS la local sau poza bonului aprobată de admin. */
+export const visitProofMethod = pgEnum("visit_proof_method", ["gps", "receipt"]);
 
 // ---------- Oraș ----------
 
@@ -331,8 +336,12 @@ export const reviews = pgTable(
     aspects: jsonb().$type<Record<string, number>>(),
     isPaid: boolean().notNull().default(false),
     verifiedVisit: boolean().notNull().default(false),
+    /** Cum a fost verificată vizita (null = neverificată). */
+    verifiedVia: visitProofMethod(),
     fakeProbability: real().notNull().default(0),
     fakeSignals: jsonb().$type<string[]>().notNull().default([]),
+    /** Un admin a confirmat că e scris de un om: analiza anti-bot nu-l mai reține. */
+    botCleared: boolean().notNull().default(false),
     /** Ponderea finală (modulul D). */
     weight: real(),
     embedding: vector({ dimensions: 384 }),
@@ -345,6 +354,52 @@ export const reviews = pgTable(
     index().on(t.venueId, t.postedAt),
     index().on(t.authorId),
   ],
+);
+
+/**
+ * Dovada vizitei prin bon: poza așteaptă un admin. La decizie poza se șterge (rămân doar hash-ul,
+ * ca același bon să nu fie folosit de două ori, și decizia).
+ */
+export const visitProofs = pgTable(
+  "visit_proofs",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    reviewId: uuid().notNull().references(() => reviews.id, { onDelete: "cascade" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    method: visitProofMethod().notNull().default("receipt"),
+    status: verificationStatus().notNull().default("pending"),
+    image: bytea(),
+    imageType: text(),
+    /** SHA-256 al pozei: același bon nu poate verifica două review-uri. */
+    imageHash: text().notNull(),
+    decision: text(),
+    decidedBy: uuid().references(() => users.id),
+    decidedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.imageHash), index().on(t.status, t.createdAt), index().on(t.reviewId)],
+);
+
+/**
+ * Cum a fost trimis un review nativ (anti-bot, docs/ANTI-BOT.md). Nu păstrăm IP-ul: doar un HMAC al
+ * IP-ului + browserului (`clientHash`), cu cheia serverului, ca să recunoaștem același dispozitiv
+ * folosit de mai multe conturi. Rândurile se șterg după 90 de zile (jobul de noapte).
+ */
+export const reviewSubmissions = pgTable(
+  "review_submissions",
+  {
+    reviewId: uuid().primaryKey().references(() => reviews.id, { onDelete: "cascade" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    clientHash: text(),
+    /** Cât a stat formularul deschis până la trimitere (ms), din tokenul semnat de server. */
+    fillMs: integer(),
+    /** Vârsta contului la trimitere (secunde). */
+    accountAgeSec: integer(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.clientHash, t.createdAt), index().on(t.userId, t.createdAt), index().on(t.createdAt)],
 );
 
 export const reviewReplies = pgTable("review_replies", {
@@ -563,6 +618,8 @@ export type ScoreExplanation = {
   touristCount: number;
   enoughData: boolean;
   trapLevel: "none" | "possible" | "trap";
+  /** Câte review-uri au vizita dovedită (GPS sau bon), cu pondere ×1,3. */
+  verifiedVisitCount?: number;
   trapReasons: { signal: string; value: number; points: number; text: string }[];
   trapInputs?: {
     localsScore: number | null;

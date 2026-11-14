@@ -59,7 +59,17 @@ export function adSignals(text: string | null | undefined): string[] {
 
 // ---------- Fals ----------
 
-export type FakeSignal = "burst" | "similarText" | "newAccount" | "extremeOnly" | "ownerOrStaff" | "generic";
+export type FakeSignal =
+  | "burst"
+  | "similarText"
+  | "newAccount"
+  | "extremeOnly"
+  | "ownerOrStaff"
+  | "generic"
+  // Anti-bot (docs/ANTI-BOT.md): comportamentul contului și al dispozitivului, nu doar textul
+  | BotSignal;
+
+export type BotSignal = "botVelocity" | "copyPaste" | "sharedDevice" | "tooFast" | "spamContent" | "freshAccount";
 
 /** Cât adaugă fiecare semnal la probabilitatea de fals (se combină ca evenimente independente). */
 export const FAKE_SIGNAL_WEIGHTS: Record<FakeSignal, number> = {
@@ -69,6 +79,12 @@ export const FAKE_SIGNAL_WEIGHTS: Record<FakeSignal, number> = {
   extremeOnly: 0.2,
   ownerOrStaff: 0.9,
   generic: 0.15,
+  botVelocity: 0.5,
+  copyPaste: 0.6,
+  sharedDevice: 0.6,
+  tooFast: 0.4,
+  spamContent: 0.6,
+  freshAccount: 0.15,
 };
 
 export type FakeContext = {
@@ -156,4 +172,89 @@ function shingles(text: string, k = 3): Set<string> {
   }
   for (let i = 0; i + k <= words.length; i++) out.add(words.slice(i, i + k).join(" "));
   return out;
+}
+
+// ---------- Anti-bot (docs/ANTI-BOT.md) ----------
+
+export const BOT_SIGNALS: readonly BotSignal[] = ["botVelocity", "copyPaste", "sharedDevice", "tooFast", "spamContent", "freshAccount"];
+
+export const BOT_RULES = {
+  /** Review-uri ale aceluiași cont într-o oră (la localuri diferite). Un om nu mănâncă în 4 locuri pe oră. */
+  velocityWindowMin: 60,
+  velocityMinCount: 4,
+  /** Același text (Jaccard pe 3 cuvinte) la alt local, de la oricine: copiat. */
+  copyPasteSimilarity: 0.7,
+  copyPasteMinWords: 8,
+  /** Conturi diferite de pe același dispozitiv/rețea la același local, în 7 zile. */
+  sharedDeviceMinAccounts: 3,
+  sharedDeviceWindowDays: 7,
+  /** Sub atâtea caractere pe secundă tastează un om; peste e lipit sau automat. */
+  humanMaxCharsPerSec: 15,
+  /** Formular trimis mai repede de atât, indiferent de lungime. */
+  minFillMs: 4_000,
+  /** Cont creat cu mai puțin de atât înainte de review. */
+  freshAccountSec: 10 * 60,
+  /** De la această probabilitate de fals, cu cel puțin un semnal de bot, review-ul așteaptă un admin. */
+  holdProbability: 0.8,
+} as const;
+
+export type BotContext = {
+  text: string | null;
+  postedAt: Date;
+  /** Când a postat autorul celelalte review-uri ale lui (oriunde). */
+  authorOtherPostTimes: Date[];
+  /**
+   * Texte recente de la ALTE localuri (oricine le-a scris), pentru copy-paste. Gol la review-urile
+   * fără amprentă de trimitere (importate, seed): verificăm doar ce se postează acum pe site.
+   */
+  otherVenueTexts: string[];
+  /** Din `review_submissions`; null la review-urile vechi, importate sau din seed. */
+  fillMs: number | null;
+  accountAgeSec: number | null;
+  /** Câte ALTE conturi au trimis review la același local de pe același dispozitiv, în fereastră. */
+  sameDeviceOtherAccounts: number;
+};
+
+export function botSignals(c: BotContext): BotSignal[] {
+  const out: BotSignal[] = [];
+  const windowMs = BOT_RULES.velocityWindowMin * 60_000;
+  const near = c.authorOtherPostTimes.filter((t) => Math.abs(t.getTime() - c.postedAt.getTime()) <= windowMs).length;
+  if (near + 1 >= BOT_RULES.velocityMinCount) out.push("botVelocity");
+
+  if (c.text && wordCount(c.text) >= BOT_RULES.copyPasteMinWords && c.otherVenueTexts.some((t) => textSimilarity(c.text!, t) >= BOT_RULES.copyPasteSimilarity)) {
+    out.push("copyPaste");
+  }
+  if (c.sameDeviceOtherAccounts + 1 >= BOT_RULES.sharedDeviceMinAccounts) out.push("sharedDevice");
+  if (c.fillMs !== null && isTooFast(c.fillMs, c.text?.length ?? 0)) out.push("tooFast");
+  if (isSpam(c.text)) out.push("spamContent");
+  if (c.accountAgeSec !== null && c.accountAgeSec < BOT_RULES.freshAccountSec) out.push("freshAccount");
+  return out;
+}
+
+/** Trimis prea repede pentru un om: sub 4 secunde, sau mai repede de 15 caractere pe secundă. */
+export function isTooFast(fillMs: number, chars: number): boolean {
+  return fillMs < BOT_RULES.minFillMs || chars / (fillMs / 1000) > BOT_RULES.humanMaxCharsPerSec;
+}
+
+const URL_RE = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|ru|cn|xyz|top|info|biz|io|shop|click)\b)/iu;
+const CONTACT_RE = /(\+?\d[\d\s.-]{8,}\d|[\w.+-]+@[\w-]+\.\w+|whats\s?app|telegram|t\.me\/)/iu;
+
+/** Spam tipic de bot: linkuri, contacte, caractere repetate, text fără vocale sau numai majuscule. */
+export function isSpam(text: string | null | undefined): boolean {
+  if (!text) return false;
+  const t = text.trim();
+  if (URL_RE.test(t) || CONTACT_RE.test(t)) return true;
+  if (/(.)\1{6,}/u.test(t)) return true; // „!!!!!!!” „aaaaaaa”
+  const letters = t.match(/\p{L}/gu) ?? [];
+  if (letters.length >= 20) {
+    const vowels = t.match(/[aeiouăâîyAEIOUĂÂÎY]/gu)?.length ?? 0;
+    if (vowels / letters.length < 0.2) return true; // „xkcdqwrtz…”
+    const upper = t.match(/\p{Lu}/gu)?.length ?? 0;
+    if (upper / letters.length > 0.8) return true;
+  }
+  return false;
+}
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }

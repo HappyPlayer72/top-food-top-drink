@@ -80,6 +80,20 @@ await userProfile(db, "andreea0");
 | Portofelul userului | `loyalty.myCards(db, userId)` |
 | Owner: meniu, poze, text, program | `owner.setMenu`, `owner.updatePresentation` |
 
+### Vizită verificată (review ×1,3)
+
+| Ce face userul | Funcție |
+| --- | --- |
+| „Sunt aici acum” la local (max. 100 m; se salvează doar ziua) | `visits.checkInAtVenue(db, userId, venueId, { lat, lng })` (demo: `{ simulate: true }`, în site prin `DEMO_VISIT_GPS`). Review-ul din aceeași zi devine verificat și dacă check-in-ul vine după |
+| Atașează poza bonului la review-ul lui | `visits.submitReceipt(db, userId, reviewId, bytes)` (JPEG/PNG/WebP, max 2 MB; același bon nu merge de două ori) |
+| Admin: coada de bonuri, poza, decizia | `visits.receiptQueue`, `visits.receiptImage`, `visits.decideReceipt(db, adminId, proofId, approve, note)` → aprobat: `verifiedVisit` + recalcul; poza se șterge oricum |
+
+Tabelul nou `visit_proofs` și coloana `reviews.verified_via` (`gps` / `receipt`) vin din migrarea `0004_visit_proofs`. Pozele fără decizie după 30 de zile se șterg în jobul de noapte `recalculeaza-scoruri`. `venuePage` dă `verifiedVia` pe fiecare review, iar `scoreExplanation.verifiedVisitCount` câte review-uri au vizita verificată.
+
+### Anti-bot la review-uri
+
+Algoritmul complet: [`docs/ANTI-BOT.md`](ANTI-BOT.md). Pe scurt: `writeReview(db, userId, input, now, client)` cu `client = { formToken, honeypot, clientHash }` trece prin poarta din `antibot.ts` (token de formular din `antibot.issueReviewFormToken`, câmp capcană, limite per cont/dispozitiv). Analiza adaugă semnalele de bot la `fakeSignals`; un review aproape sigur bot primește `status: "flagged"` și un raport automat în `/admin` („Păstrează” îl publică și îl marchează `bot_cleared`). Migrarea `0005_anti_bot`: tabelul `review_submissions` + `reviews.bot_cleared`. După o decizie pe un review, `refreshAfterModeration(db, reviewId)` recalculează scorul.
+
 `venuePage` întoarce acum și `menu`, `aspectScores` (0–10 pe mâncare, servire, preț…), `loyalty`, `venue.photos`, `venue.headline`, `venue.writeup`, `venue.openNow`, `venue.openLabel` („Deschis până la 23:00”), `venue.hoursText`, iar fiecare review are `helpfulCount`. `cityPage` dă pe fiecare card `openNow`, `openLabel`, `photo`, `aspectScores`.
 
 Erorile pentru user sunt `ServiceError` cu `code` (`not_found`, `forbidden`, `invalid`, `conflict`, `unauthorized`) și mesaj în română, gata de afișat.

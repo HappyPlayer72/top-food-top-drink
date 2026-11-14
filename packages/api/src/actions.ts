@@ -1,6 +1,7 @@
 /** Acțiunile userilor din pagini: scrie review, raportează cât e de plin. */
 import { and, eq, gte } from "drizzle-orm";
-import { checkins, employees, invalid, notFound, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
+import { checkins, employees, invalid, notFound, reviewSubmissions, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
+import { checkReviewGate, type ReviewClient } from "./antibot.ts";
 import { rateEmployee } from "@tftd/owner";
 import { detectPlatform, processSubmission, submitSocialLink, type SocialAnalysis } from "@tftd/ingestion";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
@@ -22,10 +23,15 @@ export type ReviewInput = {
 };
 
 /**
- * Review nativ. Vizita e „verificată” dacă userul are check-in la local în ziua vizitei.
- * După salvare: analiză (limbă, fals, aspecte) și recalcularea scorurilor orașului.
+ * Review nativ. Vizita e „verificată” dacă userul are check-in la local în ziua vizitei
+ * (sau, mai târziu, prin bon aprobat de admin: vezi visits.ts).
+ * După salvare: analiză (limbă, fals, aspecte, anti-bot) și recalcularea scorurilor orașului.
+ *
+ * `client` vine de la site (token de formular, câmp capcană, amprenta dispozitivului): trece prin poarta
+ * anti-bot (antibot.ts) și se salvează în `review_submissions`. Fără el (seed, teste) poarta e sărită.
+ * Dacă analiza îl reține ca bot, review-ul întors are `status: "flagged"` (așteaptă un admin).
  */
-export async function writeReview(db: Db, userId: string, input: ReviewInput, now = new Date()) {
+export async function writeReview(db: Db, userId: string, input: ReviewInput, now = new Date(), client?: ReviewClient) {
   if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 10) throw invalid("Nota e de la 1 la 10.");
   if (input.text.trim().length < 20) throw invalid("Scrie cel puțin 20 de caractere: ce ai mâncat sau băut, cum a fost.");
   const [venue] = await db.select().from(venues).where(eq(venues.id, input.venueId));
@@ -36,6 +42,7 @@ export async function writeReview(db: Db, userId: string, input: ReviewInput, no
     .from(reviews)
     .where(and(eq(reviews.venueId, venue.id), eq(reviews.authorId, userId), gte(reviews.postedAt, new Date(now.getTime() - REVIEW_COOLDOWN_DAYS * DAY))));
   if (recent) throw invalid(`Ai scris deja un review aici în ultimele ${REVIEW_COOLDOWN_DAYS} de zile.`);
+  const submission = client ? await checkReviewGate(db, userId, venue.id, client, now) : null;
 
   if (input.servedByEmployeeId) {
     const [e] = await db.select().from(employees).where(eq(employees.id, input.servedByEmployeeId));
@@ -62,9 +69,14 @@ export async function writeReview(db: Db, userId: string, input: ReviewInput, no
       visitWeekendNight: venue.vertical === "drink" ? (input.weekendNight ?? null) : null,
       postedAt: now,
       verifiedVisit: !!checkin,
+      verifiedVia: checkin ? "gps" : null,
       servedByEmployeeId: input.servedByEmployeeId ?? null,
     })
     .returning();
+
+  if (submission) {
+    await db.insert(reviewSubmissions).values({ reviewId: review!.id, userId, venueId: venue.id, ...submission, createdAt: now });
+  }
 
   if (input.servedByEmployeeId && input.employeeRating) {
     await rateEmployee(db, userId, { employeeId: input.servedByEmployeeId, reviewId: review!.id, ...input.employeeRating }, now).catch(() => undefined);
@@ -111,4 +123,16 @@ export async function submitSocialLinkNow(
   } catch {
     return { status: "failed", analysis: null };
   }
+}
+
+/** După decizia adminului pe un review (ascuns / păstrat): reanalizează localul și recalculează scorurile. */
+export async function refreshAfterModeration(db: Db, reviewId: string, now = new Date()) {
+  const [r] = await db
+    .select({ venueId: reviews.venueId, citySlug: venues.citySlug, vertical: venues.vertical })
+    .from(reviews)
+    .innerJoin(venues, eq(venues.id, reviews.venueId))
+    .where(eq(reviews.id, reviewId));
+  if (!r) return;
+  await analyzeVenueReviews(db, r.venueId, { onlyNew: true, now });
+  await recalculateCity(db, r.citySlug, r.vertical, now);
 }

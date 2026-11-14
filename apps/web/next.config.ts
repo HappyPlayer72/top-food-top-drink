@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
     '@tftd/scoring',
   ],
   serverExternalPackages: ['postgres'],
+  // Poza bonului (vizită verificată) e micșorată în browser, dar trece de limita implicită de 1 MB.
+  experimental: { serverActions: { bodySizeLimit: '3mb' } },
   // Monorepo: rădăcina pentru tracing e repo-ul, nu apps/web.
   outputFileTracingRoot: resolve(__dirname, '../..'),
 };

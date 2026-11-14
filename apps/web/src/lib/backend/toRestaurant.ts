@@ -102,6 +102,7 @@ export function toReview(r: ApiReview, now: Date): Review {
     helpfulCount: r.helpfulCount,
     weightMultiplier: round1(r.weight ?? 1),
     isVerifiedVisit: r.verifiedVisit,
+    verifiedVia: r.verifiedVia ?? undefined,
     isPaidCollab: r.isPaid,
     foodScore: round1(r.rating),
     // Estimarea „capcană” a unui review: nota mică de la un localnic = semnal; altfel mic
@@ -189,6 +190,7 @@ export function toRestaurant(
     touristTrapIndex: s.touristTrapIndex ?? 0,
     trapTier: trapTier(s.touristTrapIndex),
     trapReasons: (s.explanation?.trapReasons ?? []).map((r) => r.text),
+    verifiedVisitCount: s.explanation?.verifiedVisitCount,
     trapBreakdown: {
       touristVsLocalGap: inputs?.localsScore != null && inputs.touristsScore != null ? round1(inputs.touristsScore - inputs.localsScore) : 0,
       touristZoneProximityM: Math.round(inputs?.distanceToTouristZoneM ?? 0),

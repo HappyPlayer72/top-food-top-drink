@@ -50,6 +50,9 @@ import {
   PartnerBadge,
   TrapBadge,
 } from './BrandPrimitives';
+import { EMPTY_VISIT_PROOF, VisitProofField, type VisitProofState } from './VisitProofField';
+import { attachReceipt } from '@/app/actions/visits';
+import { reviewFormToken } from '@/app/actions/user';
 
 export interface RestaurantDetailModalProps {
   restaurant: Restaurant | null;
@@ -57,8 +60,12 @@ export interface RestaurantDetailModalProps {
   onClose: () => void;
   onAddReview: (
     restaurantId: string,
-    review: Review
-  ) => void | Promise<{ ok: boolean; message?: string; error?: string }>;
+    review: Review,
+    /** Anti-bot: tokenul formularului și câmpul capcană (docs/ANTI-BOT.md). */
+    antiBot?: { formToken?: string; website?: string }
+  ) => void | Promise<{ ok: boolean; message?: string; error?: string; reviewId?: string; verifiedVisit?: boolean }>;
+  /** Cu backend: formularul arată „Dovedește vizita” (check-in GPS sau bon, ×1,3). */
+  canVerifyVisit?: boolean;
   /** Cu backend: votul „util” se salvează și întoarce numărul real */
   onVoteHelpful?: (
     reviewId: string
@@ -165,6 +172,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   onToggleSave,
   initialReviewOpen = false,
   onConsumeInitialReviewOpen,
+  canVerifyVisit = false,
 }) => {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilterTab>('verified-local');
   const [showScoreFormula, setShowScoreFormula] = useState(false);
@@ -187,6 +195,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [noiseLevel, setNoiseLevel] = useState<NoiseLevel | null>(null);
   const [praisedEmployee, setPraisedEmployee] = useState<string>('');
   const [reviewText, setReviewText] = useState('');
+  const [visitProof, setVisitProof] = useState<VisitProofState>(EMPTY_VISIT_PROOF);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  /** Anti-bot: token semnat de server la deschiderea formularului + câmpul capcană nevăzut de oameni. */
+  const formTokenRef = useRef<string | undefined>(undefined);
+  const honeypotRef = useRef<HTMLInputElement | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
   const [localPreferenceAnswers, setLocalPreferenceAnswers] = useState<
@@ -236,6 +249,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setIsReviewDrawerOpen(false);
     setIsPreferencePromptOpen(false);
     setLastSubmittedReviewId(null);
+    setVisitProof(EMPTY_VISIT_PROOF);
     setDraftPreferenceAnswers({});
     setLocalPreferenceAnswers(loadVenuePreferenceAnswers(restaurant.id));
     setHelpfulVotedKeys({});
@@ -256,6 +270,21 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       modalOverlayRef.current.scrollTop = 0;
     }
   }, [restaurant?.id]);
+
+  const venueIdForToken = restaurant?.venueId;
+  const refreshFormToken = React.useCallback(() => {
+    formTokenRef.current = undefined;
+    if (!canVerifyVisit || !venueIdForToken || !currentUser) return;
+    reviewFormToken(venueIdForToken)
+      .then((r) => {
+        if (r.ok) formTokenRef.current = r.token;
+      })
+      .catch(() => undefined);
+  }, [canVerifyVisit, venueIdForToken, currentUser]);
+
+  useEffect(() => {
+    if (isReviewDrawerOpen) refreshFormToken();
+  }, [isReviewDrawerOpen, refreshFormToken]);
 
   useEffect(() => {
     if (!restaurant || !initialReviewOpen) return;
@@ -580,7 +609,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           ? currentUser.neighborhood
           : undefined,
       weightMultiplier: currentUser.weightMultiplier,
-      isVerifiedVisit: currentUser.role === 'verified-local',
+      isVerifiedVisit: false,
       isPaidCollab: false,
       foodScore: finalGrade,
       trapEstimatePct: markAsTrap
@@ -596,11 +625,31 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       helpfulCount: 0,
     };
 
-    const result = await onAddReview(restaurant.id, newReview);
-    if (result && !result.ok) {
-      setFormError(result.error ?? 'Review-ul nu s-a putut publica. Încearcă din nou.');
-      return;
+    setIsSubmittingReview(true);
+    let result: Awaited<ReturnType<typeof onAddReview>>;
+    let receiptNotice = '';
+    try {
+      result = await onAddReview(restaurant.id, newReview, {
+        formToken: formTokenRef.current,
+        website: honeypotRef.current?.value,
+      });
+      if (result && !result.ok) {
+        setFormError(result.error ?? 'Review-ul nu s-a putut publica. Încearcă din nou.');
+        refreshFormToken();
+        return;
+      }
+      // Bonul pleacă după review (are nevoie de ID-ul lui); review-ul e publicat oricum.
+      if (result?.reviewId && visitProof.receipt && !result.verifiedVisit) {
+        const fd = new FormData();
+        fd.set('reviewId', result.reviewId);
+        fd.set('receipt', visitProof.receipt, 'bon.jpg');
+        const r = await attachReceipt(fd);
+        receiptNotice = ` ${r.ok ? r.message : `Bonul nu s-a trimis: ${r.error}`}`;
+      }
+    } finally {
+      setIsSubmittingReview(false);
     }
+    setVisitProof(EMPTY_VISIT_PROOF);
     setReviewFilter(currentUser.role);
     setIsReviewDrawerOpen(false);
     setReviewText('');
@@ -609,7 +658,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setSafetyScore(null);
     setNoiseLevel(null);
     setSubmittedNotice(
-      result?.message ??
+      result?.message ? result.message + receiptNotice :
       `Review publicat ca ${currentUser.name} (${formatScore(
         currentUser.weightMultiplier
       )}×)${
@@ -951,7 +1000,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     <strong>2,0× localnic verificat</strong>,{' '}
                     <strong>1,0× turist</strong> și{' '}
                     <strong>0,2× influencer</strong> (colaborările plătite nu domină
-                    media). Localurile cu puține review-uri sunt trase ușor spre media
+                    media). O <strong>vizită verificată</strong> (check-in la local sau bonul
+                    verificat de un admin) adaugă <strong>×1,3</strong>
+                    {restaurant.verifiedVisitCount !== undefined &&
+                      ` (${restaurant.verifiedVisitCount} ${restaurant.verifiedVisitCount === 1 ? 'review are' : 'review-uri au'} vizita verificată aici)`}
+                    . Localurile cu puține review-uri sunt trase ușor spre media
                     orașului, ca un singur vot extrem să nu deformeze clasamentul.
                   </p>
                 </div>
@@ -1752,6 +1805,20 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                               Turist
                             </span>
                           )}
+                          {rev.isVerifiedVisit && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[11px] font-semibold border ${
+                                isDrink
+                                  ? 'bg-[#1E4335] border-[#2D5947] text-[#A7F3D0]'
+                                  : 'bg-[#ECF7F0] border-[#BCE3CB] text-[#1E6B43]'
+                              }`}
+                            >
+                              <Check className="w-3 h-3" aria-hidden="true" />
+                              Vizită verificată
+                              {rev.verifiedVia === 'gps' ? ' · check-in' : rev.verifiedVia === 'receipt' ? ' · bon' : ''}
+                              <span className="sr-only">, review-ul cântărește ×1,3</span>
+                            </span>
+                          )}
                           {rev.markedAsTouristTrap && (
                             <TrapBadge
                               variant="severe"
@@ -2249,6 +2316,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               </div>
 
               <form onSubmit={handleReviewSubmit} className="space-y-4">
+                {/* Capcană anti-bot: nevăzută și nefocusabilă pentru oameni; scripturile o completează */}
+                <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+                  <label htmlFor="rev-website">Website</label>
+                  <input ref={honeypotRef} id="rev-website" name="website" type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+                </div>
                 {/* Account-derived author identity ("Cine scrie?") — no influencer option */}
                 <div className="space-y-1.5">
                   <span className="text-[13px] font-semibold block">
@@ -2452,6 +2524,15 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   </div>
                 )}
 
+                {canVerifyVisit && restaurant.venueId && (
+                  <VisitProofField
+                    venueId={restaurant.venueId}
+                    value={visitProof}
+                    onChange={setVisitProof}
+                    isDrink={isDrink}
+                  />
+                )}
+
                 <div className="space-y-1">
                   <label
                     htmlFor="rev-text"
@@ -2491,13 +2572,14 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
                 <button
                   type="submit"
-                  className={`btn-press w-full min-h-[48px] py-3 rounded-[4px] font-bold text-[15px] ${
+                  disabled={isSubmittingReview}
+                  className={`btn-press w-full min-h-[48px] py-3 rounded-[4px] font-bold text-[15px] disabled:opacity-70 ${
                     isDrink
                       ? 'bg-[#F2A33A] text-[#17382C]'
                       : 'bg-[#B3261E] text-white'
                   }`}
                 >
-                  Publică review-ul
+                  {isSubmittingReview ? 'Se publică…' : 'Publică review-ul'}
                 </button>
               </form>
             </div>

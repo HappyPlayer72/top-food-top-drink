@@ -46,7 +46,8 @@ export async function queue(db: Db, adminId: string) {
 }
 
 /**
- * Decizia pe un raport. Pentru review-uri: `hide` îl ascunde (nu se șterge), `keep` îl lasă publicat.
+ * Decizia pe un raport. Pentru review-uri: `hide` îl ascunde (nu se șterge), `keep` îl lasă publicat
+ * (un review reținut de filtrul anti-bot devine publicat și marcat „verificat de om”).
  * Pentru contestații Tourist Trap: `accept` / `reject` (recalcularea o face scoring-ul; aici rămâne decizia scrisă).
  */
 export async function resolveReport(db: Db, adminId: string, reportId: string, decision: "hide" | "keep" | "accept" | "reject", note: string) {
@@ -56,6 +57,14 @@ export async function resolveReport(db: Db, adminId: string, reportId: string, d
   if (r.status !== "open") throw invalid("Raportul a fost deja rezolvat.");
   if (r.targetType === "review" && decision === "hide") {
     await db.update(reviews).set({ status: "hidden" }).where(eq(reviews.id, r.targetId));
+  }
+  // Reținut de filtrul anti-bot, dar adminul zice că e om: îl publicăm și analiza nu-l mai reține.
+  // `analyzedAt: null` → se reanalizează (fără semnalele de bot) și scorul se recalculează.
+  if (r.targetType === "review" && decision === "keep") {
+    await db
+      .update(reviews)
+      .set({ status: "published", botCleared: true, analyzedAt: null })
+      .where(and(eq(reviews.id, r.targetId), eq(reviews.status, "flagged")));
   }
   // Local adăugat de mână de un user: `accept` îl publică, `reject` îl închide
   if (r.targetType === "venue" && (decision === "accept" || decision === "reject")) {

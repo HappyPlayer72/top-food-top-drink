@@ -5,8 +5,9 @@
  * `offline: true` = nu există bază de date (DATABASE_URL lipsă) → UI-ul păstrează comportamentul local.
  */
 import { randomInt } from 'node:crypto';
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { accounts, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
+import { accounts, antibot, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { clearSession, errorMessage, getUserId, setSession } from '@/lib/server/session';
 import { toUserAccount } from '@/lib/backend/user';
@@ -66,18 +67,54 @@ export async function logoutUser(): Promise<void> {
   if (hasDb()) await clearSession();
 }
 
-/** Review real: analiză (limbă, fals, aspecte) + recalcularea scorului, apoi paginile se reîncarcă. */
+/**
+ * Tokenul anti-bot al formularului de review: îl cere formularul când se deschide (docs/ANTI-BOT.md).
+ * Leagă userul, localul și ora deschiderii; la trimitere serverul știe cât a durat completarea.
+ */
+export async function reviewFormToken(venueId: string): Promise<Result<{ token: string }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să scrii un review.' };
+  return { ok: true, token: antibot.issueReviewFormToken(userId, venueId) };
+}
+
+/** Amprenta dispozitivului (HMAC de IP + browser); IP-ul nu se salvează. */
+async function clientHash(): Promise<string | null> {
+  const h = await headers();
+  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip');
+  return antibot.clientFingerprint(ip, h.get('user-agent'));
+}
+
+/** Review real: poarta anti-bot, analiză (limbă, fals, aspecte, bot) + recalcularea scorului. */
 export async function submitReview(input: {
   venueId: string;
   rating: number;
   text: string;
   weekendNight?: boolean;
-}): Promise<Result<{ message: string }>> {
+  /** Din `reviewFormToken`, primit la deschiderea formularului. */
+  formToken?: string;
+  /** Câmpul ascuns: gol la oameni. */
+  website?: string;
+}): Promise<Result<{ message: string; reviewId: string; verifiedVisit: boolean; held: boolean }>> {
   if (!hasDb()) return OFFLINE;
   const userId = await getUserId();
   if (!userId) return { ok: false, error: 'Intră în cont ca să scrii un review.' };
   try {
-    const r = await writeReview(getDb(), userId, { ...input, rating: Math.round(input.rating) });
+    const { formToken, website, ...review } = input;
+    const r = await writeReview(getDb(), userId, { ...review, rating: Math.round(review.rating) }, new Date(), {
+      formToken,
+      honeypot: website,
+      clientHash: await clientHash(),
+    });
+    if (r.status === 'flagged') {
+      return {
+        ok: true,
+        reviewId: r.id,
+        verifiedVisit: false,
+        held: true,
+        message: 'Review-ul tău a ajuns la verificare la un moderator și apare după ce îl aprobă.',
+      };
+    }
     revalidatePath('/', 'layout');
     const weight = (r.weight ?? 1).toFixed(1).replace('.', ',');
     const why =
@@ -86,7 +123,14 @@ export async function submitReview(input: {
         : r.authorType === 'local'
           ? ' Ești localnic verificat, nota ta contează dublu.'
           : '';
-    return { ok: true, message: `Review publicat. Pondere ×${weight}.${why} Scorul localului s-a recalculat.` };
+    const visit = r.verifiedVisit ? ' Vizită verificată prin check-in (×1,3).' : '';
+    return {
+      ok: true,
+      reviewId: r.id,
+      verifiedVisit: r.verifiedVisit,
+      held: false,
+      message: `Review publicat. Pondere ×${weight}.${why}${visit} Scorul localului s-a recalculat.`,
+    };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
   }
