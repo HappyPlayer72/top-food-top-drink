@@ -10,7 +10,8 @@ Identitatea vizuală a aplicației este definită central în [`apps/web/src/app
 - **Roșu carou** (`--color-carou`): `#B3261E` — fața de masă TopFood, accent primar food
 - **Maro cafea** (`--color-cafea`): `#3A2418` — text principal TopFood (mod luminos)
 - **Muștar** (`--color-mustar`): `#E0A526` — accent cald food, badge `Posibilă capcană`
-- **Albastru plăcuță** (`--color-placuta`): `#1F4E8C` (mod întunecat `#7DB4FF`) — insignă `Localnic`, plăcuță stradală
+- **Verde-brad localnic** (`--localnic`, `--color-placuta`): `#2D5130` cu text alb (mod întunecat `#AED3A8` cu text `#132A15`) — **doar** insigna `Localnic` (plăcuță plină, chenar interior, iconiță căsuță) și bara `Localnici`
+- **Nisip turist** (`--turist`, `--turist-line`): text `#6B4F2A` pe contur `#A78452` (mod întunecat `#E3CDA6`) — insigna `Turist` (doar contur, iconiță glob) și bara `Turiști`
 - **Verde sticlă** (`--color-sticla`): `#17382C` — fundal public TopDrink și identitate băuturi
 - **Chihlimbar** (`--color-chihlimbar`): `#F2A33A` — accent TopDrink, stele/notă, badge `Local nou`
 - **Spumă** (`--color-spuma`): `#F4EEE2` — text pe Verde sticlă și text în modul întunecat
@@ -51,7 +52,7 @@ Font unic încărcat din Google Fonts în [`apps/web/src/app/layout.tsx`](../app
 - **`CarouStrip`**: bandă de 6 celule flex în degrade carou (`#FAF5F0`, `#E08A84`, `#C94A42`, `#B3261E`) urmată de extensie solidă `#B3261E`, fără gradient CSS brut — semnătura TopFood.
 - **`CarouMark` / `CoasterMark` / `BrandWordmark`**: marcaje vectoriale și wordmark oficial pentru TopFood (carou) și TopDrink (coaster crenelat).
 - **`CoasterScore`**: insignă circulară crenelată (de obicei **56–64px**) pentru afișarea notei oneste (`0.0–10.0`).
-- **`LocalnicBadge` / `InfluencerBadge` / `PartnerBadge` / `TrapBadge`**: badge-uri dedicate pentru localnic verificat (`2.0×`), parteneriat plătit (`0.2×`, transparent), partener oficial și nivel capcană turistică (`possible` / `trap`).
+- **`LocalnicBadge` / `TuristBadge` / `InfluencerBadge` / `PartnerBadge` / `TrapBadge`**: badge-uri dedicate pentru localnic verificat (`2.0×`, verde-brad cu căsuță), turist (contur nisip cu glob), parteneriat plătit (`0.2×`, transparent), partener oficial și nivel capcană turistică (`possible` / `trap`).
 - **`LocalVsTouristBars`**: grafic comparativ orizontal **Localnici vs. Turiști** pentru explicarea vizuală a decalajului de scor.
 - **`AvertizareaCard`**: card explicativ cu motivele concrete ale indicelui de capcană.
 - **`EmployeeEcusonCard` & `CrowdMeter`**: card tip ecuson pentru angajați/premiul lunii și indicator în 5 trepte pentru `Vibe Check`.

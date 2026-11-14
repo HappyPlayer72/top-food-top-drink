@@ -1276,7 +1276,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                       </p>
                       <div className="flex items-center justify-between gap-2 flex-wrap pt-0.5">
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[3px] bg-[#FAF8F5] border border-[#E6DFD5] text-[11px] font-semibold text-[#3A2418]">
-                          <span className="text-[#1F4E8C]">
+                          <span className="text-[var(--localnic)]">
                             Localnici {formatScore(trap.localsScore)}
                           </span>
                           <span className="text-[#6E5649]">vs.</span>

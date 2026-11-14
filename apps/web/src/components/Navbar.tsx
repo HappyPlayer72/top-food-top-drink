@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { NavSection, Restaurant, UserAccount, Vertical } from '../types';
-import { BrandWordmark, CarouMark, CoasterMark, LocalnicBadge } from './BrandPrimitives';
+import { BrandWordmark, CarouMark, CoasterMark, LocalnicBadge, TuristBadge } from './BrandPrimitives';
 
 
 export interface NavbarProps {
@@ -341,15 +341,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 size="xs"
               />
             ) : (
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-[3px] border text-[11px] font-semibold ${
-                  isDrink
-                    ? 'border-[#2D5947] text-[#F4EEE2]/80 bg-[#122B22]'
-                    : 'border-[#D6CFC5] text-[#6E5649] bg-[#FAF8F5]'
-                }`}
-              >
-                Turist / Vizitator
-              </span>
+              <TuristBadge label="Turist / Vizitator" size="xs" />
             )}
           </div>
           <button

@@ -1,12 +1,12 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Camera, Flag, Globe, Inbox, MessageSquareText, Reply } from 'lucide-react';
+import { Camera, Flag, Inbox, MessageSquareText, Reply } from 'lucide-react';
 import type { venuePage } from '@tftd/api';
 import { replyAction, reportAction } from '@/app/owner/[venueId]/actions-reviews';
 import { EMPTY } from '@/lib/form';
 import { formatScore } from '@/types';
-import { LocalnicBadge } from '@/components/BrandPrimitives';
+import { LocalnicBadge, TuristBadge } from '@/components/BrandPrimitives';
 import { Avatar, Chip, Disclosure, EmptyState, Field, FormMessage, StatStrip, Stars, SubmitButton, Tag } from './ui';
 import { frameClass, inputClass, stagger } from './ui-classes';
 
@@ -89,7 +89,7 @@ function ReviewCard({ venueId, review: r, index }: { venueId: string; review: Re
             </div>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {r.authorType === 'local' ? <LocalnicBadge size="sm" label={r.author?.neighborhood ? `Localnic din ${r.author.neighborhood}` : 'Localnic'} /> : null}
-              {r.authorType === 'tourist' ? <Tag icon={<Globe size={14} aria-hidden="true" />}>Turist</Tag> : null}
+              {r.authorType === 'tourist' ? <TuristBadge size="sm" /> : null}
               {r.isPaid ? <Tag icon={<Camera size={14} aria-hidden="true" />}>Colaborare plătită</Tag> : null}
             </div>
           </div>

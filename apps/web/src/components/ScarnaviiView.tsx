@@ -361,20 +361,9 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
               {visibleList.map((item, idx) => {
                 const Icon = item.icon;
                 const isHighlighted = isRolling && rollingIndex === idx;
-                const cardStyles = isDrink
-                  ? [
-                      'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]',
-                      'bg-[#F4EEE2] text-[#17382C] border-[#F4EEE2]',
-                      'bg-[#B3261E] text-white border-[#B3261E]',
-                      'bg-[#1F4E8C] text-white border-[#1F4E8C]',
-                    ]
-                  : [
-                      'bg-[#F2A33A] text-[#3A2418] border-[#F2A33A]',
-                      'bg-[#1F4E8C] text-white border-[#1F4E8C]',
-                      'bg-[#B3261E] text-white border-[#B3261E]',
-                      'bg-[#F4EEE2] text-[#3A2418] border-[#F4EEE2]',
-                    ];
-                const cardStyle = cardStyles[idx % cardStyles.length];
+                const cardStyle = (idx + Math.floor(idx / 2)) % 2 === 0
+                  ? 'scarnavii-card-orange'
+                  : isDrink ? 'scarnavii-card-green' : 'scarnavii-card-red';
 
                 return (
                   <button
@@ -411,7 +400,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
                         {item.description}
                       </p>
 
-                      <span className="mt-auto inline-flex -rotate-1 items-center gap-2 rounded-[4px] border-2 border-[#3A2418] bg-[#F4EEE2] px-4 py-2.5 text-[12px] font-black uppercase tracking-wide text-[#3A2418] shadow-[3px_3px_0_#3A2418] transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5 group-hover:shadow-[1px_1px_0_#3A2418]">
+                      <span className="mt-auto inline-flex -rotate-1 items-center gap-2 rounded-[4px] border-2 scarnavii-card-cta px-4 py-2.5 text-[12px] font-black uppercase tracking-wide shadow-[3px_3px_0_#3A2418] transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5 group-hover:shadow-[1px_1px_0_#3A2418]">
                         <span>{item.ctaLabel}</span>
                         <ArrowRight className="h-4 w-4" />
                       </span>

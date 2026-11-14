@@ -82,7 +82,7 @@ export function LocalVerificationPanel({ vertical, onVerified }: { vertical: Ver
 
   const t = isDrink
     ? { muted: 'text-[#F4EEE2]/75', border: 'border-[#285443]', input: 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]', primary: 'bg-[#F2A33A] text-[#17382C]', quiet: 'border-[#285443]', error: 'text-[#FF7A70]' }
-    : { muted: 'text-[#6E5649]', border: 'border-[#E6DFD5]', input: 'bg-white border-[#D6CFC5] text-[#3A2418]', primary: 'bg-[#1F4E8C] text-white', quiet: 'border-[#D6CFC5]', error: 'text-[#B3261E]' };
+    : { muted: 'text-[#6E5649]', border: 'border-[#E6DFD5]', input: 'bg-white border-[#D6CFC5] text-[#3A2418]', primary: 'bg-[var(--localnic)] text-[var(--localnic-on)]', quiet: 'border-[#D6CFC5]', error: 'text-[#B3261E]' };
   const btn = 'btn-press min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[4px] text-[13px] font-bold aria-disabled:opacity-60';
 
   return (
