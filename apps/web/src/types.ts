@@ -227,6 +227,8 @@ export interface Review {
   noiseLevel?: NoiseLevel;
   /** Optional answers to preference questions after posting a review */
   preferenceAnswers?: Partial<Record<UserPreferenceKey, boolean>>;
+  /** Owner user ID when authored by a signed-in/local user */
+  authorId?: string;
 }
 
 export interface OwnerPost {

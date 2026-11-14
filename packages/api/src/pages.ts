@@ -101,6 +101,7 @@ export async function venuePage(
     .select({
       id: reviews.id,
       source: reviews.source,
+      authorId: reviews.authorId,
       rating: reviews.rating,
       text: reviews.text,
       language: reviews.language,

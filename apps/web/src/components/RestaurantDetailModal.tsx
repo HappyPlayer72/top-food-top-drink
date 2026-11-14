@@ -11,12 +11,14 @@ import {
   ChevronLeft,
   Clock,
   MapPin,
+  Pencil,
   Plug,
   Scale,
   ShieldAlert,
   ShieldCheck,
   Sun,
   ThumbsUp,
+  Trash2,
   Volume2,
   X,
 } from 'lucide-react';
@@ -59,6 +61,15 @@ export interface RestaurantDetailModalProps {
     restaurantId: string,
     review: Review
   ) => void | Promise<{ ok: boolean; message?: string; error?: string }>;
+  onEditReview?: (
+    restaurantId: string,
+    reviewId: string,
+    updates: { foodScore: number; text: string }
+  ) => Promise<{ ok: boolean; message?: string; error?: string }>;
+  onDeleteReview?: (
+    restaurantId: string,
+    reviewId: string
+  ) => Promise<{ ok: boolean; message?: string; error?: string }>;
   /** Cu backend: votul „util” se salvează și întoarce numărul real */
   onVoteHelpful?: (
     reviewId: string
@@ -158,6 +169,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   currentUser,
   onClose,
   onAddReview,
+  onEditReview,
+  onDeleteReview,
   onVoteHelpful,
   onRequireLogin,
   onLocateOnMap,
@@ -197,6 +210,13 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   >({});
   const [isPreferencePromptOpen, setIsPreferencePromptOpen] = useState(false);
   const [lastSubmittedReviewId, setLastSubmittedReviewId] = useState<string | null>(null);
+  const [editingReviewKey, setEditingReviewKey] = useState<string | null>(null);
+  const [editScoreText, setEditScoreText] = useState<string>('9');
+  const [editText, setEditText] = useState<string>('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
+  const [isDeletingKey, setIsDeletingKey] = useState<string | null>(null);
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
   const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
   const [drawerEntered, setDrawerEntered] = useState(false);
@@ -570,9 +590,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       return;
     }
 
-    const reviewId = `rev-${Date.now()}`;
+    const reviewId = `local-rev-${Date.now()}`;
     const newReview: Review = {
       id: reviewId,
+      authorId: currentUser.id,
       authorName: currentUser.name,
       authorRole: currentUser.role as AuthorRole,
       authorNeighborhood:
@@ -690,6 +711,55 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       return;
     }
     setHelpfulVotedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleStartEdit = (reviewKey: string, rev: Review) => {
+    setConfirmDeleteKey(null);
+    setEditingReviewKey(reviewKey);
+    setEditScoreText(String(Math.round(rev.foodScore)));
+    setEditText(rev.text);
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async (reviewId: string) => {
+    if (!onEditReview || !restaurant) return;
+    const parsed = Number(editScoreText.replace(',', '.'));
+    if (Number.isNaN(parsed) || parsed < 1 || parsed > 10 || !Number.isInteger(parsed)) {
+      setEditError('Nota trebuie să fie un număr întreg de la 1 la 10.');
+      return;
+    }
+    const trimmed = editText.trim();
+    if (trimmed.length < 20) {
+      setEditError('Scrie cel puțin 20 de caractere în review.');
+      return;
+    }
+    setIsSavingEdit(true);
+    setEditError(null);
+    const res = await onEditReview(restaurant.id, reviewId, {
+      foodScore: parsed,
+      text: trimmed,
+    });
+    setIsSavingEdit(false);
+    if (!res.ok) {
+      setEditError(res.error ?? 'Nu am putut actualiza review-ul.');
+      return;
+    }
+    setEditingReviewKey(null);
+    if (res.message) setSubmittedNotice(res.message);
+  };
+
+  const handleConfirmDelete = async (reviewKey: string, reviewId: string) => {
+    if (!onDeleteReview || !restaurant) return;
+    setIsDeletingKey(reviewKey);
+    const res = await onDeleteReview(restaurant.id, reviewId);
+    setIsDeletingKey(null);
+    setConfirmDeleteKey(null);
+    if (!res.ok) {
+      setSubmittedNotice(res.error ?? 'Nu am putut șterge review-ul.');
+      return;
+    }
+    if (editingReviewKey === reviewKey) setEditingReviewKey(null);
+    if (res.message) setSubmittedNotice(res.message);
   };
 
   const resetDrawerDrag = () => {
@@ -1710,6 +1780,15 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   const helpfulTotal = server
                     ? server.count
                     : (rev.helpfulCount ?? 0) + (isHelpfulVoted ? 1 : 0);
+                  const isOwnReview = Boolean(
+                    currentUser &&
+                      rev.id &&
+                      (rev.authorId
+                        ? rev.authorId === currentUser.id
+                        : rev.authorName === currentUser.name)
+                  );
+                  const isEditingThis = editingReviewKey === reviewKey;
+                  const isConfirmingDelete = confirmDeleteKey === reviewKey;
 
                   return (
                     <article
@@ -1767,7 +1846,89 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         </span>
                       </div>
 
-                      <p className="text-[15px] leading-[1.55]">{rev.text}</p>
+                      {isEditingThis && rev.id ? (
+                        <div
+                          className={`rounded-[4px] border p-3.5 space-y-3 ${
+                            isDrink
+                              ? 'bg-[#143025] border-[#2D5947]'
+                              : 'bg-[#FAF8F5] border-[#E6DFD5]'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center gap-3">
+                            <label
+                              htmlFor={`edit-score-${reviewKey}`}
+                              className="text-[12px] font-bold"
+                            >
+                              Notă (1–10):
+                            </label>
+                            <input
+                              id={`edit-score-${reviewKey}`}
+                              type="number"
+                              min={1}
+                              max={10}
+                              step={1}
+                              value={editScoreText}
+                              onChange={(e) => setEditScoreText(e.target.value)}
+                              className={`w-20 px-2.5 py-1.5 rounded-[4px] border text-[14px] font-bold tabular-nums focus:outline-none ${
+                                isDrink
+                                  ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] focus:border-[#F2A33A]'
+                                  : 'bg-white border-[#D6CFC5] text-[#3A2418] focus:border-[#3A2418]'
+                              }`}
+                            />
+                          </div>
+
+                          <textarea
+                            rows={3}
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            aria-label="Text review editat"
+                            className={`w-full px-3 py-2 rounded-[4px] border text-[14px] leading-relaxed focus:outline-none ${
+                              isDrink
+                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] focus:border-[#F2A33A]'
+                                : 'bg-white border-[#D6CFC5] text-[#3A2418] focus:border-[#3A2418]'
+                            }`}
+                          />
+
+                          {editError && (
+                            <p className="text-[12px] font-semibold text-[#B3261E]">
+                              {editError}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={isSavingEdit}
+                              onClick={() => handleSaveEdit(rev.id!)}
+                              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] text-[12px] font-bold disabled:opacity-50 ${
+                                isDrink
+                                  ? 'bg-[#F2A33A] text-[#17382C]'
+                                  : 'bg-[#B3261E] text-white'
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>{isSavingEdit ? 'Se salvează...' : 'Salvează modificările'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSavingEdit}
+                              onClick={() => {
+                                setEditingReviewKey(null);
+                                setEditError(null);
+                              }}
+                              className={`btn-press px-3 py-2 rounded-[4px] border text-[12px] font-semibold ${
+                                isDrink
+                                  ? 'border-[#2D5947] text-[#F4EEE2]/80'
+                                  : 'border-[#D6CFC5] text-[#6E5649]'
+                              }`}
+                            >
+                              Anulează
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[15px] leading-[1.55]">{rev.text}</p>
+                      )}
 
                       {(rev.safetyScore !== undefined ||
                         rev.noiseLevel !== undefined ||
@@ -1835,25 +1996,88 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                             : ''}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleToggleHelpful(reviewKey, rev.id)}
-                          aria-pressed={isHelpfulVoted}
-                          className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
-                            isHelpfulVoted
-                              ? isDrink
-                                ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                                : 'bg-[#3A2418] text-white border-[#3A2418]'
-                              : isDrink
-                              ? 'border-[#285443] text-[#F4EEE2]/80 hover:border-[#F2A33A]'
-                              : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
-                          }`}
-                        >
-                          <ThumbsUp className="w-3 h-3" />
-                          <span>
-                            Util{helpfulTotal > 0 ? ` · ${helpfulTotal}` : ''}
-                          </span>
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {isOwnReview && !isEditingThis && !isConfirmingDelete && (
+                            <>
+                              {onEditReview && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(reviewKey, rev)}
+                                  className={`btn-press inline-flex items-center gap-1 min-h-[44px] px-2.5 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                                    isDrink
+                                      ? 'border-[#285443] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                                      : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
+                                  }`}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  <span>Editează</span>
+                                </button>
+                              )}
+                              {onDeleteReview && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingReviewKey(null);
+                                    setConfirmDeleteKey(reviewKey);
+                                  }}
+                                  className={`btn-press inline-flex items-center gap-1 min-h-[44px] px-2.5 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                                    isDrink
+                                      ? 'border-[#285443] text-[#FFB4AC] hover:border-[#FFB4AC]'
+                                      : 'border-[#E6DFD5] text-[#B3261E] hover:border-[#B3261E]'
+                                  }`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Șterge</span>
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {isConfirmingDelete && rev.id && (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={isDeletingKey === reviewKey}
+                                onClick={() => handleConfirmDelete(reviewKey, rev.id!)}
+                                className="btn-press min-h-[44px] px-3 py-1.5 rounded-[3px] bg-[#B3261E] text-white text-[12px] font-bold disabled:opacity-50"
+                              >
+                                {isDeletingKey === reviewKey ? 'Se șterge...' : 'Confirmă ștergerea'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isDeletingKey === reviewKey}
+                                onClick={() => setConfirmDeleteKey(null)}
+                                className={`btn-press min-h-[44px] px-2.5 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                                  isDrink
+                                    ? 'border-[#285443] text-[#F4EEE2]/80'
+                                    : 'border-[#E6DFD5] text-[#6E5649]'
+                                }`}
+                              >
+                                Anulează
+                              </button>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleHelpful(reviewKey, rev.id)}
+                            aria-pressed={isHelpfulVoted}
+                            className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
+                              isHelpfulVoted
+                                ? isDrink
+                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
+                                : isDrink
+                                ? 'border-[#285443] text-[#F4EEE2]/80 hover:border-[#F2A33A]'
+                                : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
+                            }`}
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                            <span>
+                              Util{helpfulTotal > 0 ? ` · ${helpfulTotal}` : ''}
+                            </span>
+                          </button>
+                        </div>
                       </div>
 
                       {rev.ownerReply && (

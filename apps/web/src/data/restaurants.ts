@@ -1560,3 +1560,123 @@ export function recalculateRestaurantWithReview(
     team: updatedTeam,
   };
 }
+
+/**
+ * Helper to recalculate scores when an existing review is edited locally
+ */
+export function recalculateRestaurantWithUpdatedReview(
+  restaurant: Restaurant,
+  reviewId: string,
+  updates: { foodScore: number; text: string }
+): Restaurant {
+  const existing = restaurant.reviews.find((r) => r.id === reviewId);
+  if (!existing) return restaurant;
+
+  const updatedReviews = restaurant.reviews.map((r) =>
+    r.id === reviewId
+      ? {
+          ...r,
+          foodScore: updates.foodScore,
+          text: updates.text,
+          date: `${r.date.replace(/\s*\(editat\)$/, '')} (editat)`,
+        }
+      : r
+  );
+
+  const prevCounts = restaurant.reviewCounts ?? {
+    locals: 0,
+    tourists: 0,
+    influencers: 0,
+  };
+  const baselineWeight = Math.max(
+    12.0,
+    prevCounts.locals * 2.0 + prevCounts.tourists * 1.0 + prevCounts.influencers * 0.2
+  );
+  const w = existing.weightMultiplier;
+  const delta = (updates.foodScore - existing.foodScore) * w;
+
+  const newFoodQualityScore = Number(
+    Math.min(10, Math.max(1, restaurant.foodQualityScore + delta / baselineWeight)).toFixed(1)
+  );
+
+  const isLocalReviewer =
+    existing.authorRole === 'verified-local' || existing.authorRole === 'regular';
+  const localsBaseline = Math.max(8, prevCounts.locals * 2.0);
+  const newLocalsScore = isLocalReviewer
+    ? Number(
+        Math.min(10, Math.max(1, restaurant.localsScore + delta / localsBaseline)).toFixed(1)
+      )
+    : restaurant.localsScore;
+
+  const touristsBaseline = Math.max(6, prevCounts.tourists * 1.0);
+  const newTouristsScore =
+    existing.authorRole === 'tourist'
+      ? Number(
+          Math.min(
+            10,
+            Math.max(1, restaurant.touristsScore + (updates.foodScore - existing.foodScore) / touristsBaseline)
+          ).toFixed(1)
+        )
+      : restaurant.touristsScore;
+
+  return {
+    ...restaurant,
+    foodQualityScore: newFoodQualityScore,
+    localsScore: newLocalsScore,
+    touristsScore: newTouristsScore,
+    reviews: updatedReviews,
+  };
+}
+
+/**
+ * Helper to remove a review locally and adjust counts/scores
+ */
+export function recalculateRestaurantWithoutReview(
+  restaurant: Restaurant,
+  reviewId: string
+): Restaurant {
+  const existing = restaurant.reviews.find((r) => r.id === reviewId);
+  if (!existing) return restaurant;
+
+  const updatedReviews = restaurant.reviews.filter((r) => r.id !== reviewId);
+  const prevCounts = restaurant.reviewCounts ?? {
+    locals: 0,
+    tourists: 0,
+    influencers: 0,
+  };
+  const isLocalReviewer =
+    existing.authorRole === 'verified-local' || existing.authorRole === 'regular';
+
+  const updatedCounts = {
+    locals: Math.max(0, prevCounts.locals - (isLocalReviewer ? 1 : 0)),
+    tourists: Math.max(0, prevCounts.tourists - (existing.authorRole === 'tourist' ? 1 : 0)),
+    influencers: Math.max(
+      0,
+      prevCounts.influencers - (existing.authorRole === 'influencer' ? 1 : 0)
+    ),
+  };
+
+  const baselineWeight = Math.max(
+    12.0,
+    prevCounts.locals * 2.0 + prevCounts.tourists * 1.0 + prevCounts.influencers * 0.2
+  );
+  const remainingWeight = Math.max(1.0, baselineWeight - existing.weightMultiplier);
+  const newFoodQualityScore = Number(
+    Math.min(
+      10,
+      Math.max(
+        1,
+        (restaurant.foodQualityScore * baselineWeight -
+          existing.foodScore * existing.weightMultiplier) /
+          remainingWeight
+      )
+    ).toFixed(1)
+  );
+
+  return {
+    ...restaurant,
+    foodQualityScore: newFoodQualityScore,
+    reviewCounts: updatedCounts,
+    reviews: updatedReviews,
+  };
+}

@@ -6,7 +6,7 @@
  */
 import { randomInt } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { accounts, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
+import { accounts, deleteReview, editReview, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { clearSession, errorMessage, getUserId, setSession } from '@/lib/server/session';
 import { toUserAccount } from '@/lib/backend/user';
@@ -87,6 +87,36 @@ export async function submitReview(input: {
           ? ' Ești localnic verificat, nota ta contează dublu.'
           : '';
     return { ok: true, message: `Review publicat. Pondere ×${weight}.${why} Scorul localului s-a recalculat.` };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+export async function updateReviewAction(input: {
+  reviewId: string;
+  rating: number;
+  text: string;
+}): Promise<Result<{ message: string }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să editezi un review.' };
+  try {
+    await editReview(getDb(), userId, { ...input, rating: Math.round(input.rating) });
+    revalidatePath('/', 'layout');
+    return { ok: true, message: 'Review-ul a fost actualizat și scorul localului s-a recalculat.' };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+export async function deleteReviewAction(reviewId: string): Promise<Result<{ message: string }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să ștergi un review.' };
+  try {
+    await deleteReview(getDb(), userId, reviewId);
+    revalidatePath('/', 'layout');
+    return { ok: true, message: 'Review-ul a fost șters și scorul localului s-a recalculat.' };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
   }

@@ -14,8 +14,8 @@
   --color-spuma: #F4EEE2;
   --color-carton: #B98A5E;
 
-  /* Quiet Structural Surfaces */
-  --color-paper: #FFFFFF;
+  /* Quiet Structural Surfaces (Vanilla Ice Cream / White Chocolate light base) */
+  --color-paper: #FBF6EA;
   --color-sponsored-food: #F2EFE9;
   --color-sponsored-drink: #1E4335;
   --color-hairline: #E6DFD5;
@@ -66,7 +66,7 @@
   html {
     font-family: var(--font-sans);
     font-variation-settings: "wdth" 100;
-    background-color: #FFFFFF;
+    background-color: #FBF6EA;
     color: #3A2418;
     scroll-behavior: smooth;
     overflow-x: clip;
@@ -523,6 +523,19 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background: #6C7484;
 }
 
+/* Light Theme: Vanilla Ice Cream / White Chocolate surfaces */
+html:not(.dark) .bg-white {
+  background-color: #FBF6EA;
+}
+
+html:not(.dark) .bg-white\/95 {
+  background-color: rgba(251, 246, 234, 0.95);
+}
+
+html:not(.dark) .bg-\[\#FAF8F5\] {
+  background-color: #F5EFE2;
+}
+
 html.dark .bg-white {
   background-color: #22262E;
 }
@@ -697,15 +710,15 @@ html.dark .bg-\[\#F2A33A\] {
    Dashboard-ul pune `data-vertical`, iar :has() recolorează tot shell-ul, inclusiv antetul.
    ============================================================================ */
 .owner-shell {
-  --o-bg: #FFFFFF;
+  --o-bg: #FBF6EA;
   --o-fg: #3A2418;
   --o-muted: #6E5649;
   --o-line: #E6DFD5;
-  --o-card: #FAF8F5;
-  --o-surface: #F2EFE9;
+  --o-card: #F5EFE2;
+  --o-surface: #EFE7D8;
   /* gri modest: răspunsurile localului și tot ce e plătit (regula 3) */
   --o-quiet: #F2EFE9;
-  --o-field: #FFFFFF;
+  --o-field: #FFFDF8;
   --o-field-line: #8F7F72;
   --o-accent: #B3261E;
   --o-accent-fg: #FFFFFF;
@@ -727,16 +740,77 @@ html.dark .bg-\[\#F2A33A\] {
 }
 
 /* Tapet: mâzgălelile din /owner-doodles.svg, desenate cu culoarea textului la opacitate mică, deci se adaptează la fiecare temă. */
-.owner-shell::before {
+.doodle-wallpaper {
+  position: relative;
+  isolation: isolate;
+}
+
+.owner-shell::before,
+.doodle-wallpaper::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-color: var(--o-fg);
-  opacity: 0.07;
-  -webkit-mask: url(/owner-doodles.svg) 0 0 / 480px 480px repeat;
-  mask: url(/owner-doodles.svg) 0 0 / 480px 480px repeat;
+  background-color: var(--o-fg, currentColor);
+  opacity: 0.055;
+  -webkit-mask-image:
+    url(/owner-doodles.svg),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 1) 0%,
+      rgba(0, 0, 0, 0.55) 12%,
+      rgba(0, 0, 0, 0.16) 26%,
+      rgba(0, 0, 0, 0.12) 50%,
+      rgba(0, 0, 0, 0.16) 74%,
+      rgba(0, 0, 0, 0.55) 88%,
+      rgba(0, 0, 0, 1) 100%
+    );
+  -webkit-mask-position: 0 0, 0 0;
+  -webkit-mask-size: 480px 480px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-image:
+    url(/owner-doodles.svg),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 1) 0%,
+      rgba(0, 0, 0, 0.55) 12%,
+      rgba(0, 0, 0, 0.16) 26%,
+      rgba(0, 0, 0, 0.12) 50%,
+      rgba(0, 0, 0, 0.16) 74%,
+      rgba(0, 0, 0, 0.55) 88%,
+      rgba(0, 0, 0, 1) 100%
+    );
+  mask-position: 0 0, 0 0;
+  mask-size: 480px 480px, 100% 100%;
+  mask-repeat: repeat, no-repeat;
+  mask-composite: intersect;
+}
+
+@media (max-width: 767px) {
+  .owner-shell::before,
+  .doodle-wallpaper::before {
+    opacity: 0.028;
+    -webkit-mask-image:
+      url(/owner-doodles.svg),
+      linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.75) 0%,
+        rgba(0, 0, 0, 0.25) 18%,
+        rgba(0, 0, 0, 0.25) 82%,
+        rgba(0, 0, 0, 0.75) 100%
+      );
+    mask-image:
+      url(/owner-doodles.svg),
+      linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.75) 0%,
+        rgba(0, 0, 0, 0.25) 18%,
+        rgba(0, 0, 0, 0.25) 82%,
+        rgba(0, 0, 0, 0.75) 100%
+      );
+  }
 }
 
 html.dark .owner-shell {

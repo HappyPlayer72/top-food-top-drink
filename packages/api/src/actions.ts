@@ -1,6 +1,6 @@
 /** Acțiunile userilor din pagini: scrie review, raportează cât e de plin. */
 import { and, eq, gte } from "drizzle-orm";
-import { checkins, employees, invalid, notFound, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
+import { checkins, employees, forbidden, invalid, notFound, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
 import { rateEmployee } from "@tftd/owner";
 import { detectPlatform, processSubmission, submitSocialLink, type SocialAnalysis } from "@tftd/ingestion";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
@@ -74,6 +74,58 @@ export async function writeReview(db: Db, userId: string, input: ReviewInput, no
   await recalculateCity(db, venue.citySlug, venue.vertical, now);
   const [saved] = await db.select().from(reviews).where(eq(reviews.id, review!.id));
   return saved!;
+}
+
+/** Editează un review nativ scris de utilizatorul curent și recalculează scorurile. */
+export async function editReview(
+  db: Db,
+  userId: string,
+  input: { reviewId: string; rating: number; text: string },
+  now = new Date()
+) {
+  if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 10) {
+    throw invalid("Nota e de la 1 la 10.");
+  }
+  if (input.text.trim().length < 20) {
+    throw invalid("Scrie cel puțin 20 de caractere: ce ai mâncat sau băut, cum a fost.");
+  }
+  const [existing] = await db.select().from(reviews).where(eq(reviews.id, input.reviewId));
+  if (!existing) throw notFound("Review-ul");
+  if (existing.authorId !== userId) throw forbidden("Poți edita doar review-urile scrise de tine.");
+  if (existing.source !== "native") throw invalid("Doar review-urile scrise aici pot fi editate.");
+
+  const [venue] = await db.select().from(venues).where(eq(venues.id, existing.venueId));
+  if (!venue) throw notFound("Localul");
+
+  await db
+    .update(reviews)
+    .set({
+      rating: input.rating,
+      originalRating: input.rating,
+      originalScale: 10,
+      text: input.text.trim(),
+    })
+    .where(eq(reviews.id, existing.id));
+
+  await analyzeVenueReviews(db, venue.id, { onlyNew: false, now });
+  await recalculateCity(db, venue.citySlug, venue.vertical, now);
+  const [updated] = await db.select().from(reviews).where(eq(reviews.id, existing.id));
+  return updated!;
+}
+
+/** Șterge un review scris de utilizatorul curent și recalculează scorurile orașului. */
+export async function deleteReview(db: Db, userId: string, reviewId: string, now = new Date()) {
+  const [existing] = await db.select().from(reviews).where(eq(reviews.id, reviewId));
+  if (!existing) throw notFound("Review-ul");
+  if (existing.authorId !== userId) throw forbidden("Poți șterge doar review-urile scrise de tine.");
+
+  const [venue] = await db.select().from(venues).where(eq(venues.id, existing.venueId));
+  await db.delete(reviews).where(eq(reviews.id, existing.id));
+
+  if (venue) {
+    await recalculateCity(db, venue.citySlug, venue.vertical, now);
+  }
+  return { deleted: true as const };
 }
 
 /** „Spune cât e de plin unde ești”: 1 (gol) … 5 (coadă la intrare), expiră în 2 ore. */

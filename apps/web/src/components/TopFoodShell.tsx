@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, voteHelpful } from '@/app/actions/user';
+import { deleteReviewAction, loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, updateReviewAction, voteHelpful } from '@/app/actions/user';
 import { X } from 'lucide-react';
 import {
   DrinkQuickFilter,
@@ -21,6 +21,8 @@ import {
   TOURIST_ZONES,
   WEEKEND_EVENTS,
   recalculateRestaurantWithReview,
+  recalculateRestaurantWithUpdatedReview,
+  recalculateRestaurantWithoutReview,
 } from '../data/restaurants';
 import { LoginScreen } from './LoginScreen';
 import { LocalVerificationPanel } from './LocalVerificationPanel';
@@ -552,6 +554,67 @@ export function TopFoodShell({
     return { ok: true };
   };
 
+  const handleEditReview = async (
+    restaurantId: string,
+    reviewId: string,
+    updates: { foodScore: number; text: string }
+  ): Promise<{ ok: boolean; message?: string; error?: string }> => {
+    const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
+    if (backendOnline && venue?.venueId && !reviewId.startsWith('local-rev-')) {
+      const res = await updateReviewAction({
+        reviewId,
+        rating: updates.foodScore,
+        text: updates.text,
+      });
+      if (res.ok) {
+        router.refresh();
+        return { ok: true, message: res.message };
+      }
+      if (!res.offline) return { ok: false, error: res.error };
+    }
+    setFoodRestaurants((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId
+          ? recalculateRestaurantWithUpdatedReview(r, reviewId, updates)
+          : r
+      )
+    );
+    setDrinkVenues((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId
+          ? recalculateRestaurantWithUpdatedReview(r, reviewId, updates)
+          : r
+      )
+    );
+    return { ok: true, message: 'Review-ul a fost actualizat.' };
+  };
+
+  const handleDeleteReview = async (
+    restaurantId: string,
+    reviewId: string
+  ): Promise<{ ok: boolean; message?: string; error?: string }> => {
+    const venue = foodRestaurants.concat(drinkVenues).find((r) => r.id === restaurantId);
+    if (backendOnline && venue?.venueId && !reviewId.startsWith('local-rev-')) {
+      const res = await deleteReviewAction(reviewId);
+      if (res.ok) {
+        router.refresh();
+        return { ok: true, message: res.message };
+      }
+      if (!res.offline) return { ok: false, error: res.error };
+    }
+    setFoodRestaurants((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId ? recalculateRestaurantWithoutReview(r, reviewId) : r
+      )
+    );
+    setDrinkVenues((prev) =>
+      prev.map((r) =>
+        r.id === restaurantId ? recalculateRestaurantWithoutReview(r, reviewId) : r
+      )
+    );
+    return { ok: true, message: 'Review-ul a fost șters.' };
+  };
+
   /** „Util” pe backend; undefined = fără backend (modalul numără local) */
   const handleVoteHelpful = backendOnline
     ? async (reviewId: string) => {
@@ -684,7 +747,7 @@ export function TopFoodShell({
   return (
     <div
       id="top"
-      className={`min-h-screen overflow-x-clip flex flex-col ${
+      className={`doodle-wallpaper min-h-screen overflow-x-clip flex flex-col ${
         isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
       }`}
     >
@@ -790,6 +853,8 @@ export function TopFoodShell({
         onConsumeInitialReviewOpen={() => setOpenReviewOnMount(false)}
         onClose={() => setSelectedRestaurantId(null)}
         onAddReview={handleAddReview}
+        onEditReview={handleEditReview}
+        onDeleteReview={handleDeleteReview}
         onVoteHelpful={handleVoteHelpful}
         onRequireLogin={handleOpenLogin}
         onLocateOnMap={handleSwitchToMap}

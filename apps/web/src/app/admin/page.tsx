@@ -9,20 +9,20 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
   const userId = await currentUserId();
-  if (!userId) return <main className="mx-auto max-w-4xl p-6"><h1>Moderare</h1><p>Autentifică-te pentru a accesa această pagină.</p><Link href="/owner">Autentificare</Link></main>;
+  if (!userId) return <main className="doodle-wallpaper min-h-screen mx-auto max-w-4xl p-6"><h1>Moderare</h1><p>Autentifică-te pentru a accesa această pagină.</p><Link href="/owner">Autentificare</Link></main>;
 
   let items: Awaited<ReturnType<typeof moderation.queue>>;
   try {
     items = await moderation.queue(getDb(), userId);
   } catch (error) {
     if (error instanceof ServiceError && error.code === 'forbidden') {
-      return <main className="mx-auto max-w-4xl p-6"><h1>Acces interzis</h1><p>Doar administratorii pot accesa moderarea.</p></main>;
+      return <main className="doodle-wallpaper min-h-screen mx-auto max-w-4xl p-6"><h1>Acces interzis</h1><p>Doar administratorii pot accesa moderarea.</p></main>;
     }
     throw error;
   }
 
   return (
-    <main className="mx-auto max-w-4xl space-y-10 p-6 text-cafea">
+    <main className="doodle-wallpaper min-h-screen mx-auto max-w-4xl space-y-10 p-6 text-cafea">
       <header><Link href="/topfood/timisoara">← Înapoi la top</Link><h1 className="mt-4 text-3xl font-bold">Moderare</h1><p>Elemente care așteaptă o decizie.</p></header>
       <section className="space-y-4" aria-labelledby="reports"><h2 id="reports" className="text-2xl font-bold">Rapoarte și contestații</h2>
         {!items.reports.length && <p>Nu există rapoarte în așteptare.</p>}

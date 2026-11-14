@@ -212,7 +212,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <div
-      className={`min-h-screen overflow-x-clip flex flex-col transition-colors ${
+      className={`doodle-wallpaper min-h-screen overflow-x-clip flex flex-col transition-colors ${
         isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
       }`}
     >

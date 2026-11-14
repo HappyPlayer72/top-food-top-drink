@@ -95,6 +95,7 @@ export function toReview(r: ApiReview, now: Date): Review {
   const reply = r.replies[0];
   return {
     id: r.id,
+    authorId: r.authorId ?? undefined,
     authorName: a.name,
     authorRole: a.role,
     authorNeighborhood: a.neighborhood,
