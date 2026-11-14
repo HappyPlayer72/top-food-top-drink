@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Restaurant } from '../../types';
-import { generateTasteTour, parseTasteRequest } from './tasteTourLogic';
+import { explainNoTour, generateBestEffortTour, generateTasteTour, googleMapsDirectionsUrl, isOpenAt, parseTasteRequest, TASTE_CATEGORIES, tourTimeline } from './tasteTourLogic';
+import { THEMED_TOURS } from '@tftd/api/tours';
 import { INITIAL_RESTAURANTS, DRINK_VENUES } from '../../data/restaurants';
 
 const venue = (id: string, name: string, item: string, priceRon: number, lng: number): Restaurant => ({
@@ -11,6 +12,28 @@ const restaurants = [venue('p', 'Pizza', 'Pizza margherita', 30, 21.22), venue('
 const start = { lat: 45.75, lng: 21.21 };
 
 describe('Tasting Tour', () => {
+  it('ia categoria din numele felului, iar titlul grupei doar dacă e neechivoc', () => {
+    const menu = (id: string, title: string, name: string, lng: number) => ({ ...venue(id, id, '', 0, lng), whatToOrder: [], menuCategories: [{ title, items: [{ name, priceRon: 10 }] }] } as unknown as Restaurant);
+    const pool = [
+      menu('focaccia', 'Supe zilnice', 'Focaccia caldă de lângă supă', 21.211),
+      menu('cannoli', 'Pizza al taglio & Desert', 'Cannoli siciliani', 21.212),
+      menu('flat', 'Dulce & Cafea', 'Flat White de specialitate', 21.213),
+      menu('mate', 'Fără alcool & Vinuri', 'Club-Mate rece', 21.214),
+      menu('margherita', 'Pizza', 'Margherita', 21.215),
+      menu('ciorba', 'Preparate', 'Ciorbă de burtă', 21.216),
+      menu('feteasca', 'Vinuri la pahar', 'Fetească Neagră', 21.217),
+    ];
+    const ids = (category: Parameters<typeof generateTasteTour>[0]['categories'][number]) =>
+      pool.filter(r => generateTasteTour({ restaurants: [r], categories: [category], excluded: [], budgetRon: 100, stopCount: 1, start })).map(r => r.id);
+    expect(ids('soup')).toEqual(['ciorba']);
+    expect(ids('pizza')).toEqual(['margherita']);
+    expect(ids('dessert')).toEqual(['cannoli']);
+    expect(ids('coffee')).toEqual(['flat']);
+    expect(ids('wine')).toEqual(['feteasca']);
+  });
+  it('tururile tematice folosesc doar categorii din Tasting Tour', () => {
+    for (const tour of THEMED_TOURS) expect(tour.categories.filter(c => !TASTE_CATEGORIES.some(entry => entry.id === c))).toEqual([]);
+  });
   it('poate genera exemplul pizza și bere cu datele demonstrative', () => {
     const parsed = parseTasteRequest('pizza și bere');
     const result = generateTasteTour({ restaurants: [...INITIAL_RESTAURANTS, ...DRINK_VENUES], categories: parsed.categories, excluded: parsed.excluded, budgetRon: 150, stopCount: 2, start });
@@ -49,5 +72,45 @@ describe('Tasting Tour', () => {
   });
   it('nu completează cu localuri fără legătură cu preferințele', () => {
     expect(generateTasteTour({ restaurants, categories: ['pizza'], excluded: [], budgetRon: 100, stopCount: 2, start })).toBeNull();
+  });
+  it('verifică programul, inclusiv intervalele de după miezul nopții', () => {
+    const week = [{ day: 'Vineri', hours: '18:00 – 02:00' }, { day: 'Sâmbătă', hours: 'Închis' }, { day: 'Duminică', hours: '12:00 – 23:00' }];
+    expect(isOpenAt(week, new Date(2026, 10, 13, 19, 0))).toBe(true); // vineri seara
+    expect(isOpenAt(week, new Date(2026, 10, 13, 17, 0))).toBe(false);
+    expect(isOpenAt(week, new Date(2026, 10, 14, 1, 30))).toBe(true); // sâmbătă, din programul de vineri
+    expect(isOpenAt(week, new Date(2026, 10, 14, 20, 0))).toBe(false);
+    expect(isOpenAt([{ day: 'Luni', hours: 'non-stop?' }], new Date(2026, 10, 16, 3, 0))).toBe(true);
+  });
+  it('calculează orele de sosire în ordinea opririlor', () => {
+    const departure = new Date(2026, 10, 13, 19, 0);
+    const [first, second] = tourTimeline(start, restaurants.slice(0, 2).map(restaurant => ({ restaurant })), departure, 4.5);
+    expect(first.arrival.getTime()).toBeGreaterThan(departure.getTime());
+    expect(second.arrival.getTime() - first.leave.getTime()).toBe(second.travelMinutes * 60_000);
+  });
+  it('trimite opririle în Google Maps după nume și adresă, nu după coordonate', () => {
+    const url = new URL(googleMapsDirectionsUrl(start, [
+      { restaurant: { name: 'La Focacceria', address: 'Piața Libertății nr. 4, Timișoara' } },
+      { restaurant: { name: 'Berăria 700', address: 'Str. Coriolan Brediceanu nr. 4, Timișoara' } },
+    ], 'walking'));
+    expect(url.searchParams.get('origin')).toBe('45.75,21.21');
+    expect(url.searchParams.get('waypoints')).toBe('La Focacceria, Piața Libertății nr. 4, Timișoara');
+    expect(url.searchParams.get('destination')).toBe('Berăria 700, Str. Coriolan Brediceanu nr. 4, Timișoara');
+    expect(url.searchParams.get('travelmode')).toBe('walking');
+  });
+  it('explică de ce nu iese traseul', () => {
+    const base = { allRestaurants: restaurants, openRestaurants: restaurants, excluded: [], budgetRon: 100, stopCount: 2 as const, start, label: (id: string) => id };
+    expect(explainNoTour({ ...base, categories: ['coffee'] })).toContain('Nu avem încă localuri cu coffee');
+    expect(explainNoTour({ ...base, openRestaurants: [restaurants[0]], categories: ['pizza', 'dessert'] })).toContain('închise la ora aleasă');
+    expect(explainNoTour({ ...base, categories: ['pizza'] })).toContain('Avem doar 1 local deschis');
+    expect(explainNoTour({ ...base, budgetRon: 40, categories: ['pizza', 'dessert'] })).toContain('~50 lei');
+  });
+  it('scurtează traseul când nu sunt destule localuri, în loc să nu arate nimic', () => {
+    const one = generateBestEffortTour({ restaurants, categories: ['pizza'], excluded: [], budgetRon: 100, stopCount: 2, start });
+    expect(one?.tour.stops.map(stop => stop.restaurant.id)).toEqual(['p']);
+    const partial = generateBestEffortTour({ restaurants, categories: ['pizza', 'coffee'], excluded: [], budgetRon: 100, stopCount: 2, start });
+    expect(partial?.tour.stops.map(stop => stop.restaurant.id)).toEqual(['p']);
+    expect(partial?.droppedCategories).toEqual(['coffee']);
+    expect(generateBestEffortTour({ restaurants, categories: ['pizza', 'dessert'], excluded: [], budgetRon: 100, stopCount: 2, start })?.tour.stops).toHaveLength(2);
+    expect(generateBestEffortTour({ restaurants, categories: ['coffee'], excluded: [], budgetRon: 100, stopCount: 2, start })).toBeNull();
   });
 });

@@ -89,7 +89,7 @@ export function OutingPoll({ vertical, restaurants, pollId, onSelectRestaurant }
   return (
     <section className="space-y-5">
       <header className="space-y-1">
-        <h2 className="font-display text-[24px] sm:text-[28px] leading-tight">Unde ieșim?</h2>
+        <h1 className="font-display text-[38px] sm:text-[48px] leading-[0.94]">Unde ieșim?</h1>
         <p className={`text-sm ${muted}`}>Alege câteva localuri, trimite linkul găștii și decideți împreună. Oricine poate vota, fără cont.</p>
       </header>
 

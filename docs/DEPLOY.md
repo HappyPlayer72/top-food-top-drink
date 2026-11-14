@@ -37,7 +37,7 @@ Recomandat: **Neon** (baza) + **Vercel** (site). Durează ~15 minute. Conturile 
 | `SITE_URL` | ex. `https://topfood-timisoara.vercel.app` | sitemap, linkuri canonice, imagini de share |
 | `GEOAPIFY_API_KEY` | cheia Geoapify | coordonatele unui local adăugat de mână |
 | `GOOGLE_PLACES_API_KEY` | **doar dacă** vrei „Caută și pe internet” live | max 3 căutări per cont la 2 zile și 100/zi pe tot site-ul (vezi mai jos) |
-| `DEMO_LOGIN`, `DEMO_SCAN`, `DEMO_EMAIL_CODES`, `DEMO_VISIT_GPS` | `off` după demo | scurtăturile de demo (pentru prezentare pot rămâne `on`) |
+| `DEMO_LOGIN`, `DEMO_SCAN`, `DEMO_EMAIL_CODES`, `DEMO_VISIT_GPS` | `off` după demo | scurtăturile de demo (pentru prezentare pot rămâne `on`). `DEMO_VISIT_GPS` simulează check-in-ul **doar** cu `on`; lipsă = GPS real (max. 100 m) |
 | `GOOGLE_ROUTES_API_KEY` | nu pune | nu mai e folosită: „Turul de gust” calculează traseul și prețul local (estimare demo), fără Google |
 | `TRIPADVISOR_API_KEY` | nu pune | nu îl folosim (nu are variantă gratuită) |
 

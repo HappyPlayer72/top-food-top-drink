@@ -78,6 +78,13 @@
       "when": 1794687385565,
       "tag": "0010_fancy_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794689222250,
+      "tag": "0011_confused_midnight",
+      "breakpoints": true
     }
   ]
 }
