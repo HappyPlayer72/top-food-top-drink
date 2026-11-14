@@ -148,6 +148,8 @@ export const venues = pgTable(
     /** Motivele afișate la „De ce?” (regula 3). */
     scoreExplanation: jsonb().$type<ScoreExplanation>(),
     scoreUpdatedAt: timestamp({ withTimezone: true }),
+    /** Ultima căutare automată pe social media (jobul cauta-social), ca să nu căutăm des același local. */
+    socialSearchedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [
@@ -506,6 +508,10 @@ export const socialSubmissions = pgTable("social_submissions", {
   submittedBy: uuid().references(() => users.id, { onDelete: "set null" }),
   platform: socialPlatform().notNull(),
   url: text().notNull().unique(),
+  /** null = trimis de un user; altfel unde l-a găsit căutarea automată: youtube | brave | google_cse */
+  discoveredVia: text().$type<"youtube" | "brave" | "google_cse">(),
+  /** Titlul postării, din rezultatul căutării (afișat pe pagina localului) */
+  title: text(),
   status: submissionStatus().notNull().default("pending"),
   /** { sentiment, dishes, priceMentioned, isAd, adSignals } */
   analysis: jsonb(),

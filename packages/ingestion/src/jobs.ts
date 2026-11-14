@@ -4,7 +4,9 @@ import { socialSubmissions, reviews, touristZones, venueManagers, venueSources, 
 import { attachSource, haversineM, linkExternalPlace, nameSimilarity } from "@tftd/matching";
 import * as google from "./google.ts";
 import * as ta from "./tripadvisor.ts";
-import { analyzeSocial, detectPlatform } from "./social.ts";
+import { analyzeSocial, detectPlatform, type SocialAnalysis } from "./social.ts";
+import { searchSocialForVenue } from "./social-search.ts";
+import { adSignals } from "@tftd/review-analysis";
 
 /** Centrul orașului = media zonelor turistice (suficient pentru căutarea pe rază). */
 async function cityCenter(db: Db, citySlug: string) {
@@ -194,4 +196,48 @@ export async function processSubmission(db: Db, submissionId: string) {
     await db.update(socialSubmissions).set({ status: "failed", analysis: { error: String(error) } }).where(eq(socialSubmissions.id, s.id));
     throw error;
   }
+}
+
+/**
+ * Jobul `cauta-social`: pentru fiecare local necăutat în ultimele `staleDays` zile, caută postări pe social media
+ * (social-search.ts, doar API-uri oficiale), le salvează ca linkuri găsite automat și le analizează ca pe cele trimise de useri.
+ * Instagram/Facebook fără token Meta nu au embed: rămân ca link simplu, cu titlul din căutare.
+ */
+export async function discoverSocialLinks(db: Db, citySlug: string, opts: { staleDays?: number; maxVenues?: number } = {}) {
+  const since = new Date(Date.now() - (opts.staleDays ?? 7) * 86_400_000);
+  const todo = await db
+    .select({ id: venues.id, name: venues.name, vertical: venues.vertical })
+    .from(venues)
+    .where(and(eq(venues.citySlug, citySlug), eq(venues.status, "active"), sql`(${venues.socialSearchedAt} is null or ${venues.socialSearchedAt} < ${since})`))
+    .orderBy(sql`${venues.honestScore} desc nulls last`)
+    .limit(opts.maxVenues ?? 1000);
+  const outcome = { venues: 0, links: 0, errors: [] as string[] };
+  for (const v of todo) {
+    const { links, errors } = await searchSocialForVenue(v.name);
+    outcome.errors.push(...errors.map((e) => `${v.name}: ${e}`));
+    for (const l of links) {
+      const [row] = await db
+        .insert(socialSubmissions)
+        .values({ venueId: v.id, platform: l.platform, url: l.url, discoveredVia: l.via, title: l.title.slice(0, 300), status: "pending" })
+        .onConflictDoNothing()
+        .returning({ id: socialSubmissions.id });
+      if (!row) continue;
+      try {
+        await processSubmission(db, row.id);
+      } catch {
+        // fără embed (ex. Instagram fără token Meta): îl arătăm ca link, cu analiza făcută pe titlul din căutare
+        const signals = adSignals(l.title);
+        const price = l.title.match(/(\d{1,4})\s*(lei|ron)\b/i);
+        const analysis: SocialAnalysis = {
+          embed: { html: null, title: l.title, authorName: null, thumbnailUrl: null },
+          isAd: signals.length > 0, adSignals: signals, sentiment: null, aspects: {}, dishes: [], priceMentioned: price ? Number(price[1]) : null,
+        };
+        await db.update(socialSubmissions).set({ status: "processed", analysis }).where(eq(socialSubmissions.id, row.id));
+      }
+      outcome.links++;
+    }
+    await db.update(venues).set({ socialSearchedAt: new Date() }).where(eq(venues.id, v.id));
+    outcome.venues++;
+  }
+  return { ...outcome, errors: [...new Set(outcome.errors.map((e) => e.replace(/^[^:]+: /, "")))].slice(0, 5) };
 }
