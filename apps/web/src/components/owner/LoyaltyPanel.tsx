@@ -28,11 +28,14 @@ export function LoyaltyPanel({
   venueId,
   program,
   qrSvg,
+  code,
   expiresInSeconds,
 }: {
   venueId: string;
   program: ProgramView;
   qrSvg: string | null;
+  /** Textul codului, pentru telefoanele fără citire QR (se scrie de mână) */
+  code?: string | null;
   expiresInSeconds: number | null;
 }) {
   const router = useRouter();
@@ -56,7 +59,10 @@ export function LoyaltyPanel({
               className="w-full max-w-[260px] rounded-[4px] bg-white p-3 [&>svg]:h-auto [&>svg]:w-full"
               dangerouslySetInnerHTML={{ __html: qrSvg }}
             />
-            <figcaption className="text-[13px] text-o-muted">Codul se reîmprospătează automat în fiecare minut.</figcaption>
+            <figcaption className="text-[13px] text-o-muted text-center">
+              {code ? <code className="block break-all text-[12px] text-o-fg">{code}</code> : null}
+              Codul se reîmprospătează automat în fiecare minut.
+            </figcaption>
           </figure>
           <div className="min-w-0 space-y-3">
             <h3 id="qr-titlu" className="font-display text-[30px] leading-tight text-o-fg">

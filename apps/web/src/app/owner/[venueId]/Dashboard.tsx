@@ -79,6 +79,7 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
           venueId={venue.id}
           program={program ? { rewardTitle: program.rewardTitle, stampsRequired: program.stampsRequired, icon: program.icon } : null}
           qrSvg={qrSvg}
+          code={current?.code ?? null}
           expiresInSeconds={current?.expiresInSeconds ?? null}
         />
       );

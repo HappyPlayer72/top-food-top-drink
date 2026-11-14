@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { LoyaltyIconId, LoyaltyProgram, UserAccount, Vertical } from '../types';
 import { createFidelityCard, fidelityWallet, stampFidelity } from '@/app/actions/loyalty';
+import { QrScanPanel } from './QrScanPanel';
 
 interface FidelityViewProps {
   vertical: Vertical;
@@ -490,6 +491,16 @@ export function FidelityView({
           Scanezi la casă și strângi recompense.
         </p>
       </div>
+
+      {useBackend && currentUser && activeTab === 'cards' && (
+        <QrScanPanel
+          isDrink={isDrink}
+          onResult={(message, isError) => {
+            showToast(message, isError);
+            void refreshFromBackend();
+          }}
+        />
+      )}
 
       {/* Toast Notification — zona live există mereu, se schimbă doar conținutul */}
       <div role={toastIsError ? 'alert' : 'status'} aria-live={toastIsError ? 'assertive' : 'polite'}>
