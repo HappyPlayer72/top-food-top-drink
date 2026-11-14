@@ -20,9 +20,10 @@ const OFFLINE = { ok: false as const, offline: true, error: 'Baza de date nu e d
 export async function fidelityWallet(): Promise<Result<{ programs: LoyaltyProgram[]; loggedIn: boolean }>> {
   if (!hasDb()) return OFFLINE;
   try {
-    const db = getDb();
     const userId = await getUserId();
-    const [venuePrograms, cards] = await Promise.all([loyalty.cityPrograms(db, CITY), userId ? loyalty.myCards(db, userId) : Promise.resolve([])]);
+    if (!userId) return { ok: false, error: 'Intră în cont ca să vezi cardurile.' };
+    const db = getDb();
+    const [venuePrograms, cards] = await Promise.all([loyalty.cityPrograms(db, CITY), loyalty.myCards(db, userId)]);
     const byProgram = new Map(cards.map((c) => [c.programId, c]));
     const programs: LoyaltyProgram[] = [
       ...cards

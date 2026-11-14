@@ -589,7 +589,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`modal-panel-enter min-h-full flex flex-col ${
+        className={`doodle-wallpaper modal-panel-enter min-h-full flex flex-col ${
           isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
         }`}
       >

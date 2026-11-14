@@ -15,12 +15,11 @@ import {
   ScanLine,
   Soup,
   Sparkles,
-  Store,
   Wine,
   X,
 } from 'lucide-react';
 import type { LoyaltyIconId, LoyaltyProgram, UserAccount, Vertical } from '../types';
-import { createFidelityCard, fidelityWallet, stampFidelity } from '@/app/actions/loyalty';
+import { fidelityWallet, stampFidelity } from '@/app/actions/loyalty';
 import { QrScanPanel } from './QrScanPanel';
 
 interface FidelityViewProps {
@@ -48,17 +47,6 @@ const ICON_OPTIONS: {
   { id: 'heart', label: 'Inimă', Icon: Heart },
   { id: 'cat', label: 'Pisică', Icon: Cat },
 ];
-
-const ACCENT_SWATCHES: { hex: string; label: string }[] = [
-  { hex: '#B3261E', label: 'Roșu Timișoara' },
-  { hex: '#E0A526', label: 'Chihlimbar' },
-  { hex: '#17382C', label: 'Sticlă' },
-  { hex: '#3A2418', label: 'Espresso' },
-  { hex: '#B98A5E', label: 'Cupru' },
-  { hex: '#7C2D12', label: 'Teracotă' },
-];
-
-const STAMP_COUNT_OPTIONS = [5, 6, 8, 10];
 
 const DEFAULT_PROGRAMS: LoyaltyProgram[] = [
   {
@@ -211,7 +199,47 @@ function DeterministicQrSvg({
   );
 }
 
-export function FidelityView({
+export function FidelityView(props: FidelityViewProps) {
+  if (!props.currentUser) {
+    const isDrink = props.vertical === 'drink';
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
+        <button type="button" onClick={props.onBack} className={`inline-flex items-center gap-2 text-sm font-medium ${isDrink ? 'text-[#A8BBAE]' : 'text-[#6E5649]'}`}>
+          <ArrowLeft className="w-4 h-4" /> Înapoi la Top
+        </button>
+        <div className={`mt-8 rounded-2xl border p-6 sm:p-8 ${isDrink ? 'bg-[#143025] border-[#264D3E] text-[#F4EEE2]' : 'bg-white border-[#E8E2D9] text-[#3A2418]'}`}>
+          <QrCode className="w-6 h-6 mb-4" />
+          <h1 className="font-serif text-3xl font-bold">Cardurile tale de fidelitate</h1>
+          <p className="mt-2 max-w-xl text-sm opacity-75">Strânge ștampile la localurile participante și bucură-te de recompense.</p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { Icon: QrCode, title: 'Cardurile tale', text: 'Le găsești pe toate într-un singur loc.' },
+              { Icon: ScanLine, title: 'Strângi ștampile', text: 'Scanezi codul afișat la local.' },
+              { Icon: Gift, title: 'Primești recompense', text: 'Completezi cardul și folosești premiul.' },
+            ].map(({ Icon, title, text }, index) => (
+              <div key={title} className={`rounded-xl border p-4 ${isDrink ? 'border-[#264D3E] bg-[#17382C]' : 'border-[#E8E2D9] bg-[#FAF8F5]'}`}>
+                <div aria-hidden="true" className={`relative mb-3 flex h-16 w-20 items-center justify-center rounded-lg ${isDrink ? 'bg-[#F2A33A]/15 text-[#F2A33A]' : 'bg-[#B3261E]/10 text-[#B3261E]'}`}>
+                  <span className="absolute left-2 top-1 text-[10px] font-bold opacity-60">0{index + 1}</span>
+                  <Icon className="h-8 w-8" strokeWidth={1.5} />
+                  <span className="absolute bottom-2 right-2 flex gap-1"><span className="h-1 w-1 rounded-full bg-current opacity-40" /><span className="h-1 w-1 rounded-full bg-current opacity-70" /><span className="h-1 w-1 rounded-full bg-current" /></span>
+                </div>
+                <h2 className="text-sm font-bold">{title}</h2>
+                <p className="mt-1 text-xs leading-relaxed opacity-75">{text}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-sm opacity-75">Conectează-te sau creează un cont ca să accesezi cardurile tale.</p>
+          <button type="button" onClick={props.onRequireLogin} className={`mt-6 rounded-lg px-4 py-2.5 text-sm font-semibold ${isDrink ? 'bg-[#F2A33A] text-[#17382C]' : 'bg-[#B3261E] text-white'}`}>
+            Conectează-te / Creează cont
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return <FidelityWallet {...props} />;
+}
+
+function FidelityWallet({
   vertical,
   currentUser,
   onBack,
@@ -219,21 +247,11 @@ export function FidelityView({
   useBackend = false,
 }: FidelityViewProps) {
   const isDrink = vertical === 'drink';
-  const [activeTab, setActiveTab] = useState<'cards' | 'vendor'>('cards');
   const [programs, setPrograms] = useState<LoyaltyProgram[]>(DEFAULT_PROGRAMS);
   const [hydrated, setHydrated] = useState(false);
   const [expandedQrProgramId, setExpandedQrProgramId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastIsError, setToastIsError] = useState(false);
-
-  // Vendor signup form state
-  const [venueName, setVenueName] = useState('');
-  const [neighborhood, setNeighborhood] = useState('Cetate');
-  const [rewardTitle, setRewardTitle] = useState('');
-  const [stampsRequired, setStampsRequired] = useState<number>(6);
-  const [selectedIcon, setSelectedIcon] = useState<LoyaltyIconId>('cat');
-  const [accentColor, setAccentColor] = useState<string>(isDrink ? '#17382C' : '#B3261E');
-  const [formError, setFormError] = useState<string | null>(null);
 
   /** Reîncarcă portofelul din backend; false = backend indisponibil (rămânem pe localStorage). */
   const refreshFromBackend = async (): Promise<boolean> => {
@@ -336,77 +354,7 @@ export function FidelityView({
     );
   };
 
-  const handleCreateProgram = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanName = venueName.trim();
-    const cleanNeighborhood = neighborhood.trim() || 'Timișoara';
-    const cleanReward = rewardTitle.trim();
-
-    if (!cleanName) {
-      setFormError('Scrie numele localului pentru a genera cardul digital.');
-      return;
-    }
-    if (!cleanReward) {
-      setFormError('Specifică ce recompensă primește clientul la completarea cardului.');
-      return;
-    }
-
-    setFormError(null);
-    if (useBackend) {
-      if (!currentUser) {
-        onRequireLogin?.();
-        return;
-      }
-      void createFidelityCard({ name: cleanName, rewardTitle: cleanReward, stampsRequired, icon: selectedIcon, accentColor }).then(
-        async (res) => {
-          if (!res.ok) {
-            setFormError(res.error);
-            return;
-          }
-          await refreshFromBackend();
-          setVenueName('');
-          setRewardTitle('');
-          setActiveTab('cards');
-          showToast(res.message);
-        },
-      );
-      return;
-    }
-    const slug = cleanName
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 20);
-
-    const newProgram: LoyaltyProgram = {
-      id: `vendor-${Date.now()}`,
-      venueName: cleanName,
-      neighborhood: cleanNeighborhood,
-      rewardTitle: cleanReward,
-      stampsRequired,
-      iconId: selectedIcon,
-      accentColor,
-      stampsCollected: 1,
-      redeemedCount: 0,
-      qrSeed: `TOPFOOD:${slug || 'LOCAL'}:${Date.now().toString(36).toUpperCase()}`,
-      isCustomVendor: true,
-    };
-
-    setPrograms((prev) => [newProgram, ...prev]);
-    setVenueName('');
-    setRewardTitle('');
-    setActiveTab('cards');
-    showToast(`Localul „${cleanName}” a fost înscris! Cardul digital cu cod QR este activ.`);
-  };
-
   const expandedProgram = programs.find((p) => p.id === expandedQrProgramId) ?? null;
-
-  const previewSeed = useMemo(() => {
-    const clean = (venueName.trim() || 'LOCALUL-TAU')
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, '-');
-    return `TOPFOOD:${clean}:${selectedIcon.toUpperCase()}:${stampsRequired}`;
-  }, [venueName, selectedIcon, stampsRequired]);
 
   const cardSurface = isDrink
     ? 'bg-[#143025] border-[#264D3E] text-[#F4EEE2]'
@@ -486,13 +434,11 @@ export function FidelityView({
           Card de fidelitate digital
         </h1>
         <p className={`mt-2 max-w-2xl text-sm sm:text-base leading-relaxed ${mutedText}`}>
-          În loc de cartoane mototolite prin portofel, fiecare local din Timișoara își
-          poate genera propriul cod QR și o pictogramă simpatică pe post de ștampilă.
-          Scanezi la casă și strângi recompense.
+          Scanează la localurile participante și strânge ștampile pentru recompense.
         </p>
       </div>
 
-      {useBackend && currentUser && activeTab === 'cards' && (
+      {useBackend && currentUser && (
         <QrScanPanel
           isDrink={isDrink}
           onResult={(message, isError) => {
@@ -528,55 +474,11 @@ export function FidelityView({
       )}
       </div>
 
-      {/* Segmented Switch: Cardurile mele / Înscriere local */}
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div
-          className={`inline-flex p-1 rounded-xl border ${
-            isDrink
-              ? 'bg-[#143025] border-[#264D3E]'
-              : 'bg-[#F2EFE9] border-[#E8E2D9]'
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('cards')}
-            className={`btn-press inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === 'cards'
-                ? isDrink
-                  ? 'bg-[#F2A33A] text-[#17382C] shadow-sm'
-                  : 'bg-[#3A2418] text-white shadow-sm'
-                : mutedText
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-            Cardurile mele ({programs.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('vendor')}
-            className={`btn-press inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === 'vendor'
-                ? isDrink
-                  ? 'bg-[#F2A33A] text-[#17382C] shadow-sm'
-                  : 'bg-[#B3261E] text-white shadow-sm'
-                : mutedText
-            }`}
-          >
-            <Store className="w-4 h-4" />
-            Înscriere local (Vendor)
-          </button>
-        </div>
-
-        {activeTab === 'cards' && (
-          <p className={`text-xs ${mutedText}`}>
-            Apasă <strong>+1 ștampilă</strong> pentru a simula scanarea QR la tejghea.
-          </p>
-        )}
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h2 className="font-serif text-2xl font-bold">Cardurile mele ({programs.length})</h2>
+        {!useBackend && <p className={`text-xs ${mutedText}`}>Ștampilele sunt simulate în modul demo.</p>}
       </div>
-
-      {/* TAB 1: CUSTOMER LOYALTY CARDS */}
-      {activeTab === 'cards' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {programs.map((program) => {
             const isComplete = program.stampsCollected >= program.stampsRequired;
             return (
@@ -740,288 +642,6 @@ export function FidelityView({
             );
           })}
         </div>
-      )}
-
-      {/* TAB 2: VENDOR SIGN-UP */}
-      {activeTab === 'vendor' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Form Column */}
-          <form
-            onSubmit={handleCreateProgram}
-            className={`lg:col-span-7 rounded-2xl border p-6 sm:p-7 shadow-sm space-y-6 ${cardSurface}`}
-          >
-            <div>
-              <h2 className="font-serif text-2xl font-bold">
-                Înscrie-ți localul în program
-              </h2>
-              <p className={`text-sm mt-1 ${mutedText}`}>
-                Configurează cardul în 30 de secunde. Primești un cod QR de afișat la
-                tejghea și pictograma ta simpatică de ștampilă.
-              </p>
-            </div>
-
-            {formError && (
-              <div className="rounded-xl bg-[#B3261E]/10 border border-[#B3261E]/30 px-4 py-3 text-sm font-medium text-[#B3261E]">
-                {formError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                  Numele localului *
-                </label>
-                <input
-                  type="text"
-                  value={venueName}
-                  onChange={(e) => setVenueName(e.target.value)}
-                  placeholder="ex. Brutăria din Elisabetin"
-                  className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition-colors ${
-                    isDrink
-                      ? 'bg-[#17382C] border-[#264D3E] text-[#F4EEE2] placeholder:text-[#6E8B7A] focus:border-[#F2A33A]'
-                      : 'bg-[#FAF8F5] border-[#E8E2D9] text-[#3A2418] placeholder:text-[#A39384] focus:border-[#B3261E]'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                  Cartier
-                </label>
-                <select
-                  value={neighborhood}
-                  onChange={(e) => setNeighborhood(e.target.value)}
-                  className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition-colors ${
-                    isDrink
-                      ? 'bg-[#17382C] border-[#264D3E] text-[#F4EEE2] focus:border-[#F2A33A]'
-                      : 'bg-[#FAF8F5] border-[#E8E2D9] text-[#3A2418] focus:border-[#B3261E]'
-                  }`}
-                >
-                  <option value="Cetate">Cetate</option>
-                  <option value="Iosefin">Iosefin</option>
-                  <option value="Fabric">Fabric</option>
-                  <option value="Elisabetin">Elisabetin</option>
-                  <option value="Complex Studențesc">Complex Studențesc</option>
-                  <option value="Dacia / Circumvalațiunii">Dacia / Circumvalațiunii</option>
-                  <option value="Mehala">Mehala</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                Recompensa la completarea cardului *
-              </label>
-              <input
-                type="text"
-                value={rewardTitle}
-                onChange={(e) => setRewardTitle(e.target.value)}
-                placeholder="ex. O cafea de specialitate + croissant cu unt din partea casei"
-                className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition-colors ${
-                  isDrink
-                    ? 'bg-[#17382C] border-[#264D3E] text-[#F4EEE2] placeholder:text-[#6E8B7A] focus:border-[#F2A33A]'
-                    : 'bg-[#FAF8F5] border-[#E8E2D9] text-[#3A2418] placeholder:text-[#A39384] focus:border-[#B3261E]'
-                }`}
-              />
-            </div>
-
-            {/* Stamp count selector */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2">
-                Număr de ștampile necesare
-              </label>
-              <div className="grid grid-cols-4 gap-2.5">
-                {STAMP_COUNT_OPTIONS.map((count) => {
-                  const selected = stampsRequired === count;
-                  return (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => setStampsRequired(count)}
-                      className={`btn-press py-2.5 rounded-xl border text-sm font-bold transition-all ${
-                        selected
-                          ? 'text-white border-transparent shadow-sm'
-                          : isDrink
-                            ? 'bg-[#17382C] border-[#264D3E] text-[#A8BBAE] hover:text-[#F4EEE2]'
-                            : 'bg-[#FAF8F5] border-[#E8E2D9] text-[#6E5649] hover:text-[#3A2418]'
-                      }`}
-                      style={selected ? { backgroundColor: accentColor } : undefined}
-                    >
-                      {count} ștampile
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Cute Icon Picker */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2">
-                Alege pictograma ștampilei (simbolul localului)
-              </label>
-              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                {ICON_OPTIONS.map(({ id, label, Icon }) => {
-                  const active = selectedIcon === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setSelectedIcon(id)}
-                      title={label}
-                      className={`btn-press flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl border transition-all ${
-                        active
-                          ? 'text-white border-transparent shadow-sm scale-105'
-                          : isDrink
-                            ? 'bg-[#17382C] border-[#264D3E] text-[#A8BBAE] hover:text-[#F4EEE2]'
-                            : 'bg-[#FAF8F5] border-[#E8E2D9] text-[#6E5649] hover:text-[#3A2418]'
-                      }`}
-                      style={active ? { backgroundColor: accentColor } : undefined}
-                    >
-                      <Icon className="w-5 h-5" strokeWidth={2} />
-                      <span className="text-[10px] font-medium truncate max-w-full px-0.5">
-                        {label.split(' ')[0]}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Accent Color Swatches */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2">
-                Culoarea ștampilei și a codului QR
-              </label>
-              <div className="flex flex-wrap items-center gap-2.5">
-                {ACCENT_SWATCHES.map((swatch) => {
-                  const active = accentColor === swatch.hex;
-                  return (
-                    <button
-                      key={swatch.hex}
-                      type="button"
-                      onClick={() => setAccentColor(swatch.hex)}
-                      className={`btn-press inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
-                        active
-                          ? isDrink
-                            ? 'border-[#F2A33A] bg-[#17382C] text-[#F4EEE2]'
-                            : 'border-[#3A2418] bg-[#FAF8F5] text-[#3A2418]'
-                          : isDrink
-                            ? 'border-[#264D3E] text-[#A8BBAE]'
-                            : 'border-[#E8E2D9] text-[#6E5649]'
-                      }`}
-                    >
-                      <span
-                        className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-white"
-                        style={{ backgroundColor: swatch.hex }}
-                      >
-                        {active && <Check className="w-2.5 h-2.5" strokeWidth={3} />}
-                      </span>
-                      {swatch.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="btn-press w-full py-3.5 rounded-xl font-bold text-sm sm:text-base text-white shadow-sm transition-opacity hover:opacity-95 flex items-center justify-center gap-2"
-              style={{ backgroundColor: accentColor }}
-            >
-              <QrCode className="w-4 h-4" />
-              Generează cardul digital și codul QR
-            </button>
-          </form>
-
-          {/* Live Preview Column */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className={`rounded-2xl border p-5 sm:p-6 shadow-sm ${cardSurface}`}>
-              <div className="flex items-center justify-between mb-4">
-                <span className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>
-                  Previzualizare card &amp; QR la tejghea
-                </span>
-                <span
-                  className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase text-white"
-                  style={{ backgroundColor: accentColor }}
-                >
-                  Live
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
-                      style={{ backgroundColor: accentColor }}
-                    >
-                      {renderLoyaltyIcon(selectedIcon, 'w-4 h-4', 2.2)}
-                    </span>
-                    <h3 className="font-serif text-lg font-bold truncate">
-                      {venueName.trim() || 'Localul tău aici'}
-                    </h3>
-                  </div>
-                  <p className={`text-xs mt-1 ${mutedText}`}>
-                    Cartier {neighborhood} • 2 / {stampsRequired} ștampile
-                  </p>
-                </div>
-
-                <div className="p-1.5 rounded-xl bg-white border border-[#E8E2D9] shrink-0">
-                  <DeterministicQrSvg
-                    seed={previewSeed}
-                    fgColor={accentColor}
-                    className="w-20 h-20"
-                  />
-                </div>
-              </div>
-
-              <div
-                className={`rounded-xl border px-3 py-2 mb-4 flex items-center gap-2 text-xs ${subtleSurface}`}
-              >
-                <Gift className="w-4 h-4 shrink-0" style={{ color: accentColor }} />
-                <span className="font-medium">
-                  {rewardTitle.trim() ||
-                    'Recompensa aleasă de tine apare aici pentru clienți'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-5 gap-2">
-                {Array.from({ length: stampsRequired }).map((_, idx) => {
-                  const stamped = idx < 2;
-                  return (
-                    <div
-                      key={idx}
-                      className={`aspect-square rounded-xl flex items-center justify-center border ${
-                        stamped
-                          ? 'text-white border-transparent'
-                          : isDrink
-                            ? 'border-dashed border-[#2C5A48] bg-[#17382C]/60 text-[#5C806E]'
-                            : 'border-dashed border-[#D9D0C3] bg-[#FAF8F5] text-[#C8BEB0]'
-                      }`}
-                      style={stamped ? { backgroundColor: accentColor } : undefined}
-                    >
-                      {stamped ? (
-                        renderLoyaltyIcon(selectedIcon, 'w-4 h-4', 2.2)
-                      ) : (
-                        <span className="text-[10px] font-mono">{idx + 1}</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className={`rounded-2xl border p-4 text-xs leading-relaxed ${subtleSurface} ${mutedText}`}>
-              <strong className={isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'}>
-                Cum funcționează la casă?
-              </strong>{' '}
-              Pui codul QR generat pe un mic stand lângă espressor sau casă. Clientul
-              îl scanează din tab-ul <em>Cardurile mele</em> și primește instant
-              pictograma aleasă de tine în loc de o ștampilă pe carton.
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Expanded Counter QR Modal */}
       {expandedProgram && (

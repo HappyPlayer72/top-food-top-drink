@@ -579,7 +579,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // ============================================================================
   if (isDrink) {
     return (
-      <div className="min-h-screen bg-[#17382C] text-[#F4EEE2] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
+      <div className="min-h-screen text-[#F4EEE2] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 space-y-6 sm:space-y-8">
           {/* Hero */}
           <section className="space-y-3.5 sm:space-y-4">
@@ -1072,7 +1072,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // TOPFOOD / TIMIȘOARA VIEW (Page 3 — White + Cafea + Carou)
   // ============================================================================
   return (
-    <div className="bg-white text-[#3A2418] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
+    <div className="text-[#3A2418] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
       {/* HERO BLOCK */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 pb-5 sm:pb-6 space-y-3.5 sm:space-y-4">
         <h1 className="font-display text-[32px] min-[375px]:text-[36px] sm:text-[54px] leading-[0.96] text-[#3A2418] max-w-2xl text-balance">

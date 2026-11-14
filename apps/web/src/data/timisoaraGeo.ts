@@ -282,12 +282,13 @@ interface MapStyleLike {
  */
 export function applyTopFoodMapSkin<T extends MapStyleLike>(
   rawStyle: T,
-  isDrink: boolean
+  isDrink: boolean,
+  darkMode = true
 ): T {
   const style = JSON.parse(JSON.stringify(rawStyle)) as T;
   if (!Array.isArray(style.layers)) return style;
 
-  const palette = isDrink
+  const palette = isDrink && darkMode
     ? {
         bg: '#143025',
         park: '#1A3E30',
@@ -309,8 +310,17 @@ export function applyTopFoodMapSkin<T extends MapStyleLike>(
         waterLabel: '#6BA38F',
         roadLabel: '#B9C9C1',
       }
+    : !isDrink && darkMode
+    ? {
+        bg: '#211f1d', park: '#353b30', wood: '#30382e', residential: '#302c29',
+        water: '#303b3c', building: '#393430', buildingOutline: '#514a45',
+        roadMinor: '#514a45', roadMajorCasing: '#211f1d', roadMajorInner: '#756a62',
+        roadMotorwayCasing: '#211f1d', roadMotorwayInner: '#8b7e73', path: '#514a45',
+        rail: '#756a62', boundary: '#756a62', labelText: '#f7f1e8',
+        labelHalo: '#211f1d', waterLabel: '#b5c9c5', roadLabel: '#cdc1b5',
+      }
     : {
-        bg: '#F6F2EA',
+        bg: isDrink ? '#f8f2e5' : '#F6F2EA',
         park: '#E2EAD8',
         wood: '#D9E4CC',
         residential: '#F2ECE1',

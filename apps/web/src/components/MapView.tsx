@@ -20,6 +20,19 @@ import {
   SlidersHorizontal,
   Layers,
   X,
+  Check,
+  Utensils,
+  Sandwich,
+  Pizza,
+  Soup,
+  CakeSlice,
+  Coffee,
+  Beer,
+  Wine,
+  Martini,
+  Citrus,
+  Leaf,
+  WheatOff,
 } from 'lucide-react';
 import {
   Restaurant,
@@ -39,8 +52,10 @@ import {
   buildTouristZonesGeoJSON,
 } from '../data/timisoaraGeo';
 import { LocalnicBadge, TrapBadge } from './BrandPrimitives';
+import { MAP_TASTES, matchesMapTastes, type MapTaste } from './mapTasteFilter';
 
 export interface MapViewProps {
+  darkMode?: boolean;
   vertical?: Vertical;
   restaurants?: Restaurant[];
   onSelectRestaurant: (restaurant: Restaurant) => void;
@@ -50,6 +65,12 @@ export interface MapViewProps {
   touristZones?: TouristZone[];
   onResetFilters?: () => void;
 }
+
+const TASTE_ICONS: Record<MapTaste, typeof Utensils> = {
+  burger: Sandwich, pizza: Pizza, pasta: Utensils, soup: Soup, dessert: CakeSlice,
+  coffee: Coffee, beer: Beer, wine: Wine, cocktail: Martini, fresh: Citrus,
+  vegetarian: Leaf, vegan: Leaf, 'gluten-free': WheatOff,
+};
 
 interface NeighborhoodCamera {
   label: string;
@@ -185,7 +206,7 @@ function getTierStyles(tier: TrapTier, trapIndex: number) {
   };
 }
 
-function createFallbackStyle(isDrink: boolean): maplibreglType.StyleSpecification {
+function createFallbackStyle(isDrink: boolean, darkMode: boolean): maplibreglType.StyleSpecification {
   return {
     version: 8,
     name: 'topfood-fallback',
@@ -195,7 +216,7 @@ function createFallbackStyle(isDrink: boolean): maplibreglType.StyleSpecificatio
         id: 'background',
         type: 'background',
         paint: {
-          'background-color': isDrink ? '#143025' : '#F6F2EA',
+          'background-color': darkMode ? (isDrink ? '#143025' : '#211f1d') : (isDrink ? '#f8f2e5' : '#F6F2EA'),
         },
       },
     ],
@@ -203,6 +224,7 @@ function createFallbackStyle(isDrink: boolean): maplibreglType.StyleSpecificatio
 }
 
 export function MapView({
+  darkMode = false,
   vertical = 'food',
   restaurants = INITIAL_RESTAURANTS,
   onSelectRestaurant,
@@ -223,6 +245,7 @@ export function MapView({
   const [showTouristRings, setShowTouristRings] = useState<boolean>(true);
   const [showNeighborhoodZones, setShowNeighborhoodZones] = useState<boolean>(true);
   const [showLandmarks, setShowLandmarks] = useState<boolean>(true);
+  const [selectedTastes, setSelectedTastes] = useState<MapTaste[]>([]);
   const [tierFilter, setTierFilter] = useState<TrapTier | 'all'>('all');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [sidebarQuery, setSidebarQuery] = useState<string>('');
@@ -326,6 +349,7 @@ export function MapView({
   const visibleRestaurants = useMemo(() => {
     return restaurants.filter((r) => {
       if (tierFilter !== 'all' && r.trapTier !== tierFilter) return false;
+      if (!matchesMapTastes(r, selectedTastes)) return false;
       if (sidebarQuery.trim() !== '') {
         const q = sidebarQuery.toLowerCase();
         return (
@@ -336,7 +360,7 @@ export function MapView({
       }
       return true;
     });
-  }, [restaurants, tierFilter, sidebarQuery]);
+  }, [restaurants, tierFilter, sidebarQuery, selectedTastes]);
 
   useEffect(() => {
     if (visibleRestaurants.length === 0) {
@@ -539,9 +563,9 @@ export function MapView({
             'text-allow-overlap': true,
           },
           paint: {
-            'text-color': isDrink ? '#F4EEE2' : '#3A2418',
+            'text-color': darkMode ? '#f7f1e8' : (isDrink ? '#263e31' : '#3A2418'),
             'text-opacity': isDrink ? 0.45 : 0.55,
-            'text-halo-color': isDrink ? '#143025' : '#F6F2EA',
+            'text-halo-color': darkMode ? (isDrink ? '#143025' : '#211f1d') : (isDrink ? '#f8f2e5' : '#F6F2EA'),
             'text-halo-width': 2,
           },
         });
@@ -600,7 +624,7 @@ export function MapView({
         });
       }
     },
-    [activeCam, activeZoneId, isDrink, showNeighborhoodZones, showTouristRings, touristZones]
+    [activeCam, activeZoneId, isDrink, darkMode, showNeighborhoodZones, showTouristRings, touristZones]
   );
 
   // Initialize MapLibre GL JS instance once
@@ -622,13 +646,13 @@ export function MapView({
         baseStyle = (await res.json()) as maplibreglType.StyleSpecification;
         rawStyleRef.current = baseStyle;
       } catch {
-        baseStyle = createFallbackStyle(isDrink);
+        baseStyle = createFallbackStyle(isDrink, darkMode);
       }
 
       if (cancelled) return;
 
       const skinnedStyle = rawStyleRef.current
-        ? applyTopFoodMapSkin(rawStyleRef.current, isDrink)
+        ? applyTopFoodMapSkin(rawStyleRef.current, isDrink, darkMode)
         : baseStyle;
 
       const isSmallScreen =
@@ -719,13 +743,13 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const nextStyle = rawStyleRef.current
-      ? applyTopFoodMapSkin(rawStyleRef.current, isDrink)
-      : createFallbackStyle(isDrink);
+      ? applyTopFoodMapSkin(rawStyleRef.current, isDrink, darkMode)
+      : createFallbackStyle(isDrink, darkMode);
     map.setStyle(nextStyle);
     map.once('style.load', () => {
       syncCustomGeoLayers(map);
     });
-  }, [isDrink, mapReady, syncCustomGeoLayers]);
+  }, [isDrink, darkMode, mapReady, syncCustomGeoLayers]);
 
   // Sync GeoJSON data & visibility when filters/selections change
   useEffect(() => {
@@ -1443,7 +1467,7 @@ export function MapView({
               onTouchMove={handleSheetTouchMove}
               onTouchEnd={handleSheetTouchEnd}
               onTouchCancel={handleSheetTouchEnd}
-              className="shrink-0"
+              className="shrink-0 max-h-[65%] overflow-y-auto"
             >
               <div className="md:hidden flex justify-center pt-1.5 pb-0.5 touch-none cursor-grab">
                 <span className="w-10 h-1 rounded-full bg-current opacity-25" />
@@ -1565,6 +1589,48 @@ export function MapView({
                   })}
                 </div>
 
+                <details className={`rounded-[8px] border px-3 py-2 ${isDrink ? 'border-[#336652] bg-[#143025]' : 'border-[#E6DFD5] bg-white'}`} aria-label="Filtre pentru mâncare și băutură">
+                  <summary className="cursor-pointer text-[13px] font-bold leading-6">
+                    <Utensils aria-hidden="true" className="mr-2 inline-block h-4 w-4 align-[-3px]" />
+                    Ce ai poftă? {selectedTastes.length > 0 && <span className="font-normal opacity-75">· {selectedTastes.length}</span>}
+                  </summary>
+                  <div className="flex justify-end">
+                    {selectedTastes.length > 0 && (
+                      <button type="button" onClick={() => setSelectedTastes([])} className={`text-[11px] font-semibold underline underline-offset-2 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
+                        Șterge
+                      </button>
+                    )}
+                  </div>
+                  {[
+                    { label: 'Mâncare', tastes: MAP_TASTES.slice(0, 5) },
+                    { label: 'Băutură', tastes: MAP_TASTES.slice(5, 10) },
+                    { label: 'Regim alimentar', tastes: MAP_TASTES.slice(10) },
+                  ].map(group => (
+                    <div key={group.label} className="mt-3">
+                      <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-[0.1em] ${isDrink ? 'text-[#F4EEE2]/60' : 'text-[#8B7568]'}`}>{group.label}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {group.tastes.map(taste => {
+                          const selected = selectedTastes.includes(taste.id);
+                          const Icon = TASTE_ICONS[taste.id];
+                          return (
+                            <button key={taste.id} type="button" aria-pressed={selected} onClick={() => setSelectedTastes(current => selected ? current.filter(id => id !== taste.id) : [...current, taste.id])}
+                              className={`inline-flex min-h-[36px] items-center gap-1 rounded-[4px] border px-3 py-1.5 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${selected ? (isDrink ? 'border-[#F2A33A] bg-[#F2A33A] text-[#17382C]' : 'border-[#3A2418] bg-[#3A2418] text-white') : (isDrink ? 'border-[#47705C] text-[#F4EEE2] hover:border-[#F2A33A] hover:bg-[#1E4335]' : 'border-[#DED5CA] bg-[#FAF8F5] text-[#50392C] hover:border-[#9F8372] hover:bg-[#F2ECE5]')}`}>
+                              <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                              {taste.label}
+                              {selected && <Check aria-hidden="true" className="h-3 w-3" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {selectedTastes.includes('gluten-free') && (
+                    <p className={`mt-2 text-[11px] leading-snug ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
+                      Pentru boala celiacă, verifică ingredientele și contaminarea încrucișată cu localul.
+                    </p>
+                  )}
+                </details>
+
                 {/* Mobile-only Map Layer Toggles */}
                 <div className="flex sm:hidden items-center gap-1.5 flex-wrap">
                   <button
@@ -1661,6 +1727,7 @@ export function MapView({
                     type="button"
                     onClick={() => {
                       setTierFilter('all');
+                      setSelectedTastes([]);
                       setSidebarQuery('');
                       if (onResetFilters) onResetFilters();
                     }}
