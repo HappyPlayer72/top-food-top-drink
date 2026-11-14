@@ -20,7 +20,7 @@ const cardClass = 'rounded-[4px] border border-o-line bg-o-card p-5 sm:p-7';
 const monthName = (ym: string) =>
   new Intl.DateTimeFormat('ro-RO', { month: 'long', year: 'numeric' }).format(new Date(`${ym}-01T12:00:00Z`));
 
-export function StatsPanel({ venueId, venueName, stats, vertical }: { venueId: string; venueName: string; stats: Stats; vertical: 'food' | 'drink' }) {
+export function StatsPanel({ venueId, venueName, stats, vertical, afterScore }: { venueId: string; venueName: string; stats: Stats; vertical: 'food' | 'drink'; afterScore?: React.ReactNode }) {
   const { scores, byMonth, aspects } = stats;
   const isDrink = vertical === 'drink';
   const trap = scores.touristTrapIndex ?? 0;
@@ -74,6 +74,8 @@ export function StatsPanel({ venueId, venueName, stats, vertical }: { venueId: s
           </div>
         </div>
       </section>
+
+      {afterScore}
 
       {trap >= 60 ? (
         <section aria-label="Avertizare: capcană turistică" className="flex flex-col gap-4">

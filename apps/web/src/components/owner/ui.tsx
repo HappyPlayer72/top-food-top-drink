@@ -34,15 +34,19 @@ export function Field({
 }
 
 /** Buton de trimitere; rămâne activ până pornește cererea, apoi arată „…”. */
-export function SubmitButton({ children, pendingLabel = 'Se trimite…', variant = 'primary', className = '' }: {
+export function SubmitButton({ children, pendingLabel = 'Se trimite…', variant = 'primary', className = '', disabled = false, name, value }: {
   children: React.ReactNode;
   pendingLabel?: string;
   variant?: 'primary' | 'quiet';
   className?: string;
+  disabled?: boolean;
+  /** Perechea name/value ajunge în FormData doar dacă ăsta e butonul apăsat (mai multe acțiuni într-un formular). */
+  name?: string;
+  value?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} aria-busy={pending} className={`${buttonClass(variant)} ${className}`}>
+    <button type="submit" name={name} value={value} disabled={pending || disabled} aria-busy={pending} className={`${buttonClass(variant)} ${className}`}>
       {pending ? pendingLabel : children}
     </button>
   );

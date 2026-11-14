@@ -7,6 +7,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   customType,
   date,
   geometry,
@@ -119,6 +120,11 @@ export const venues = pgTable(
     /** Media aspectelor din review-uri, pe scara 0–10 (scrisă de scoring). */
     aspectScores: jsonb().$type<Record<string, number>>(),
 
+    /** Pictograma din lista /owner, aleasă de owner: simbol + culoare (chei validate în packages/owner) sau poză mică (data URL, ≤ 30 000 de caractere). */
+    ownerIconSymbol: text(),
+    ownerIconColor: text(),
+    ownerIconImage: text(),
+
     // Scoruri (scrise DOAR de packages/scoring)
     honestScore: real(),
     localsScore: real(),
@@ -134,6 +140,7 @@ export const venues = pgTable(
     uniqueIndex().on(t.citySlug, t.vertical, t.slug),
     index().using("gist", t.location),
     index().on(t.citySlug, t.vertical, t.honestScore),
+    check("venues_owner_icon_image_size", sql`length(${t.ownerIconImage}) <= 30000`),
   ],
 );
 
