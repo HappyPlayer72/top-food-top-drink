@@ -1,5 +1,5 @@
 /** Leagă un local găsit pe o platformă externă de fișa noastră (sau creează una nouă). */
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { matchCandidates, venueSources, venues, type Db, type OpeningHours } from "@tftd/db";
 import { findMatch, normalizeName, type Place } from "./match.ts";
 
@@ -49,6 +49,15 @@ export async function linkExternalPlace(db: Db, p: ExternalPlace): Promise<LinkR
   if (decision.status === "match") {
     const venueId = known[decision.index]!.id;
     await db.insert(venueSources).values({ venueId, source: p.source, externalId: p.externalId, ...sourceRow });
+    // Completează din sursă ce nu știam încă (program, telefon, site); nu suprascrie ce e deja în DB
+    await db
+      .update(venues)
+      .set({
+        openingHours: sql`coalesce(${venues.openingHours}, ${p.openingHours ? JSON.stringify(p.openingHours) : null}::jsonb)`,
+        phone: sql`coalesce(${venues.phone}, ${p.phone ?? null})`,
+        website: sql`coalesce(${venues.website}, ${p.website ?? null})`,
+      })
+      .where(eq(venues.id, venueId));
     return { venueId, outcome: "matched" };
   }
 
