@@ -419,6 +419,12 @@ export async function venueStats(db: Db, userId: string, venueId: string, now = 
 
 // ---------- Citiri pentru dashboard-ul /owner ----------
 
+/** Localele care au deja proprietar (nu se mai pot revendica). */
+export async function ownedVenueIds(db: Db): Promise<Set<string>> {
+  const rows = await db.select({ id: venueManagers.venueId }).from(venueManagers).where(eq(venueManagers.role, "owner"));
+  return new Set(rows.map((r) => r.id));
+}
+
 /** Localele pe care userul le administrează (owner sau manager). */
 export async function managedVenues(db: Db, userId: string) {
   return db

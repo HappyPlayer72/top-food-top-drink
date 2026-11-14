@@ -51,13 +51,13 @@ export async function cityPage(
     eq(venues.citySlug, q.citySlug),
     eq(venues.vertical, q.vertical),
     eq(venues.status, "active"),
-    isNotNull(venues.honestScore),
     ...(q.category ? [sql`${q.category} = ANY(${venues.categories})`] : []),
     ...(q.neighborhood ? [eq(venues.neighborhood, q.neighborhood)] : []),
     ...(q.maxPriceLei ? [sql`coalesce(${venues.priceMaxLei}, (${venues.drinkPrices}->>'beer05l')::int, 0) <= ${q.maxPriceLei}`] : []),
     ...(q.noTraps ? [sql`coalesce(${venues.touristTrapIndex}, 0) < ${POSSIBLE_TRAP}`] : []),
   ];
-  const top = await db.select(card).from(venues).where(and(...filters)).orderBy(desc(venues.honestScore), desc(venues.totalWeight)).limit(q.limit ?? 20);
+  // Localurile fără review-uri (fără scor) apar și ele, la final, ca să se poată scrie primul review
+  const top = await db.select(card).from(venues).where(and(...filters)).orderBy(sql`${venues.honestScore} desc nulls last`, desc(venues.totalWeight), venues.name).limit(q.limit ?? 20);
 
   const traps = await db
     .select({ name: venues.name, slug: venues.slug, neighborhood: venues.neighborhood, index: venues.touristTrapIndex, explanation: venues.scoreExplanation })
