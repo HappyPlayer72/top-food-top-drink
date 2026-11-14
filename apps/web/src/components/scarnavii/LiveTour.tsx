@@ -26,7 +26,10 @@ export function loadLiveTour(): SavedLiveTour | null {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as SavedLiveTour | null;
     if (!saved) return null;
-    if (Date.now() - saved.startedAt > MAX_AGE_MS || !Array.isArray(saved.stops) || saved.reached?.length !== saved.stops.length) {
+    // Date stricate sau vechi: le ștergem, altfel turul ar crăpa la fiecare deschidere.
+    const valid = Array.isArray(saved.stops) && saved.reached?.length === saved.stops.length
+      && Number.isInteger(saved.current) && saved.current >= 0 && saved.current < saved.stops.length;
+    if (!valid || !(Date.now() - saved.startedAt <= MAX_AGE_MS)) {
       clearLiveTour();
       return null;
     }
