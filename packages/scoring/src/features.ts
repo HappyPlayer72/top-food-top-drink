@@ -39,7 +39,7 @@ export const QUESTIONS: Question[] = [
   { key: "spatiu_intre_mese", theme: "accesibilitate", label: "Spațiu între mese", question: "E destul spațiu între mese ca să treci ușor?", claim: "e destul spațiu între mese", ownerDeclarable: true },
   { key: "wifi", theme: "lucru", label: "Wi-Fi", question: "A mers Wi-Fi-ul?", claim: "Wi-Fi-ul merge", ownerDeclarable: true },
   { key: "prize", theme: "lucru", label: "Prize", question: "Ai găsit prize la mese?", claim: "există prize la mese", ownerDeclarable: true },
-  { key: "liniste", theme: "lucru", label: "Liniște", question: "E destul de liniște cât să lucrezi?", claim: "e destul de liniște pentru lucru", ownerDeclarable: false },
+  { key: "liniste", theme: "lucru", label: "Liniște", question: "E destul de liniște cât să poți vorbi sau lucra?", claim: "e destul de liniște cât să poți vorbi sau lucra", ownerDeclarable: false },
   // Ieșiri: experiența personală, formulată la fel pentru toți; owner-ul nu o poate declara în locul clienților.
   { key: "atmosfera", theme: "iesiri", label: "Atmosferă", question: "Ți-a plăcut atmosfera?", claim: "le-a plăcut atmosfera", ownerDeclarable: false },
   { key: "siguranta", theme: "iesiri", label: "Siguranță", question: "Te-ai simțit în siguranță în local?", claim: "s-au simțit în siguranță în local", ownerDeclarable: false },

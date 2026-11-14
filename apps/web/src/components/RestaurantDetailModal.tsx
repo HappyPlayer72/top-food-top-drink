@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { Answer } from '@tftd/scoring/features';
+import { QUESTION_BY_KEY, type Answer } from '@tftd/scoring/features';
 import { ReviewQuestions } from './ReviewQuestions';
 import { VenueFeatures } from './VenueFeatures';
 import {
@@ -74,12 +74,12 @@ export interface RestaurantDetailModalProps {
 
 type ReviewFilterTab = 'verified-local' | 'tourist' | 'influencer' | 'all';
 
-const NOISE_OPTIONS: { id: NoiseLevel; label: string }[] = [
-  { id: 'linistit', label: 'Liniștit' },
-  { id: 'moderat', label: 'Moderat' },
-  { id: 'animat', label: 'Animat' },
-  { id: 'zgomotos', label: 'Zgomotos' },
+const QUICK_CHOICES: { value: Answer; label: string }[] = [
+  { value: 'yes', label: 'Da' },
+  { value: 'no', label: 'Nu' },
+  { value: 'not_observed', label: 'Nu am observat' },
 ];
+const QUICK_LABEL: Record<Answer, string> = { yes: 'Da', no: 'Nu', not_observed: 'Nu am observat' };
 
 const NOISE_LABELS: Record<NoiseLevel, string> = {
   linistit: 'Liniștit',
@@ -141,8 +141,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [scoreInput, setScoreInput] = useState<number>(9);
   const [gradeText, setGradeText] = useState<string>('9');
   const [markAsTrap, setMarkAsTrap] = useState<boolean>(false);
-  const [safetyScore, setSafetyScore] = useState<number | null>(null);
-  const [noiseLevel, setNoiseLevel] = useState<NoiseLevel | null>(null);
   const [praisedEmployee, setPraisedEmployee] = useState<string>('');
   const [reviewText, setReviewText] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -186,8 +184,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setScoreInput(initialGrade);
     setGradeText(String(initialGrade));
     setMarkAsTrap(false);
-    setSafetyScore(null);
-    setNoiseLevel(null);
     setFormError(null);
     setSubmittedNotice(null);
     if (modalOverlayRef.current) {
@@ -341,19 +337,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const weeklyHours = getVenueWeeklyHours(restaurant);
   const todayDayName = getTodayDayName();
   const baseWarnings = getVenueWarnings(restaurant);
-  const venueWarnings = {
-    unsafeFeeling:
-      baseWarnings.unsafeFeeling ??
-      (safetyScore !== null && safetyScore <= 2
-        ? `Ai semnalat că nu te-ai simțit în siguranță (${safetyScore}/5).`
-        : undefined),
-    veryNoisy:
-      baseWarnings.veryNoisy ??
-      (noiseLevel === 'zgomotos'
-        ? 'Ai semnalat că este foarte zgomotos.'
-        : undefined),
-    brightLights: baseWarnings.brightLights,
-  };
+  const venueWarnings = baseWarnings;
   const hasAnyWarning = Boolean(
     venueWarnings.unsafeFeeling ||
       venueWarnings.veryNoisy ||
@@ -448,8 +432,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       text,
       language: 'RO',
       praisedEmployee: praisedEmployee || undefined,
-      safetyScore: safetyScore ?? undefined,
-      noiseLevel: noiseLevel ?? undefined,
       helpfulCount: 0,
       answers: Object.keys(answers).length ? answers : undefined,
     };
@@ -464,8 +446,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewText('');
     setPraisedEmployee('');
     setMarkAsTrap(false);
-    setSafetyScore(null);
-    setNoiseLevel(null);
     setAnswers({});
     setSubmittedNotice(
       result?.message ??
@@ -475,6 +455,19 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
         markAsTrap ? ' cu semnalare de capcană turistică' : ''
       }. Scorul s-a actualizat.`
     );
+  };
+
+  // Butoanele rapide din bara de jos completează aceleași întrebări ca formularul și deschid review-ul.
+  const quickKey = activeQuickVote === 'noise' ? 'liniste' : 'siguranta';
+  const handleQuickAnswer = (value: Answer) => {
+    if (!currentUser) {
+      setActiveQuickVote(null);
+      onRequireLogin?.();
+      return;
+    }
+    setAnswers((prev) => ({ ...prev, [quickKey]: value }));
+    setActiveQuickVote(null);
+    setIsReviewDrawerOpen(true);
   };
 
   const handleFilterClick = (tab: 'verified-local' | 'tourist' | 'influencer') => {
@@ -1763,16 +1756,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[13px] font-semibold flex items-center gap-1.5">
                     {activeQuickVote === 'safety' ? (
-                      <>
-                        <ShieldCheck className="w-4 h-4 opacity-80" />
-                        <span>Te-ai simțit în siguranță?</span>
-                      </>
+                      <ShieldCheck className="w-4 h-4 opacity-80" />
                     ) : (
-                      <>
-                        <Volume2 className="w-4 h-4 opacity-80" />
-                        <span>E gălăgie?</span>
-                      </>
+                      <Volume2 className="w-4 h-4 opacity-80" />
                     )}
+                    <span>{QUESTION_BY_KEY.get(quickKey)?.question}</span>
                   </span>
                   <button
                     type="button"
@@ -1787,76 +1775,33 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   </button>
                 </div>
 
-                {activeQuickVote === 'safety' ? (
-                  <div className="space-y-1">
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[1, 2, 3, 4, 5].map((lvl) => {
-                        const active = safetyScore === lvl;
-                        return (
-                          <button
-                            key={lvl}
-                            type="button"
-                            onClick={() => {
-                              setSafetyScore((prev) => (prev === lvl ? null : lvl));
-                              setActiveQuickVote(null);
-                            }}
-                            aria-pressed={active}
-                            aria-label={`Siguranță ${lvl} din 5`}
-                            className={`btn-press min-h-[40px] rounded-[4px] border text-[13px] font-bold ${
-                              active
-                                ? isDrink
-                                  ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                                  : 'bg-[#3A2418] text-white border-[#3A2418]'
-                                : isDrink
-                                ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-                            }`}
-                          >
-                            {lvl}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div
-                      className={`flex justify-between text-[10px] ${
-                        isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
-                      }`}
-                    >
-                      <span>Nesigur</span>
-                      <span>Foarte sigur</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    {NOISE_OPTIONS.map((opt) => {
-                      const active = noiseLevel === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => {
-                            setNoiseLevel((prev) =>
-                              prev === opt.id ? null : opt.id
-                            );
-                            setActiveQuickVote(null);
-                          }}
-                          aria-pressed={active}
-                          className={`btn-press min-h-[40px] px-2 rounded-[4px] border text-[12px] font-semibold ${
-                            active
-                              ? isDrink
-                                ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                                : 'bg-[#3A2418] text-white border-[#3A2418]'
-                              : isDrink
-                              ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                              : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {QUICK_CHOICES.map((c) => {
+                    const active = answers[quickKey] === c.value;
+                    return (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => handleQuickAnswer(c.value)}
+                        aria-pressed={active}
+                        className={`btn-press min-h-[44px] px-2 rounded-[4px] border text-[13px] font-semibold ${
+                          active
+                            ? isDrink
+                              ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                              : 'bg-[#3A2418] text-white border-[#3A2418]'
+                            : isDrink
+                            ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
+                            : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className={`text-[11px] ${isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'}`}>
+                  Răspunsul se trimite împreună cu review-ul tău și intră în procentele de pe pagina localului.
+                </p>
               </div>
             </div>
           )}
@@ -1892,7 +1837,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               }
               aria-pressed={activeQuickVote === 'safety'}
               className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
-                safetyScore !== null || activeQuickVote === 'safety'
+                answers.siguranta || activeQuickVote === 'safety'
                   ? isDrink
                     ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
                     : 'bg-[#3A2418] border-[#3A2418] text-white'
@@ -1903,8 +1848,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             >
               <ShieldCheck className="w-4 h-4 shrink-0" />
               <span>
-                {safetyScore !== null
-                  ? `Siguranță ${safetyScore}/5`
+                {answers.siguranta
+                  ? `Siguranță: ${QUICK_LABEL[answers.siguranta]}`
                   : 'Te-ai simțit în siguranță?'}
               </span>
             </button>
@@ -1916,7 +1861,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               }
               aria-pressed={activeQuickVote === 'noise'}
               className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
-                noiseLevel !== null || activeQuickVote === 'noise'
+                answers.liniste || activeQuickVote === 'noise'
                   ? isDrink
                     ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
                     : 'bg-[#3A2418] border-[#3A2418] text-white'
@@ -1927,9 +1872,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             >
               <Volume2 className="w-4 h-4 shrink-0" />
               <span>
-                {noiseLevel !== null
-                  ? NOISE_LABELS[noiseLevel]
-                  : 'E gălăgie?'}
+                {answers.liniste
+                  ? `Liniște: ${QUICK_LABEL[answers.liniste]}`
+                  : 'E liniște?'}
               </span>
             </button>
 
