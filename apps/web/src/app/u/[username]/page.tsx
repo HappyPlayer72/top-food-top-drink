@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { CheckCircle2, ChevronLeft, ExternalLink, House, ShieldCheck, Star } from 'lucide-react';
 import { userProfile } from '@tftd/api';
 import { Footer } from '@/components/Footer';
+import { ProfileBadges } from '@/components/ProfileBadges';
 import { getDb } from '@/lib/server/db';
 
 export const dynamic = 'force-dynamic';
@@ -118,6 +119,11 @@ export default async function UserProfilePage({ params }: Props) {
               ))}
             </div>
           )}
+        </section>
+
+        <section aria-labelledby="insigne-profil" className="rounded-[6px] border border-cafea/15 bg-hartie p-6 space-y-4">
+          <h2 id="insigne-profil" className="font-display text-2xl">Insigne</h2>
+          <ProfileBadges tourBadges={profile.tourBadges} categoryBadges={profile.categoryBadges} mutedClass="text-cafea-deschis" />
         </section>
 
         <section aria-labelledby="recenzii-profil" className="space-y-4">

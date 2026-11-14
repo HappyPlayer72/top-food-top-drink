@@ -11,6 +11,7 @@ import { venueProgram } from "@tftd/loyalty";
 import { activePartnership, adsFor, sponsoredSlots } from "@tftd/monetization";
 import { recordVenueView } from "@tftd/owner";
 import { formatHours, openStatus } from "./hours.ts";
+import { userBadges } from "./badges.ts";
 import { venueFeatureData, venueFeatures, venueQuickData } from "./features.ts";
 import { activeThemes, featureStatus, rankTheme, themeQuestions, type Theme, type ThemeCandidate } from "@tftd/scoring/features";
 import { PRIOR_WEIGHT, POSSIBLE_TRAP, TRAP } from "@tftd/scoring";
@@ -400,14 +401,17 @@ export async function weekendEvents(db: Db, citySlug: string, now = new Date()) 
 export async function userProfile(db: Db, username: string) {
   const [u] = await db.select().from(users).where(eq(users.username, username));
   if (!u) throw notFound("Utilizatorul");
-  const links = await db.select({ platform: userSocialLinks.platform, url: userSocialLinks.url, verified: userSocialLinks.verified, followers: userSocialLinks.followers }).from(userSocialLinks).where(eq(userSocialLinks.userId, u.id));
-  const recent = await db
-    .select({ id: reviews.id, rating: reviews.rating, text: reviews.text, postedAt: reviews.postedAt, venue: { name: venues.name, slug: venues.slug, vertical: venues.vertical, citySlug: venues.citySlug } })
-    .from(reviews)
-    .innerJoin(venues, eq(venues.id, reviews.venueId))
-    .where(and(eq(reviews.authorId, u.id), eq(reviews.status, "published")))
-    .orderBy(desc(reviews.postedAt))
-    .limit(20);
+  const [links, recent, badges] = await Promise.all([
+    db.select({ platform: userSocialLinks.platform, url: userSocialLinks.url, verified: userSocialLinks.verified, followers: userSocialLinks.followers }).from(userSocialLinks).where(eq(userSocialLinks.userId, u.id)),
+    db
+      .select({ id: reviews.id, rating: reviews.rating, text: reviews.text, postedAt: reviews.postedAt, venue: { name: venues.name, slug: venues.slug, vertical: venues.vertical, citySlug: venues.citySlug } })
+      .from(reviews)
+      .innerJoin(venues, eq(venues.id, reviews.venueId))
+      .where(and(eq(reviews.authorId, u.id), eq(reviews.status, "published")))
+      .orderBy(desc(reviews.postedAt))
+      .limit(20),
+    userBadges(db, u.id),
+  ]);
   return {
     username: u.username,
     displayName: u.displayName,
@@ -417,6 +421,7 @@ export async function userProfile(db: Db, username: string) {
     followers: u.followers,
     socialLinks: links,
     reviews: recent,
+    ...badges,
   };
 }
 

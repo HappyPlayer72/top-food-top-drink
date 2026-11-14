@@ -2,18 +2,18 @@
 /**
  * „Dovedește vizita” din formularul de review (pondere ×1,3):
  * - check-in GPS la local: coordonatele se folosesc doar pentru distanță; se salvează ziua (GDPR).
- *   În demo (DEMO_VISIT_GPS ≠ "off") locația e simulată, ca prezentarea să meargă de pe laptop.
+ *   Doar cu DEMO_VISIT_GPS=on locația e simulată (prezentarea de pe laptop); implicit cere GPS real.
  * - poza bonului: ajunge în /admin; după decizie poza se șterge.
  */
 import { revalidatePath } from 'next/cache';
-import { visits } from '@tftd/api';
+import { completeThemedTour, visits } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { errorMessage, getUserId } from '@/lib/server/session';
 import type { Result } from './user';
 
 const hasDb = () => !!process.env.DATABASE_URL;
 const OFFLINE = { ok: false as const, offline: true, error: 'Baza de date nu e disponibilă.' };
-const demoGps = () => process.env.DEMO_VISIT_GPS !== 'off';
+const demoGps = () => process.env.DEMO_VISIT_GPS === 'on';
 
 /**
  * Fără `loc` și în afara demo-ului întoarce `needLocation`, iar clientul cere locația telefonului.
@@ -38,6 +38,27 @@ export async function checkInAtVenue(
       message: simulated
         ? 'Check-in la local (mod demo: locația e simulată).'
         : `Check-in la local (ești la ${r.distanceM} m). Păstrăm doar ziua, nu locația.`,
+    };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** Ștampila turului tematic: serverul verifică check-in-ul la fiecare oprire (Tasting Tour → „Finalizează turul”). */
+export async function finishThemedTour(tourSlug: string, venueIds: string[]): Promise<Result<{ message: string; awarded: boolean }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să primești ștampila turului.' };
+  if (typeof tourSlug !== 'string' || !Array.isArray(venueIds) || venueIds.length > 3 || !venueIds.every((id) => typeof id === 'string')) {
+    return { ok: false, error: 'Turul nu e valid.' };
+  }
+  try {
+    const r = await completeThemedTour(getDb(), userId, tourSlug, venueIds);
+    revalidatePath('/cont');
+    return {
+      ok: true,
+      awarded: r.awarded,
+      message: r.awarded ? `Ai primit ștampila „${r.tourName}”. O găsești în profil.` : `Ai deja ștampila „${r.tourName}”.`,
     };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };

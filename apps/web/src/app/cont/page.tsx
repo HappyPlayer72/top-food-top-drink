@@ -7,6 +7,7 @@ import { myQuickVotes, userProfile } from '@tftd/api';
 import { users, venues } from '@tftd/db';
 import { NOISE_LEVELS } from '@tftd/scoring/features';
 import { LocalnicBadge } from '@/components/BrandPrimitives';
+import { ProfileBadges } from '@/components/ProfileBadges';
 import { AccountActions, PreferencesSection, SavedVenues, SocialAndTeamSection, VerificationSection } from '@/components/account/AccountClient';
 import { HeroArt } from '@/components/owner/Doodles';
 import { ThemeToggle } from '@/components/owner/ThemeToggle';
@@ -131,6 +132,9 @@ export default async function AccountPage() {
                 { value: voteRows.length, label: 'localuri votate' },
               ]}
             />
+            <div className="mt-5 text-o-fg">
+              <ProfileBadges tourBadges={profile.tourBadges} categoryBadges={profile.categoryBadges} mutedClass="text-o-muted" />
+            </div>
             <div className="mt-5">
               {isLocal ? (
                 <p className="text-[15px] text-o-fg">

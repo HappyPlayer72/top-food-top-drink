@@ -2,17 +2,23 @@
 
 import { HonestValue } from '../BrandPrimitives';
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, ArrowLeft, ArrowRight, Bike, Car, Map as MapIcon, Clock, Footprints, LocateFixed, MapPin, Minus, Navigation, Plus, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Bike, Car, Flag, Map as MapIcon, Clock, Footprints, LocateFixed, MapPin, Minus, Navigation, Plus, Sparkles } from 'lucide-react';
 import { Coordinates, Restaurant, Vertical } from '../../types';
-import { distance, explainNoTour, generateBestEffortTour, generateTasteTour, googleMapsDirectionsUrl, isOpenAt, parseTasteRequest, STAY_MINUTES, TASTE_CATEGORIES, tourTimeline, type TasteCategory } from './tasteTourLogic';
+import { distance, explainNoTour, generateBestEffortTour, generateTasteTour, googleMapsDirectionsUrl, isOpenAt, parseTasteRequest, STAY_MINUTES, TASTE_CATEGORIES, tourTimeline, type TasteCategory, type TasteTourStop } from './tasteTourLogic';
 import { getVenueWeeklyHours } from '../../data/venueExtras';
 import { getTasteTourGoogleData } from '../../app/actions/taste-tour';
 import { StartPointPicker } from './StartPointPicker';
+import { THEMED_TOURS, themedTourVenues, type ThemedTour } from '@tftd/api/tours';
+import { clearLiveTour, LiveTour, loadLiveTour, type SavedLiveTour } from './LiveTour';
+import { TourArt } from './TourArt';
 
 interface TasteTourProps {
   vertical: Vertical;
   restaurants: Restaurant[];
   onSelectRestaurant: (restaurant: Restaurant) => void;
+  /** Cont + backend: check-in, review-uri și ștampila se salvează doar atunci. */
+  signedIn: boolean;
+  onRequireLogin: () => void;
 }
 
 type StartPoint = { label: string; coordinates: Coordinates };
@@ -40,8 +46,25 @@ const MAP_PICK = 'Punct ales pe hartă';
 const formatAccuracy = (meters: number) => meters >= 1000 ? `~${Math.round(meters / 1000)} km` : `~${Math.round(meters)} m`;
 const clock = (date: Date) => date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 
-export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onSelectRestaurant }) => {
+export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onSelectRestaurant, signedIn, onRequireLogin }) => {
   const isDrink = vertical === 'drink';
+  // Ecranul de start (tururi tematice) → wizard / rezultat → turul pe viu.
+  const [started, setStarted] = useState(false);
+  const [themed, setThemed] = useState<ThemedTour | null>(null);
+  const [live, setLive] = useState(false);
+  // Tur pornit și salvat în browser (citit după hidratare: serverul nu vede localStorage).
+  const [resume, setResume] = useState<{ saved: SavedLiveTour; stops: TasteTourStop[] } | null>(null);
+  const [liveInitial, setLiveInitial] = useState<SavedLiveTour | null>(null);
+  useEffect(() => {
+    const saved = loadLiveTour();
+    if (!saved) return;
+    const byId = new Map(restaurants.map((restaurant) => [restaurant.id, restaurant]));
+    const stops = saved.stops.flatMap(({ restaurantId, item, category }) => {
+      const restaurant = byId.get(restaurantId);
+      return restaurant ? [{ restaurant, item, category }] : [];
+    });
+    if (stops.length === saved.stops.length) setResume({ saved, stops });
+  }, [restaurants]);
   const [step, setStep] = useState(0);
   // Pasul 1
   const [categories, setCategories] = useState<TasteCategory[]>([]);
@@ -119,13 +142,15 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
   ][step];
 
   const toggleCategory = (id: TasteCategory) => {
+    // Alte categorii = nu mai e turul tematic (ștampila e doar pentru tururile gata făcute).
+    setThemed(null);
     setCategories((current) => current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]);
   };
 
-  const departureTime = () => {
+  const departureTime = (whenValue = when, timeValue = time) => {
     const date = new Date();
-    if (when === 'later') {
-      const [hours, minutes] = time.split(':').map(Number);
+    if (whenValue === 'later') {
+      const [hours, minutes] = timeValue.split(':').map(Number);
       date.setHours(hours, minutes, 0, 0);
       // O oră deja trecută înseamnă mâine.
       if (date.getTime() < Date.now() - 60_000) date.setDate(date.getDate() + 1);
@@ -163,23 +188,73 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
     );
   };
 
-  const createTour = () => {
-    if (!start || !budgetValid) return;
-    const leaveAt = departureTime();
+  const createTour = ({ categories: wanted, excluded: avoid, budgetRon, stops, leaveAt, preset } = { categories: chosen, excluded, budgetRon: budgetValue, stops: stopCount, leaveAt: departureTime(), preset: themed }) => {
+    if (!start || !(budgetRon > 0)) return;
+    // Turul tematic merge doar prin localurile lui: aceleași liste după care serverul dă ștampila.
+    const pool = preset ? themedTourVenues(preset) : null;
+    const candidates = pool ? restaurants.filter((restaurant) => pool.has(restaurant.slug)) : restaurants;
     // Ora aproximativă la care ajungi la ultima oprire (opririle de dinainte + ~15 min de drum).
-    const lastArrival = new Date(leaveAt.getTime() + ((stopCount - 1) * STAY_MINUTES + 15) * 60_000);
+    const lastArrival = new Date(leaveAt.getTime() + ((stops - 1) * STAY_MINUTES + 15) * 60_000);
     // shortcut: localul trebuie să fie deschis la plecare sau la ultima sosire; ora exactă se verifică în traseu (avertisment pe oprire).
-    const open = restaurants.filter((restaurant) => {
+    const open = candidates.filter((restaurant) => {
       const week = getVenueWeeklyHours(restaurant);
       return isOpenAt(week, leaveAt) || isOpenAt(week, lastArrival);
     });
-    const input = { categories: chosen, excluded, budgetRon: budgetValue, stopCount, start: start.coordinates };
+    const input = { categories: wanted, excluded: avoid, budgetRon, stopCount: stops, start: start.coordinates };
     const result = generateBestEffortTour({ ...input, restaurants: open });
     setTour(result?.tour ?? null);
     setDroppedCategories(result?.droppedCategories ?? []);
-    setFailure(result ? null : explainNoTour({ ...input, allRestaurants: restaurants, openRestaurants: open, label: labelOf }));
+    setFailure(result ? null : explainNoTour({ ...input, allRestaurants: candidates, openRestaurants: open, label: labelOf }));
     setDeparture(leaveAt);
     setStep(STEPS.length);
+  };
+
+  /** Tur tematic: completează alegerile și sare la „De unde pleci” (sau direct la traseu, dacă punctul e ales). */
+  const pickThemed = (preset: ThemedTour) => {
+    const presetCategories = preset.categories as TasteCategory[];
+    setThemed(preset);
+    setCategories(presetCategories);
+    setNote('');
+    setBudget(String(preset.budgetRon));
+    setWhen('later');
+    setTime(preset.time);
+    setStopCount(preset.stops);
+    setStarted(true);
+    // Cu mașina trec prin pasul 4, unde sunt regulile despre alcool la volan.
+    if (start && travel !== 'car') createTour({ categories: presetCategories, excluded: [], budgetRon: preset.budgetRon, stops: preset.stops, leaveAt: departureTime('later', preset.time), preset });
+    else setStep(STEPS.length - 1);
+  };
+
+  const resumeTour = () => {
+    if (!resume) return;
+    const { saved, stops } = resume;
+    setTour({ stops, totalRon: stops.reduce((sum, stop) => sum + stop.item.priceRon, 0), approximateDistanceKm: 0 });
+    setDroppedCategories([]);
+    setThemed(THEMED_TOURS.find((preset) => preset.slug === saved.themedSlug) ?? null);
+    setLiveInitial(saved);
+    setResume(null);
+    setStarted(true);
+    setStep(STEPS.length);
+    setLive(true);
+  };
+
+  const startLive = () => {
+    setLiveInitial(null);
+    setResume(null);
+    setLive(true);
+  };
+
+  const exitLive = () => {
+    setLive(false);
+    setResume(null);
+    // Un tur reluat nu are punct de plecare și ore: înapoi la lista de tururi.
+    if (!start) { setStarted(false); setTour(null); }
+  };
+
+  const buildOwn = () => {
+    setThemed(null);
+    setStarted(true);
+    setStep(0);
   };
 
   const next = () => {
@@ -194,6 +269,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
   const mapsLink = tour && start ? googleMapsDirectionsUrl(start.coordinates, tour.stops, mode.mapsMode) : null;
 
   const showingResult = step === STEPS.length;
+  const ui = { panel, input, primary, muted, border, selected };
 
   return (
     <div className="space-y-5">
@@ -202,10 +278,47 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
           <Sparkles className={`w-4 h-4 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`} />
           <h1 className="font-display text-[38px] sm:text-[48px] leading-[0.94]">Tasting Tour</h1>
         </div>
-        <p className={`text-[13px] sm:text-[14px] ${muted}`}>Răspunde la 4 întrebări scurte și îți facem un traseu prin localuri, cu ore și drum.</p>
+        <p className={`text-[13px] sm:text-[14px] ${muted}`}>{started ? 'Răspunde la 4 întrebări scurte și îți facem un traseu prin localuri, cu ore și drum.' : 'Alege un tur gata făcut sau construiește-l pe al tău.'}</p>
       </div>
 
-      {!showingResult && <div className={`rounded-[6px] border p-4 sm:p-5 space-y-5 ${panel}`}>
+      {!started && <div className="space-y-3">
+        {resume && <div role="status" className={`flex flex-col gap-3 rounded-[6px] border-2 p-4 sm:flex-row sm:items-center sm:justify-between ${panel} ${isDrink ? 'border-[#F2A33A]' : 'border-[#B3261E]'}`}>
+          <p className="text-[13px]">
+            <strong className="block text-[15px]">Ai un tur început{resume.saved.themedSlug ? `: ${THEMED_TOURS.find((preset) => preset.slug === resume.saved.themedSlug)?.name ?? ''}` : ''}</strong>
+            <span className={muted}>{resume.stops.map(({ restaurant }) => restaurant.name).join(' → ')} · {resume.saved.finished ? 'terminat, mai ai review-urile' : `oprirea ${resume.saved.current + 1} din ${resume.stops.length}`}</span>
+          </p>
+          <span className="flex shrink-0 gap-2">
+            <button type="button" onClick={() => { clearLiveTour(); setResume(null); }} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Renunță</button>
+            <button type="button" onClick={resumeTour} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] px-4 py-2 text-[12px] font-bold ${primary}`}>Continuă turul<ArrowRight className="h-3.5 w-3.5" /></button>
+          </span>
+        </div>}
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {THEMED_TOURS.map((preset) => <li key={preset.slug}>
+            <button type="button" onClick={() => pickThemed(preset)} className={`btn-press flex h-full w-full items-start gap-3 rounded-[6px] border p-4 text-left ${panel}`}>
+              <TourArt slug={preset.slug} className="h-20 w-20 shrink-0" />
+              <span className="min-w-0 space-y-1.5">
+                <span className="block font-display text-[24px] leading-tight">{preset.name}</span>
+                <span className={`block text-[13px] ${muted}`}>{preset.blurb}</span>
+                <span className={`block text-[12px] font-semibold ${muted}`}>{preset.stops} opriri · de la {preset.time} · până la {preset.budgetRon} lei de persoană</span>
+                <span className={`block text-[12px] ${muted}`}>Ștampilă în profil, cu check-in la fiecare oprire.</span>
+              </span>
+            </button>
+          </li>)}
+          <li>
+            <button type="button" onClick={buildOwn} className={`btn-press flex h-full w-full items-center gap-3 rounded-[6px] p-4 text-left ${primary}`}>
+              <TourArt slug="construieste" ink={isDrink ? '#F2A33A' : '#B3261E'} className="h-20 w-20 shrink-0" />
+              <span className="min-w-0 space-y-1.5">
+                <span className="block font-display text-[24px] leading-tight">Construiește-ți turul</span>
+                <span className="block text-[13px] opacity-90">Alegi tu ce guști, cu cine, când și de unde pleci.</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </div>}
+
+      {started && live && tour && <LiveTour stops={tour.stops} themed={themed && tour.stops.length === themed.stops && droppedCategories.length === 0 ? themed : null} signedIn={signedIn} onRequireLogin={onRequireLogin} onExit={exitLive} ui={ui} initial={liveInitial} />}
+
+      {started && !showingResult && <div className={`rounded-[6px] border p-4 sm:p-5 space-y-5 ${panel}`}>
         <div className="space-y-2">
           <p className={`text-[12px] font-bold uppercase tracking-wide ${muted}`}>Pasul {step + 1} din {STEPS.length}</p>
           <div className="flex gap-1.5" aria-hidden="true">
@@ -230,7 +343,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
           </fieldset>
           <div className="space-y-1.5">
             <label htmlFor="taste-note" className="block text-[13px] font-bold">Altceva? <span className={`font-normal ${muted}`}>(opțional)</span></label>
-            <textarea id="taste-note" maxLength={300} rows={2} value={note} onChange={(event) => setNote(event.target.value)}
+            <textarea id="taste-note" maxLength={300} rows={2} value={note} onChange={(event) => { setThemed(null); setNote(event.target.value); }}
               placeholder="De exemplu: fără pizza, ceva dulce la final"
               className={`w-full rounded-[4px] border px-3 py-2 text-[14px] ${input}`} />
             {excluded.length > 0 && <p className={`text-[12px] ${muted}`}>Evităm: {excluded.map(labelOf).join(', ')}.</p>}
@@ -322,20 +435,23 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
         <div className="flex items-center justify-between gap-3 pt-1">
           {step > 0
             ? <button type="button" onClick={() => setStep(step - 1)} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><ArrowLeft className="h-4 w-4" />Înapoi</button>
-            : <span />}
+            : <button type="button" onClick={() => setStarted(false)} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><ArrowLeft className="h-4 w-4" />Toate tururile</button>}
           <button type="button" onClick={next} disabled={!canContinue} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] px-5 py-2.5 text-[13px] font-bold disabled:opacity-45 ${primary}`}>
             {step === STEPS.length - 1 ? <><Sparkles className="h-4 w-4" />Creează traseul</> : <>Continuă<ArrowRight className="h-4 w-4" /></>}
           </button>
         </div>
       </div>}
 
-      {showingResult && <div className="space-y-4 stagger-fade-in" aria-live="polite">
+      {started && showingResult && !live && <div className="space-y-4 stagger-fade-in" aria-live="polite">
         <div className={`rounded-[6px] border p-4 flex flex-wrap items-center justify-between gap-3 ${panel}`}>
           <p className="text-[13px]">
-            <strong>{chosen.map(labelOf).join(' → ')}</strong>
+            <strong>{themed ? `${themed.name}: ` : ''}{chosen.map(labelOf).join(' → ')}</strong>
             <span className={muted}> · {people} {people === 1 ? 'persoană' : 'persoane'}{company ? ` · ${company.toLowerCase()}` : ''} · {departure ? clock(departure) : ''} · {mode.label.toLowerCase()} din {start?.label}</span>
           </p>
-          <button type="button" onClick={() => setStep(0)} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Modifică alegerile</button>
+          <span className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setStep(themed ? STEPS.length - 1 : 0)} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Modifică alegerile</button>
+            <button type="button" onClick={() => { setStarted(false); setStep(0); }} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Toate tururile</button>
+          </span>
         </div>
 
         {failure && !tour && <p role="status" className={`rounded-[6px] border p-4 text-[13px] ${panel}`}>{failure}</p>}
@@ -390,7 +506,11 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
               <span className="block text-[12px] font-normal text-[#5E5E5E] whitespace-nowrap">{googleData.route.attribution}</span>
             </div>}
             <p className={`text-[12px] ${muted}`}>Orele și prețurile sunt orientative. Verifică ruta și programul localurilor înainte de plecare.</p>
-            {mapsLink && <a href={mapsLink} target="_blank" rel="noreferrer" className={`btn-press inline-flex items-center gap-2 rounded-[4px] px-4 py-2.5 text-[13px] font-bold ${primary}`}><Navigation className="w-4 h-4" />Deschide traseul în Google Maps</a>}
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={startLive} className={`btn-press inline-flex items-center gap-2 rounded-[4px] px-4 py-2.5 text-[13px] font-bold ${primary}`}><Flag className="w-4 h-4" />Pornește turul</button>
+              {mapsLink && <a href={mapsLink} target="_blank" rel="noreferrer" className={`btn-press inline-flex items-center gap-2 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><Navigation className="w-4 h-4" />Deschide traseul în Google Maps</a>}
+            </div>
+            {themed && (tour.stops.length < themed.stops || droppedCategories.length > 0) && <p className={`text-[12px] ${muted}`}>Traseul e mai scurt decât turul „{themed.name}”, așa că nu primești ștampila pentru el. Încearcă altă oră.</p>}
           </div>
         </>}
       </div>}

@@ -235,6 +235,21 @@ export const checkins = pgTable(
   (t) => [uniqueIndex().on(t.userId, t.citySlug, t.day, t.venueId)],
 );
 
+/**
+ * Insigna („ștampila”) unui tur tematic din Tasting Tour, o dată per tur. Se acordă doar pe server,
+ * cu check-in la fiecare oprire (`completeThemedTour`). Slug-urile sunt în packages/api/src/tours.ts.
+ */
+export const tourCompletions = pgTable(
+  "tour_completions",
+  {
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    tourSlug: text().notNull(),
+    completedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    venueIds: uuid().array().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.tourSlug] })],
+);
+
 export const localVerifications = pgTable("local_verifications", {
   id: uuid().primaryKey().defaultRandom(),
   userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),

@@ -26,6 +26,8 @@ export interface ScarnaviiViewProps {
   allRestaurants: Restaurant[];
   onBack: () => void;
   onSelectRestaurant: (r: Restaurant) => void;
+  signedIn: boolean;
+  onRequireLogin: () => void;
 }
 
 type ScarnaviiModeId =
@@ -125,6 +127,8 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
   allRestaurants,
   onBack,
   onSelectRestaurant,
+  signedIn,
+  onRequireLogin,
 }) => {
   const isDrink = vertical === 'drink';
 
@@ -287,7 +291,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
 
         {/* Active Interactive Mode OR Scârnăvii List */}
         {activeMode === 'taste-tour' ? (
-          <TasteTour vertical={vertical} restaurants={allRestaurants} onSelectRestaurant={onSelectRestaurant} />
+          <TasteTour vertical={vertical} restaurants={allRestaurants} onSelectRestaurant={onSelectRestaurant} signedIn={signedIn} onRequireLogin={onRequireLogin} />
         ) : activeMode === 'preferences' ? (
           <PreferenceRecommender
             vertical={vertical}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Restaurant } from '../../types';
-import { explainNoTour, generateBestEffortTour, generateTasteTour, googleMapsDirectionsUrl, isOpenAt, parseTasteRequest, tourTimeline } from './tasteTourLogic';
+import { explainNoTour, generateBestEffortTour, generateTasteTour, googleMapsDirectionsUrl, isOpenAt, parseTasteRequest, TASTE_CATEGORIES, tourTimeline } from './tasteTourLogic';
+import { THEMED_TOURS } from '@tftd/api/tours';
 import { INITIAL_RESTAURANTS, DRINK_VENUES } from '../../data/restaurants';
 
 const venue = (id: string, name: string, item: string, priceRon: number, lng: number): Restaurant => ({
@@ -11,6 +12,28 @@ const restaurants = [venue('p', 'Pizza', 'Pizza margherita', 30, 21.22), venue('
 const start = { lat: 45.75, lng: 21.21 };
 
 describe('Tasting Tour', () => {
+  it('ia categoria din numele felului, iar titlul grupei doar dacă e neechivoc', () => {
+    const menu = (id: string, title: string, name: string, lng: number) => ({ ...venue(id, id, '', 0, lng), whatToOrder: [], menuCategories: [{ title, items: [{ name, priceRon: 10 }] }] } as unknown as Restaurant);
+    const pool = [
+      menu('focaccia', 'Supe zilnice', 'Focaccia caldă de lângă supă', 21.211),
+      menu('cannoli', 'Pizza al taglio & Desert', 'Cannoli siciliani', 21.212),
+      menu('flat', 'Dulce & Cafea', 'Flat White de specialitate', 21.213),
+      menu('mate', 'Fără alcool & Vinuri', 'Club-Mate rece', 21.214),
+      menu('margherita', 'Pizza', 'Margherita', 21.215),
+      menu('ciorba', 'Preparate', 'Ciorbă de burtă', 21.216),
+      menu('feteasca', 'Vinuri la pahar', 'Fetească Neagră', 21.217),
+    ];
+    const ids = (category: Parameters<typeof generateTasteTour>[0]['categories'][number]) =>
+      pool.filter(r => generateTasteTour({ restaurants: [r], categories: [category], excluded: [], budgetRon: 100, stopCount: 1, start })).map(r => r.id);
+    expect(ids('soup')).toEqual(['ciorba']);
+    expect(ids('pizza')).toEqual(['margherita']);
+    expect(ids('dessert')).toEqual(['cannoli']);
+    expect(ids('coffee')).toEqual(['flat']);
+    expect(ids('wine')).toEqual(['feteasca']);
+  });
+  it('tururile tematice folosesc doar categorii din Tasting Tour', () => {
+    for (const tour of THEMED_TOURS) expect(tour.categories.filter(c => !TASTE_CATEGORIES.some(entry => entry.id === c))).toEqual([]);
+  });
   it('poate genera exemplul pizza și bere cu datele demonstrative', () => {
     const parsed = parseTasteRequest('pizza și bere');
     const result = generateTasteTour({ restaurants: [...INITIAL_RESTAURANTS, ...DRINK_VENUES], categories: parsed.categories, excluded: parsed.excluded, budgetRon: 150, stopCount: 2, start });

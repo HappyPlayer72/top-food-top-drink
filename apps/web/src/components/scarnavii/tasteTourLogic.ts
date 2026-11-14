@@ -5,10 +5,10 @@ const categoryTerms = {
   pizza: ['pizza', 'pizzerie'],
   burger: ['burger', 'hamburger'],
   soup: ['ciorba', 'supa'],
-  dessert: ['desert', 'dulce', 'prajitura', 'tort', 'inghetata', 'clatite', 'papanasi', 'cheesecake', 'tiramisu'],
-  coffee: ['cafea', 'coffee', 'espresso', 'cappuccino', 'latte'],
+  dessert: ['desert', 'deserturi', 'deserturile', 'dulce', 'prajitura', 'tort', 'inghetata', 'clatite', 'papanasi', 'cheesecake', 'tiramisu', 'cannoli', 'strudel'],
+  coffee: ['cafea', 'coffee', 'espresso', 'cappuccino', 'latte', 'flat white'],
   beer: ['bere', 'beer'],
-  cocktail: ['cocktail', 'cocktailuri'],
+  cocktail: ['cocktail', 'cocktailuri', 'negroni', 'gin tonic', 'spritz'],
   wine: ['vin', 'vinuri', 'wine'],
   romanian: ['mancare romaneasca', 'romanesc', 'romaneasca', 'sarmale', 'mici'],
 } as const;
@@ -66,16 +66,31 @@ function validCoordinates(point: Coordinates | undefined): point is Coordinates 
   return !!point && Number.isFinite(point.lat) && Number.isFinite(point.lng) && Math.abs(point.lat) <= 90 && Math.abs(point.lng) <= 180 && (point.lat !== 0 || point.lng !== 0);
 }
 
+const categoriesIn = (text: string) => (Object.keys(categoryTerms) as TasteCategory[]).filter(category => categoryTerms[category].some(term => containsTerm(text, term)));
+
+/**
+ * Felul e ce spune începutul numelui („Focaccia caldă de lângă supă” nu e supă). Titlul grupei contează
+ * doar pentru un nume fără niciun termen („Margherita” la „Pizza”) și doar dacă fiecare parte a lui
+ * („Dulce & Cafea”) spune același lucru.
+ */
+function itemCategories(name: string, groupTitle: string): TasteCategory[] {
+  const normalized = normalize(name);
+  if (categoriesIn(normalized).length) return categoriesIn(normalized.split(/ (?:cu|de|la|pe) /)[0]);
+  const parts = groupTitle.split(/&|,|\+/).map(part => categoriesIn(normalize(part)));
+  return parts.length && parts.every(found => found.length === 1 && found[0] === parts[0][0]) ? parts[0] : [];
+}
+
 /** Cel mai ieftin preparat din categorie la un local eligibil (coordonate valide, fără capcane pentru turiști). */
 function cheapestMatch(restaurant: Restaurant, category: TasteCategory, excluded: TasteCategory[]): { name: string; priceRon: number } | null {
   if (!validCoordinates(restaurant.coordinates) || restaurant.touristTrapIndex >= 60) return null;
   const items = [
-    ...(restaurant.whatToOrder ?? []).map(item => ({ item, context: item.name })),
-    ...getVenueMenu(restaurant).flatMap(group => group.items.map(item => ({ item, context: `${group.title} ${item.name}` }))),
+    ...(restaurant.whatToOrder ?? []).map(item => ({ item, title: '' })),
+    ...getVenueMenu(restaurant).flatMap(group => group.items.map(item => ({ item, title: group.title }))),
   ];
-  const matching = items.filter(({ item, context }) => {
-    const normalized = normalize(context);
-    return !normalized.includes('de evitat') && Number.isFinite(item.priceRon) && item.priceRon > 0 && categoryTerms[category].some(term => containsTerm(normalized, term)) && !excluded.some(excludedCategory => categoryTerms[excludedCategory].some(term => containsTerm(normalized, term)));
+  const matching = items.filter(({ item, title }) => {
+    if (!Number.isFinite(item.priceRon) || item.priceRon <= 0 || normalize(`${title} ${item.name}`).includes('de evitat')) return false;
+    const kinds = itemCategories(item.name, title);
+    return kinds.includes(category) && !kinds.some(kind => excluded.includes(kind));
   }).sort((a, b) => a.item.priceRon - b.item.priceRon || a.item.name.localeCompare(b.item.name));
   return matching[0] ? { name: matching[0].item.name, priceRon: matching[0].item.priceRon } : null;
 }
