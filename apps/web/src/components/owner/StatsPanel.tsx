@@ -21,12 +21,13 @@ const monthName = (ym: string) =>
   new Intl.DateTimeFormat('ro-RO', { month: 'long', year: 'numeric' }).format(new Date(`${ym}-01T12:00:00Z`));
 
 export function StatsPanel({ venueId, venueName, stats, vertical, afterScore }: { venueId: string; venueName: string; stats: Stats; vertical: 'food' | 'drink'; afterScore?: React.ReactNode }) {
-  const { scores, byMonth, aspects } = stats;
+  const { scores, byMonth, aspects, views, scoreHistory } = stats;
   const isDrink = vertical === 'drink';
   const trap = scores.touristTrapIndex ?? 0;
   const months = [...new Set(byMonth.map((r) => r.month))];
   const cell = (month: string, type: 'local' | 'tourist') => byMonth.find((r) => r.month === month && r.authorType === type);
   const sortedAspects = Object.entries(aspects).sort((a, b) => a[1] - b[1]);
+  const maxDailyViews = Math.max(1, ...views.daily.map((d) => d.views));
 
   return (
     <div className="flex flex-col gap-12">
@@ -76,6 +77,59 @@ export function StatsPanel({ venueId, venueName, stats, vertical, afterScore }: 
       </section>
 
       {afterScore}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <section aria-labelledby="vizualizari-titlu" className={cardClass}>
+          <SubHeading id="vizualizari-titlu" note="De câte ori a fost deschis profilul localului în ultimele 30 de zile.">
+            Vizualizări pagină
+          </SubHeading>
+          <div className="flex flex-wrap items-baseline gap-6">
+            <div>
+              <span className="font-display block text-[42px] leading-none tabular-nums">{views.last7d}</span>
+              <span className="mt-1 block text-[13px] text-o-muted">în ultimele 7 zile</span>
+            </div>
+            <div>
+              <span className="font-display block text-[42px] leading-none tabular-nums">{views.total30d}</span>
+              <span className="mt-1 block text-[13px] text-o-muted">în ultimele 30 de zile</span>
+            </div>
+          </div>
+          {views.daily.length ? (
+            <div className="mt-5 flex h-20 items-end gap-1 border-b border-o-line pb-1" aria-label="Vizualizări pe zile">
+              {views.daily.slice(-14).map((d) => (
+                <div key={d.day} className="group flex flex-1 flex-col items-center gap-1" title={`${d.day}: ${d.views} vizualizări`}>
+                  <div
+                    className="w-full rounded-t-[2px] bg-o-fg/80 transition-all"
+                    style={{ height: `${Math.max(8, Math.round((d.views / maxDailyViews) * 68))}px` }}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-[14px] text-o-muted">Încă nu s-au înregistrat vizualizări pe zile.</p>
+          )}
+        </section>
+
+        <section aria-labelledby="evolutie-titlu" className={cardClass}>
+          <SubHeading id="evolutie-titlu" note="Cum a evoluat Scorul Onest după fiecare recalculare zilnică.">
+            Evoluția scorului (90 zile)
+          </SubHeading>
+          {scoreHistory.length >= 2 ? (
+            <>
+              <ScoreSparkline points={scoreHistory} />
+              <div className="mt-3 flex flex-wrap justify-between text-[13px] text-o-muted tabular-nums">
+                <span>Prima zi: {scoreHistory[0]!.day} ({formatScore(scoreHistory[0]!.score)})</span>
+                <span>Ultima zi: {scoreHistory[scoreHistory.length - 1]!.day} ({formatScore(scoreHistory[scoreHistory.length - 1]!.score)})</span>
+              </div>
+            </>
+          ) : scoreHistory.length === 1 ? (
+            <p className="text-[15px] text-o-muted">
+              Un singur punct înregistrat până acum: <strong>{formatScore(scoreHistory[0]!.score)}</strong> la {scoreHistory[0]!.day}. Revin-o după următoarele review-uri pentru grafic.
+            </p>
+          ) : (
+            <p className="text-[15px] text-o-muted">Istoricul zilnic apare automat pe măsură ce scorul este recalculat.</p>
+          )}
+        </section>
+      </div>
 
       {trap >= 60 ? (
         <section aria-label="Avertizare: capcană turistică" className="flex flex-col gap-4">
@@ -170,5 +224,31 @@ function AspectRow({ name, value }: { name: string; value: number }) {
         {verdict} ({value > 0 ? '+' : ''}{formatScore(value)})
       </span>
     </li>
+  );
+}
+
+function ScoreSparkline({ points }: { points: { day: string; score: number; reviewCount: number }[] }) {
+  const width = 320;
+  const height = 76;
+  const pad = 8;
+  const scores = points.map((p) => p.score);
+  const min = Math.min(...scores, 5);
+  const max = Math.max(...scores, 10);
+  const range = Math.max(0.5, max - min);
+  const coords = points.map((p, idx) => {
+    const x = pad + (idx / Math.max(1, points.length - 1)) * (width - pad * 2);
+    const y = pad + (1 - (p.score - min) / range) * (height - pad * 2);
+    return { x, y, ...p };
+  });
+  const d = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-20 w-full overflow-visible" role="img" aria-label="Grafic evoluție scor onest">
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {coords.map((c) => (
+        <circle key={c.day} cx={c.x} cy={c.y} r="3.2" fill="currentColor">
+          <title>{`${c.day}: ${formatScore(c.score)} (${c.reviewCount} review-uri)`}</title>
+        </circle>
+      ))}
+    </svg>
   );
 }

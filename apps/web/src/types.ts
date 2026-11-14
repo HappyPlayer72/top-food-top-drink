@@ -120,15 +120,66 @@ export const USER_PREFERENCE_OPTIONS: UserPreferenceOption[] = [
   },
 ];
 
+export interface UserSocialLink {
+  platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube';
+  url: string;
+  verified: boolean;
+  followers: number | null;
+}
+
+export interface UserEmployment {
+  employeeId: string;
+  venueId: string;
+  venueName: string;
+  venueSlug: string;
+  vertical?: 'food' | 'drink';
+  role: string;
+  firstName: string;
+  accepted: boolean;
+}
+
 export interface UserAccount {
   id: string;
+  username?: string;
   name: string;
   email?: string;
   role: 'verified-local' | 'tourist';
+  isInfluencer?: boolean;
+  followers?: number | null;
   neighborhood?: string;
   weightMultiplier: number;
   description: string;
   preferences?: UserPreferenceKey[];
+  savedVenueSlugs?: string[];
+  socialLinks?: UserSocialLink[];
+  employments?: UserEmployment[];
+}
+
+export interface AdBanner {
+  id: string;
+  advertiser: string;
+  creativeUrl: string;
+  linkUrl: string;
+  placement: string;
+}
+
+export interface MonthlyAwards {
+  month: string | null;
+  months: string[];
+  revelation: { venueId: string; name?: string; slug?: string; neighborhood?: string; from: number; to: number } | null;
+  employee: { employeeId: string; venueId: string; mentions: number; firstName: string; venue: string; venueSlug?: string } | null;
+  local: { userId: string; reviews: number; username?: string; displayName: string; neighborhood: string | null } | null;
+  influencer: { userId: string; reviews: number; followers: number | null; username?: string; displayName: string } | null;
+}
+
+export interface VenueVideo {
+  url: string;
+  platform: string;
+  dishes: string[];
+  prices: { item: string; priceLei: number }[];
+  isPaid: boolean;
+  adSignal: 'marcat_reclama' | 'posibil_reclama' | 'organic';
+  sentiment: 'positive' | 'neutral' | 'negative';
 }
 
 export interface SignatureDish {
@@ -229,6 +280,8 @@ export interface Review {
   preferenceAnswers?: Partial<Record<UserPreferenceKey, boolean>>;
   /** Owner user ID when authored by a signed-in/local user */
   authorId?: string;
+  /** Username-ul autorului pentru profil public `/u/{username}` */
+  authorUsername?: string;
 }
 
 export interface OwnerPost {
@@ -277,10 +330,13 @@ export interface WeekendEvent {
   venueName: string;
   venueId: string;
   details: string;
+  neighborhood?: string;
+  address?: string;
 }
 
 export interface TopReviewer {
   id: string;
+  username?: string;
   initials: string;
   name: string;
   role: 'verified-local' | 'influencer';
@@ -317,6 +373,7 @@ export interface Restaurant {
   shortNeighborhood?: string;
   cuisine: string;
   shortCategory?: string;
+  categories?: string[];
   priceTier: PriceTier;
   avgMealPriceRon: number;
   categoryAvgPriceRon: number;
@@ -378,6 +435,7 @@ export interface Restaurant {
   kitchenStory?: KitchenStory;
   ownerPosts?: OwnerPost[];
   team?: TeamMember[];
+  videos?: VenueVideo[];
 }
 
 /**

@@ -1,4 +1,4 @@
-// Doar pentru server: datele pentru URL-ul propriu al unui local (/topfood/timisoara/{slug}).
+// Doar pentru server: datele pentru URL-urile publice SEO (localuri, categorii, clasament lunar).
 import type { Metadata } from 'next';
 import { venuePage } from '@tftd/api';
 import { getDb } from '../server/db';
@@ -7,6 +7,27 @@ import { DRINK_VENUES, INITIAL_RESTAURANTS } from '../../data/restaurants';
 const CITY = 'timisoara';
 const CITY_NAME = 'Timișoara';
 const fmt = (x: number | null | undefined) => (x == null ? null : x.toFixed(1).replace('.', ','));
+
+export const CATEGORY_LABELS: Record<'food' | 'drink', Record<string, string>> = {
+  food: {
+    romanesc: 'Românesc',
+    pizza: 'Pizza',
+    bistro: 'Bistro',
+    'street-food': 'Street food',
+    patiserie: 'Patiserie',
+    burger: 'Burger',
+    asiatic: 'Asiatic',
+    vegan: 'Vegan',
+  },
+  drink: {
+    pub: 'Pub',
+    club: 'Club',
+    'cocktail-bar': 'Cocktail bar',
+    terasa: 'Terasă',
+    'cafenea-de-seara': 'Cafenea de seară',
+    'muzica-live': 'Muzică live',
+  },
+};
 
 type VenueInfo = { name: string; honest: number | null; locals: number | null; trap: number | null; headline: string | null; photo: string | null };
 
@@ -50,6 +71,34 @@ export async function venueMetadata(vertical: 'food' | 'drink', slug: string): P
     title,
     description,
     alternates: { canonical: `/top${vertical}/${CITY}/${slug}` },
-    openGraph: { title, description, type: 'website', locale: 'ro_RO', ...(v.photo ? { images: [v.photo] } : {}) },
+    openGraph: { title, description, type: 'website', locale: 'ro_RO' },
+  };
+}
+
+export function categoryMetadata(vertical: 'food' | 'drink', category: string): Metadata {
+  const brand = vertical === 'drink' ? 'topdrink' : 'topfood';
+  const label = CATEGORY_LABELS[vertical][category] ?? category.replace(/-/g, ' ');
+  const noun = vertical === 'drink' ? 'Baruri și cluburi' : 'Restaurante';
+  const title = `${label} în ${CITY_NAME} — ${noun} pe gustate | ${brand}/${CITY}`;
+  const description = `Cele mai bine cotate localuri din categoria ${label} în ${CITY_NAME}, după Scorul Onest și votul localnicilor.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/top${vertical}/${CITY}/categorie/${category}` },
+    openGraph: { title, description, type: 'website', locale: 'ro_RO' },
+  };
+}
+
+export function monthlyMetadata(vertical: 'food' | 'drink', month?: string): Metadata {
+  const brand = vertical === 'drink' ? 'topdrink' : 'topfood';
+  const suffix = month ? ` · ${month}` : '';
+  const title = `Topul lunii${suffix} | ${brand}/${CITY}`;
+  const description = `Clasamentul lunar onest din ${CITY_NAME}${suffix}: podiumul localurilor, Revelația lunii, Localnicul, Influencerul și Angajatul lunii.`;
+  const canonical = month ? `/top${vertical}/${CITY}/top-luna/${month}` : `/top${vertical}/${CITY}/top-luna`;
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, type: 'website', locale: 'ro_RO' },
   };
 }

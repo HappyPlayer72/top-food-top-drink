@@ -3,16 +3,19 @@
  * Funcții pure, fără acces la DB, ca să poată fi testate și înțelese ușor.
  * Ce nu există încă în DB (poze, texte editoriale) se ia din `fallback` (datele statice), după slug.
  */
-import type { cityPage, leaderboardPage, topReviewers, venuePage, weekendEvents } from '@tftd/api';
+import type { cityPage, leaderboardPage, SocialAnalysis, topReviewers, venuePage, weekendEvents } from '@tftd/api';
 import type {
+  AdBanner,
   AspectScores,
   AuthorRole,
+  MonthlyAwards,
   Neighborhood,
   PriceTier,
   Restaurant,
   Review,
   TopReviewer,
   TrapTier,
+  VenueVideo,
   WeekendEvent,
 } from '../../types';
 
@@ -75,7 +78,7 @@ function relativeDate(d: Date, now: Date): string {
 const formatFollowers = (n: number | null | undefined) =>
   n == null ? undefined : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
 
-function reviewAuthor(r: ApiReview): { name: string; role: AuthorRole; neighborhood?: string; followers?: string } {
+function reviewAuthor(r: ApiReview): { name: string; username?: string; role: AuthorRole; neighborhood?: string; followers?: string } {
   if (r.author?.displayName) {
     const roles = r.author.roles ?? [];
     const role: AuthorRole = roles.includes('influencer')
@@ -85,7 +88,7 @@ function reviewAuthor(r: ApiReview): { name: string; role: AuthorRole; neighborh
         : r.authorType === 'tourist'
           ? 'tourist'
           : 'regular';
-    return { name: r.author.displayName, role, neighborhood: r.author.neighborhood ?? undefined, followers: formatFollowers(r.author.followers) };
+    return { name: r.author.displayName, username: r.author.username ?? undefined, role, neighborhood: r.author.neighborhood ?? undefined, followers: formatFollowers(r.author.followers) };
   }
   return { name: r.externalAuthor?.name ?? 'Anonim', role: r.authorType === 'tourist' ? 'tourist' : 'regular' };
 }
@@ -96,6 +99,7 @@ export function toReview(r: ApiReview, now: Date): Review {
   return {
     id: r.id,
     authorId: r.authorId ?? undefined,
+    authorUsername: a.username,
     authorName: a.name,
     authorRole: a.role,
     authorNeighborhood: a.neighborhood,
@@ -163,6 +167,7 @@ export function toRestaurant(
     shortNeighborhood: v.neighborhood ?? fb?.shortNeighborhood,
     cuisine: label(v.categories[0]) || fb?.cuisine || '',
     shortCategory: label(v.categories[0]) || fb?.shortCategory,
+    categories: v.categories.length ? v.categories : fb?.categories,
     priceTier: priceTier(avgMeal),
     avgMealPriceRon: avgMeal ?? fb?.avgMealPriceRon ?? 0,
     categoryAvgPriceRon: ctx.categoryAvgPriceRon ?? fb?.categoryAvgPriceRon ?? 0,
@@ -249,6 +254,50 @@ export function toRestaurant(
       isEmployeeOfMonth: i === 0 && t.mentionsThisMonth > 0 && t.mentionsThisMonth === Math.max(...p.team.map((x) => x.mentionsThisMonth)),
       monthLabel: 'angajatul lunii',
     })),
+    videos: p.videos.map((vid) => toVenueVideo(vid.url, vid.platform, vid.analysis as SocialAnalysis | null)),
+  };
+}
+
+/** Transformă analiza unui link social într-un card video pentru UI. */
+export function toVenueVideo(url: string, platform: string, a: SocialAnalysis | null): VenueVideo {
+  const isPaid = !!a?.isAd;
+  const hasExplicit = (a?.adSignals ?? []).some((s) => /#|reclam|sponsor|ad\b/i.test(s));
+  return {
+    url,
+    platform,
+    dishes: a?.dishes ?? [],
+    prices: a?.priceMentioned != null ? [{ item: 'Menționat în video', priceLei: a.priceMentioned }] : [],
+    isPaid,
+    adSignal: isPaid ? (hasExplicit ? 'marcat_reclama' : 'posibil_reclama') : 'organic',
+    sentiment: a?.sentiment == null ? 'neutral' : a.sentiment >= 6.5 ? 'positive' : a.sentiment < 5 ? 'negative' : 'neutral',
+  };
+}
+
+/** Transformă reclamele active ale orașului într-un format serializabil pentru UI. */
+export function toAdBanners(ads: CityPage['ads'] | undefined): AdBanner[] {
+  return (ads ?? []).map((a) => ({
+    id: a.id,
+    advertiser: a.advertiser,
+    creativeUrl: a.creativeUrl,
+    linkUrl: a.linkUrl,
+    placement: a.placement,
+  }));
+}
+
+/** Transformă premiile lunii din clasament. */
+export function toMonthlyAwards(lb: Leaderboard): MonthlyAwards {
+  return {
+    month: lb.month ?? null,
+    months: lb.months ?? [],
+    revelation: lb.snapshot?.awards.revelation
+      ? {
+          ...lb.snapshot.awards.revelation,
+          neighborhood: lb.snapshot.awards.revelation.neighborhood ?? undefined,
+        }
+      : null,
+    employee: lb.snapshot?.awards.employee ?? null,
+    local: lb.snapshot?.awards.local ?? null,
+    influencer: lb.snapshot?.awards.influencer ?? null,
   };
 }
 
@@ -275,6 +324,8 @@ export function toWeekendEvent(e: Awaited<ReturnType<typeof weekendEvents>>[numb
     venueName: e.venue.name,
     venueId: e.venue.slug,
     details: e.body,
+    neighborhood: (e.venue as { neighborhood?: string }).neighborhood,
+    address: (e.venue as { address?: string | null }).address ?? undefined,
   };
 }
 
@@ -285,5 +336,5 @@ export function toTopReviewer(r: Awaited<ReturnType<typeof topReviewers>>[number
     .join('')
     .slice(0, 2)
     .toUpperCase();
-  return { id: r.userId, initials, name: r.displayName, role: r.role, badgeLabel: r.badgeLabel, helpfulVotes: r.helpfulVotes };
+  return { id: r.userId, username: r.username, initials, name: r.displayName, role: r.role, badgeLabel: r.badgeLabel, helpfulVotes: r.helpfulVotes };
 }

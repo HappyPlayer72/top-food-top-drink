@@ -119,8 +119,22 @@ it('trapTier: pragurile din componente', () => {
 });
 
 it('evenimentul de weekend și recenzentul de top', () => {
-  const e = toWeekendEvent({ id: 'p1', title: 'Concert de blues', body: 'De la 21:00.', eventAt: new Date('2026-11-14T19:00:00Z'), venue: { name: 'Pivnița cu Boltă', slug: 'pivnita-cu-bolta', vertical: 'drink' } });
+  const e = toWeekendEvent({
+    id: 'p1',
+    title: 'Concert de blues',
+    body: 'De la 21:00.',
+    eventAt: new Date('2026-11-14T19:00:00Z'),
+    venue: {
+      name: 'Pivnița cu Boltă',
+      slug: 'pivnita-cu-bolta',
+      vertical: 'drink',
+      neighborhood: 'Cetate / Piața Unirii',
+      address: 'Str. Alba Iulia 1',
+      categories: ['muzica-live'],
+      photo: null,
+    },
+  });
   expect(e).toMatchObject({ dayShort: 'sâm.', dayNumber: '14', venueId: 'pivnita-cu-bolta', title: 'Concert de blues, Pivnița cu Boltă' });
   const t = toTopReviewer({ userId: 'u1', username: 'andreea0', displayName: 'Andreea M.', neighborhood: 'Iosefin', roles: ['user', 'local'], followers: null, helpfulVotes: 26, reviews: 4, role: 'verified-local', badgeLabel: 'Localnic din Iosefin' });
-  expect(t).toEqual({ id: 'u1', initials: 'AM', name: 'Andreea M.', role: 'verified-local', badgeLabel: 'Localnic din Iosefin', helpfulVotes: 26 });
+  expect(t).toEqual({ id: 'u1', username: 'andreea0', initials: 'AM', name: 'Andreea M.', role: 'verified-local', badgeLabel: 'Localnic din Iosefin', helpfulVotes: 26 });
 });

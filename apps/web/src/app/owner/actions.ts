@@ -68,3 +68,9 @@ export async function respondToInviteAction(employeeId: string, accept: boolean)
   revalidatePath('/owner');
 }
 
+export async function leaveTeamAsEmployeeAction(employeeId: string): Promise<void> {
+  const userId = await requireUser();
+  await owner.removeEmployee(getDb(), userId, employeeId);
+  revalidatePath('/owner');
+}
+

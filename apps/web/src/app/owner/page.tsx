@@ -12,7 +12,7 @@ import { buttonClass } from '@/components/owner/ui-classes';
 import { getDb } from '@/lib/server/db';
 import { getUserId } from '@/lib/server/session';
 import { formatScore } from '@/types';
-import { respondToInviteAction } from './actions';
+import { respondToInviteAction, leaveTeamAsEmployeeAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,9 +67,10 @@ export default async function OwnerHome() {
   if (!userId) return <AuthForm />;
 
   const db = getDb();
-  const [mine, invites, name, unanswered, resume, checklists, appealed, food, drink] = await Promise.all([
+  const [mine, invites, employments, name, unanswered, resume, checklists, appealed, food, drink] = await Promise.all([
     owner.managedVenues(db, userId),
     owner.pendingInvites(db, userId),
+    owner.myEmployments(db, userId),
     owner.displayName(db, userId),
     owner.unansweredReviews(db, userId),
     owner.pendingClaim(db, userId),
@@ -78,6 +79,7 @@ export default async function OwnerHome() {
     cityPage(db, { citySlug: 'timisoara', vertical: 'food', limit: 200 }),
     cityPage(db, { citySlug: 'timisoara', vertical: 'drink', limit: 200 }),
   ]);
+  const activeEmployments = employments.filter((e) => e.accepted);
   const ranked = new Map([...food.top, ...drink.top].map((v) => [v.id, v]));
   const claimable = [
     ...food.top.map((v) => ({ id: v.id, name: v.name, group: 'Restaurante', neighborhood: v.neighborhood, vertical: 'food' as const })),
@@ -154,6 +156,28 @@ export default async function OwnerHome() {
                     </button>
                   </form>
                 </span>
+              </li>
+            ))}
+          </ul>
+        </Box>
+      ) : null}
+
+      {activeEmployments.length ? (
+        <Box id="echipele-mele" title="Echipele din care faci parte">
+          <p className="mb-4 text-[14px] text-o-muted">
+            Conform GDPR (#7), prenumele tău apare public doar cât timp rămâi în echipă. Poți ieși oricând cu un singur click.
+          </p>
+          <ul className="flex flex-col gap-3">
+            {activeEmployments.map((e) => (
+              <li key={e.employeeId} className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] border border-o-line p-4">
+                <span className="text-[15px]">
+                  <strong>{e.venueName}</strong> · {e.role} ({e.firstName})
+                </span>
+                <form action={leaveTeamAsEmployeeAction.bind(null, e.employeeId)}>
+                  <button type="submit" className={buttonClass('quiet')}>
+                    Ieși din echipă
+                  </button>
+                </form>
               </li>
             ))}
           </ul>

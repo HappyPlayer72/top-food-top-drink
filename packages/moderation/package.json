@@ -8,6 +8,7 @@
   "dependencies": {
     "@tftd/accounts": "*",
     "@tftd/db": "*",
+    "@tftd/scoring": "*",
     "drizzle-orm": "^0.44.0"
   }
 }

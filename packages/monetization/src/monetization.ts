@@ -3,8 +3,8 @@
  * Datele de aici ajung DOAR în sloturi separate din pagini, niciodată în scor sau clasament.
  * Plăți reale (Stripe) după hackathon: acum o plată se marchează manual cu markPaid.
  */
-import { and, count, eq, gt, gte, lte, sql } from "drizzle-orm";
-import { adSlots, forbidden, invalid, notFound, partnerships, reviews, venueManagers, venues, type Db } from "@tftd/db";
+import { and, count, desc, eq, gt, gte, lte, sql } from "drizzle-orm";
+import { adSlots, ensureExtendedSchema, forbidden, invalid, notFound, partnerships, reviews, users, venueManagers, venues, type Db } from "@tftd/db";
 
 export const SPONSORED_SLOTS = 3;
 /** Peste acest Tourist Trap Index localul nu poate cumpăra Highlight. */
@@ -108,6 +108,7 @@ export function rotate<T>(xs: T[], step: number): T[] {
 // ---------- Reclame ----------
 
 export async function adsFor(db: Db, citySlug: string, vertical: "food" | "drink", placement: string, now = new Date()) {
+  await ensureExtendedSchema(db);
   return db
     .select()
     .from(adSlots)
@@ -115,8 +116,71 @@ export async function adsFor(db: Db, citySlug: string, vertical: "food" | "drink
 }
 
 export async function recordAdEvent(db: Db, adId: string, event: "impression" | "click") {
+  await ensureExtendedSchema(db);
   await db
     .update(adSlots)
     .set(event === "impression" ? { impressions: sql`${adSlots.impressions} + 1` } : { clicks: sql`${adSlots.clicks} + 1` })
     .where(eq(adSlots.id, adId));
+}
+
+async function assertMonetizationAdmin(db: Db, userId: string) {
+  const [u] = await db.select({ roles: users.roles }).from(users).where(eq(users.id, userId));
+  if (!u?.roles.includes("admin")) throw forbidden("Doar adminii pot gestiona reclamele.");
+}
+
+const SAFE_LINK = /^(https?:\/\/|\/)/i;
+const SAFE_CREATIVE = /^(https?:\/\/|\/|data:image\/(jpeg|png|webp|svg\+xml);base64,)/i;
+
+export async function listAdSlots(db: Db, adminId: string) {
+  await assertMonetizationAdmin(db, adminId);
+  await ensureExtendedSchema(db);
+  return db.select().from(adSlots).orderBy(desc(adSlots.startsAt));
+}
+
+export async function createAdSlot(
+  db: Db,
+  adminId: string,
+  input: {
+    citySlug: string;
+    vertical: "food" | "drink";
+    placement: string;
+    advertiser: string;
+    creativeUrl: string;
+    linkUrl: string;
+    startsAt: Date;
+    endsAt: Date;
+  },
+) {
+  await assertMonetizationAdmin(db, adminId);
+  await ensureExtendedSchema(db);
+  const advertiser = input.advertiser.trim();
+  const placement = input.placement.trim() || "city_banner";
+  const creativeUrl = input.creativeUrl.trim();
+  const linkUrl = input.linkUrl.trim();
+  if (!advertiser || advertiser.length > 120) throw invalid("Numele partenerului trebuie să aibă între 1 și 120 de caractere.");
+  if (!SAFE_LINK.test(linkUrl)) throw invalid("Linkul destinație trebuie să înceapă cu https://, http:// sau /.");
+  if (!SAFE_CREATIVE.test(creativeUrl)) throw invalid("Imaginea/bannerul trebuie să fie un URL valid sau o imagine încărcată.");
+  if (input.endsAt <= input.startsAt) throw invalid("Data de sfârșit trebuie să fie după data de început.");
+
+  const [created] = await db
+    .insert(adSlots)
+    .values({
+      citySlug: input.citySlug,
+      vertical: input.vertical,
+      placement,
+      advertiser,
+      creativeUrl,
+      linkUrl,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+    })
+    .returning();
+  return created!;
+}
+
+export async function deleteAdSlot(db: Db, adminId: string, slotId: string) {
+  await assertMonetizationAdmin(db, adminId);
+  const [deleted] = await db.delete(adSlots).where(eq(adSlots.id, slotId)).returning({ id: adSlots.id });
+  if (!deleted) throw notFound("Slotul de reclamă");
+  return deleted;
 }

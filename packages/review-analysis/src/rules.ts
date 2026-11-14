@@ -83,10 +83,14 @@ export type FakeContext = {
   authorIsOwnerOrStaff: boolean;
   /** Celelalte review-uri ale aceluiași local. */
   venueReviews: { rating: number; text: string | null; postedAt: Date }[];
+  /** Similaritate maximă cosinus din pgvector (0–1), opțională. */
+  maxEmbeddingSimilarity?: number;
 };
 
 export const BURST = { windowHours: 48, minCount: 5, topRating: 9 } as const;
 export const SIMILARITY_THRESHOLD = 0.6;
+export const EMBEDDING_DIMENSIONS = 384;
+export const VECTOR_SIMILARITY_THRESHOLD = 0.85;
 
 export function fakeSignals(c: FakeContext): FakeSignal[] {
   const out: FakeSignal[] = [];
@@ -107,7 +111,12 @@ export function fakeSignals(c: FakeContext): FakeSignal[] {
     const usualPer48h = (c.venueReviews.filter((r) => r.rating >= BURST.topRating).length / spanDays) * 2;
     if (near + 1 >= BURST.minCount && near + 1 > 3 * usualPer48h) out.push("burst");
   }
-  if (c.text && c.venueReviews.some((r) => r.text && textSimilarity(c.text!, r.text) >= SIMILARITY_THRESHOLD)) out.push("similarText");
+  if (
+    (c.text && c.venueReviews.some((r) => r.text && textSimilarity(c.text!, r.text) >= SIMILARITY_THRESHOLD)) ||
+    (c.maxEmbeddingSimilarity ?? 0) >= VECTOR_SIMILARITY_THRESHOLD
+  ) {
+    out.push("similarText");
+  }
   if (c.authorReviewCount <= 1 && !c.authorHasPhotoOrHistory) out.push("newAccount");
   if (c.authorRatings.length >= 3 && (c.authorRatings.every((r) => r >= 9.5) || c.authorRatings.every((r) => r <= 2.5))) {
     out.push("extremeOnly");
@@ -156,4 +165,78 @@ function shingles(text: string, k = 3): Set<string> {
   }
   for (let i = 0; i + k <= words.length; i++) out.add(words.slice(i, i + k).join(" "));
   return out;
+}
+
+function normalizeWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function fnv1a(str: string, seed: number): number {
+  let h = seed >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h;
+}
+
+/**
+ * Embedding determinist de 384 dimensiuni (unitar L2) bazat pe unigrame, bigrame și 3-grame de caractere.
+ * Folosit cu pgvector (`<=>`) pentru detectarea review-urilor parafrazate/duplicate fără apeluri externe.
+ */
+export function computeTextEmbedding(text: string | null | undefined): number[] | null {
+  if (!text) return null;
+  const words = normalizeWords(text);
+  if (!words.length) return null;
+
+  const features: { token: string; weight: number }[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i]!;
+    features.push({ token: `w:${w}`, weight: 2.5 });
+    if (i + 1 < words.length) features.push({ token: `b:${w}_${words[i + 1]!}`, weight: 0.8 });
+    if (w.length >= 4) {
+      for (let j = 0; j + 3 <= w.length; j++) {
+        features.push({ token: `c:${w.slice(j, j + 3)}`, weight: 0.7 });
+      }
+    }
+  }
+
+  const vec = new Array<number>(EMBEDDING_DIMENSIONS).fill(0);
+  for (const { token, weight } of features) {
+    const idx = fnv1a(token, 2166136261) % EMBEDDING_DIMENSIONS;
+    const sign = (fnv1a(token, 0x9e3779b9) & 1) === 0 ? 1 : -1;
+    vec[idx] = (vec[idx] ?? 0) + sign * weight;
+  }
+
+  let normSq = 0;
+  for (const x of vec) normSq += x * x;
+  if (normSq === 0) return null;
+  const norm = Math.sqrt(normSq);
+  return vec.map((x) => Math.round((x / norm) * 1e6) / 1e6);
+}
+
+export function cosineSimilarity(a: number[] | null | undefined, b: number[] | null | undefined): number {
+  if (!a || !b || a.length !== b.length || !a.length) return 0;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    const av = a[i] ?? 0;
+    const bv = b[i] ?? 0;
+    dot += av * bv;
+    na += av * av;
+    nb += bv * bv;
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+export function toVectorLiteral(vec: number[]): string {
+  return `[${vec.join(",")}]`;
 }

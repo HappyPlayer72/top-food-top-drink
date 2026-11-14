@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
 import type { moderation } from '@tftd/api';
-import { ClaimDetails, MatchDetails, ReportDetails } from './details';
+import { ClaimDetails, MatchDetails, ReceiptDetails, ReportDetails, SuspiciousAccountDetails } from './details';
 
 type Queue = Awaited<ReturnType<typeof moderation.queue>>;
 
@@ -19,4 +19,13 @@ it('marchează datele lipsă și explică efectul contestației', () => {
   expect(renderToStaticMarkup(<ReportDetails report={report} />)).toContain('nu modifică automat eticheta');
   expect(renderToStaticMarkup(<MatchDetails match={match} />)).toContain('Indisponibil');
   expect(renderToStaticMarkup(<ClaimDetails claim={claim} />)).toContain('Indisponibil în sistem');
+});
+
+it('afișează detaliile bonurilor fiscale și ale conturilor suspecte', () => {
+  const receipt = { id: 'r1', venueId: 'v1', rating: 9, text: 'Foarte bun', receiptPhotoUrl: 'data:image/jpeg;base64,abc', postedAt: new Date('2026-11-13T12:00:00Z'), venue: { name: 'Local X', address: 'Str. 1' }, author: { username: 'ana', displayName: 'Ana' } } as Queue['receipts'][number];
+  const suspicious = { userId: 'u1', username: 'bot1', displayName: 'Bot', reviewCount: 3, avgFakeProbability: 0.85, reasons: ['Rafală coordonată de note maxime'], latestAt: new Date('2026-11-13T12:00:00Z') } as Queue['suspiciousAccounts'][number];
+  expect(renderToStaticMarkup(<ReceiptDetails receipt={receipt} />)).toContain('Local X');
+  const susHtml = renderToStaticMarkup(<SuspiciousAccountDetails account={suspicious} />);
+  expect(susHtml).toContain('@bot1');
+  expect(susHtml).toContain('85%');
 });

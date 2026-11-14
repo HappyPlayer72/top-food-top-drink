@@ -6,11 +6,12 @@
  */
 import { randomInt } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { accounts, deleteReview, editReview, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
+import { accounts, deleteReview, detectPlatform, editReview, monetization, owner, submitSocialLinkNow, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { clearSession, errorMessage, getUserId, setSession } from '@/lib/server/session';
+import { toVenueVideo } from '@/lib/backend/toRestaurant';
 import { toUserAccount } from '@/lib/backend/user';
-import type { UserAccount } from '@/types';
+import type { UserAccount, VenueVideo } from '@/types';
 
 export type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; offline?: boolean };
 
@@ -72,6 +73,7 @@ export async function submitReview(input: {
   rating: number;
   text: string;
   weekendNight?: boolean;
+  receiptPhotoUrl?: string;
 }): Promise<Result<{ message: string }>> {
   if (!hasDb()) return OFFLINE;
   const userId = await getUserId();
@@ -80,13 +82,16 @@ export async function submitReview(input: {
     const r = await writeReview(getDb(), userId, { ...input, rating: Math.round(input.rating) });
     revalidatePath('/', 'layout');
     const weight = (r.weight ?? 1).toFixed(1).replace('.', ',');
+    const receiptNote = r.receiptPhotoUrl
+      ? ' Bonul a fost trimis spre verificare (după aprobare primești ×1,3).'
+      : '';
     const why =
       r.fakeProbability >= 0.5
         ? ` Atenție: arată ca un review suspect (${Math.round(r.fakeProbability * 100)}%), așa că pondera e mică.`
         : r.authorType === 'local'
           ? ' Ești localnic verificat, nota ta contează dublu.'
           : '';
-    return { ok: true, message: `Review publicat. Pondere ×${weight}.${why} Scorul localului s-a recalculat.` };
+    return { ok: true, message: `Review publicat. Pondere ×${weight}.${why}${receiptNote} Scorul localului s-a recalculat.` };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
   }
@@ -142,5 +147,139 @@ export async function reportCrowd(venueId: string, level: number): Promise<Resul
     return { ok: true };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** Trimite un link TikTok / Instagram / YouTube / Facebook pentru un local și îl procesează prin oEmbed. */
+export async function submitVenueVideoAction(input: {
+  venueId: string;
+  url: string;
+}): Promise<Result<{ status: 'processed' | 'failed' | 'duplicate'; video?: VenueVideo }>> {
+  if (!hasDb()) return OFFLINE;
+  try {
+    const userId = await getUserId();
+    const trimmed = input.url.trim();
+    const res = await submitSocialLinkNow(getDb(), { venueId: input.venueId, url: trimmed, userId });
+    revalidatePath('/', 'layout');
+    if (res.status === 'duplicate') {
+      return { ok: false, error: 'Acest link a fost deja adăugat la un local.' };
+    }
+    if (res.status === 'failed' || !res.analysis) {
+      return { ok: false, error: 'Nu am putut citi datele video-ului acum. Verifică linkul și încearcă din nou.' };
+    }
+    return {
+      ok: true,
+      status: res.status,
+      video: toVenueVideo(trimmed, detectPlatform(trimmed) ?? 'tiktok', res.analysis),
+    };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** Salvează / elimină un local din lista „Salvate” a userului conectat. */
+export async function toggleSavedVenueAction(venueSlug: string, desired?: boolean): Promise<Result<{ slugs: string[] }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să salvezi localurile pe termen lung.' };
+  try {
+    const res = await accounts.toggleSavedVenueSlug(getDb(), userId, venueSlug, desired);
+    return { ok: true, slugs: res.savedSlugs };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** Înregistrează o vizualizare a paginii/modalului unui local pentru statisticile owner-ului. */
+export async function trackVenueViewAction(venueId: string): Promise<void> {
+  if (!hasDb() || !venueId) return;
+  try {
+    await owner.recordVenueView(getDb(), venueId);
+  } catch {
+    // non-fatal
+  }
+}
+
+/** Acceptă sau refuză o invitație de angajat sau părăsește echipa (GDPR #7). */
+export async function respondEmployeeInviteAction(employeeId: string, accept: boolean): Promise<Result<{ user: UserAccount }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont.' };
+  try {
+    await owner.respondToInvite(getDb(), userId, employeeId, accept);
+    revalidatePath('/', 'layout');
+    return { ok: true, user: (await toUserAccount(getDb(), userId))! };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+export async function leaveTeamAction(employeeId: string): Promise<Result<{ user: UserAccount }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont.' };
+  try {
+    await owner.removeEmployee(getDb(), userId, employeeId);
+    revalidatePath('/', 'layout');
+    return { ok: true, user: (await toUserAccount(getDb(), userId))! };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** Leagă un cont social și generează codul de verificare în bio (item 14). */
+export async function startSocialVerificationAction(input: {
+  platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube';
+  url: string;
+  followers?: number;
+}): Promise<Result<{ code: string; instruction: string; user: UserAccount }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont mai întâi.' };
+  try {
+    const res = await accounts.startSocialVerification(getDb(), userId, input);
+    revalidatePath('/', 'layout');
+    return { ok: true, code: res.code, instruction: res.instruction, user: (await toUserAccount(getDb(), userId))! };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+export async function confirmSocialVerificationAction(input: {
+  platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube';
+  bioSnippet: string;
+  followers?: number;
+}): Promise<Result<{ influencer: boolean; user: UserAccount }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont mai întâi.' };
+  try {
+    const res = await accounts.confirmSocialVerification(getDb(), userId, input);
+    revalidatePath('/', 'layout');
+    return { ok: true, influencer: res.influencer, user: (await toUserAccount(getDb(), userId))! };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+export async function unlinkSocialAction(platform: 'tiktok' | 'instagram' | 'facebook' | 'youtube'): Promise<Result<{ user: UserAccount }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont mai întâi.' };
+  try {
+    await accounts.unlinkSocialAccount(getDb(), userId, platform);
+    revalidatePath('/', 'layout');
+    return { ok: true, user: (await toUserAccount(getDb(), userId))! };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+export async function recordAdEventAction(adId: string, event: 'impression' | 'click'): Promise<void> {
+  if (!hasDb() || !adId) return;
+  try {
+    await monetization.recordAdEvent(getDb(), adId, event);
+  } catch {
+    // non-fatal
   }
 }

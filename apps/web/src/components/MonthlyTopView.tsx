@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, Trophy } from 'lucide-react';
-import { Restaurant, TopReviewer, Vertical, formatScore } from '../types';
+import Link from 'next/link';
+import { Award, ChevronDown, ChevronLeft, Download, Sparkles, Trophy } from 'lucide-react';
+import { MonthlyAwards, Restaurant, TopReviewer, Vertical, formatScore } from '../types';
 import { TOP_LOCAL_REVIEWERS } from '../data/restaurants';
 import { InfluencerBadge, LocalnicBadge } from './BrandPrimitives';
 
@@ -13,9 +14,20 @@ export interface MonthlyTopViewProps {
   onSelectRestaurant: (restaurant: Restaurant) => void;
   /** Din backend; lipsă = lista statică */
   topReviewers?: TopReviewer[];
+  awards?: MonthlyAwards;
+  selectedMonth?: string | null;
+  onSelectMonth?: (month: string | null) => void;
 }
 
 type MonthlyTab = 'localuri' | 'recenzenti' | 'angajati';
+
+function formatMonthRo(ym: string): string {
+  const [y, m] = ym.split('-');
+  const d = new Date(Date.UTC(Number(y), Math.max(0, Number(m) - 1), 1));
+  if (Number.isNaN(d.getTime())) return ym;
+  const formatted = new Intl.DateTimeFormat('ro-RO', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(d);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
 
 export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   vertical,
@@ -23,9 +35,18 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   onBack,
   onSelectRestaurant,
   topReviewers = TOP_LOCAL_REVIEWERS,
+  awards,
+  selectedMonth: selectedMonthProp = null,
+  onSelectMonth,
 }) => {
   const isDrink = vertical === 'drink';
-  const [selectedMonth, setSelectedMonth] = useState<'2026-11' | '2026-10'>('2026-11');
+  const availableMonths = awards?.months?.length ? awards.months : ['2026-11', '2026-10'];
+  const [internalMonth, setInternalMonth] = useState<string>(availableMonths[0] ?? '2026-11');
+  const selectedMonth = selectedMonthProp ?? internalMonth;
+  const setSelectedMonth = (m: string) => {
+    setInternalMonth(m);
+    onSelectMonth?.(m);
+  };
   const [activeSubTab, setActiveSubTab] = useState<MonthlyTab>('localuri');
   const [showAllReviewers, setShowAllReviewers] = useState(false);
 
@@ -95,6 +116,22 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   }, [restaurants]);
 
   const leadEmployee = topEmployees[0];
+  const revelationVenue = useMemo(() => {
+    if (awards?.revelation?.slug) {
+      return restaurants.find((r) => r.slug === awards.revelation!.slug) ?? null;
+    }
+    return [...restaurants]
+      .filter((r) => !r.isSponsored && r.touristTrapIndex < 60 && (r.monthlyRankChange ?? 0) > 0)
+      .sort((a, b) => (b.monthlyRankChange ?? 0) - (a.monthlyRankChange ?? 0))[0] ?? restaurants.find((r) => r.isRisingStar) ?? rankedVenues[1] ?? null;
+  }, [awards?.revelation, restaurants, rankedVenues]);
+  const topLocalAward = awards?.local ?? (() => {
+    const r = topReviewers.find((x) => x.role === 'verified-local');
+    return r ? { userId: r.id, username: r.username, displayName: r.name, neighborhood: r.badgeLabel.replace(/^Localnic din\s+/i, ''), reviews: r.helpfulVotes } : null;
+  })();
+  const topInfluencerAward = awards?.influencer ?? (() => {
+    const r = topReviewers.find((x) => x.role === 'influencer');
+    return r ? { userId: r.id, username: r.username, displayName: r.name, followers: null, reviews: r.helpfulVotes } : null;
+  })();
 
   return (
     <div
@@ -140,32 +177,48 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
               Topul lunii
             </h1>
 
-            <div className="relative shrink-0 max-w-full">
-              <select
-                value={selectedMonth}
-                onChange={(e) =>
-                  setSelectedMonth(e.target.value as '2026-11' | '2026-10')
-                }
-                aria-label="Selectează luna"
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none',
-                  appearance: 'none',
-                  backgroundImage: 'none',
-                }}
-                className={`appearance-none [-webkit-appearance:none] [-moz-appearance:none] bg-none max-w-full min-h-[44px] pl-3.5 pr-9 py-2 rounded-[4px] border text-[16px] sm:text-[13px] font-semibold cursor-pointer ${
+            <div className="flex flex-wrap items-center gap-2 shrink-0 max-w-full">
+              <a
+                href={`/api/share/top-luna?vertical=${vertical}&month=${encodeURIComponent(selectedMonth)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] border text-[13px] font-semibold ${
                   isDrink
-                    ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
-                    : 'bg-white border-[#D6CFC5] text-[#3A2418]'
+                    ? 'border-[#2D5947] bg-[#143025] text-[#F2A33A] hover:border-[#F2A33A]'
+                    : 'border-[#D6CFC5] bg-white text-[#B3261E] hover:border-[#B3261E]'
                 }`}
               >
-                <option value="2026-11">Noiembrie 2026</option>
-                <option value="2026-10">Octombrie 2026 (arhivă)</option>
-              </select>
-              <ChevronDown
-                aria-hidden="true"
-                className="w-4 h-4 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-70"
-              />
+                <Download className="w-4 h-4" aria-hidden="true" />
+                <span>Imagine IG / TikTok</span>
+              </a>
+              <div className="relative shrink-0 max-w-full">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  aria-label="Selectează luna"
+                  style={{
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    appearance: 'none',
+                    backgroundImage: 'none',
+                  }}
+                  className={`appearance-none [-webkit-appearance:none] [-moz-appearance:none] bg-none max-w-full min-h-[44px] pl-3.5 pr-9 py-2 rounded-[4px] border text-[16px] sm:text-[13px] font-semibold cursor-pointer ${
+                    isDrink
+                      ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
+                      : 'bg-white border-[#D6CFC5] text-[#3A2418]'
+                  }`}
+                >
+                  {availableMonths.map((m, i) => (
+                    <option key={m} value={m}>
+                      {formatMonthRo(m)}{i > 0 ? ' (arhivă)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="w-4 h-4 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-70"
+                />
+              </div>
             </div>
           </div>
 
@@ -562,7 +615,13 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
 
                     <div className="min-w-0 space-y-1">
                       <div className="font-semibold text-[15px] leading-tight">
-                        {reviewer.name}
+                        {reviewer.username ? (
+                          <Link href={`/u/${encodeURIComponent(reviewer.username)}`} className="hover:underline">
+                            {reviewer.name}
+                          </Link>
+                        ) : (
+                          reviewer.name
+                        )}
                       </div>
                       <div>
                         {reviewer.role === 'verified-local' ? (
@@ -594,6 +653,109 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
             </ol>
           </section>
         )}
+
+        {/* ===================================================================
+            PREMIILE LUNII (Cele 4 titluri lunare: Revelația, Localnicul, Influencerul, Angajatul)
+            =================================================================== */}
+        <section aria-label="Premiile lunii" className="space-y-3 pt-2">
+          <div className="flex items-center gap-2">
+            <Award className={`w-5 h-5 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`} aria-hidden="true" />
+            <h2 className="font-display text-[26px] leading-tight">Premiile lunii</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {revelationVenue && (
+              <button
+                type="button"
+                onClick={() => onSelectRestaurant(revelationVenue)}
+                className={`text-left rounded-[6px] border p-4 transition-colors ${
+                  isDrink ? 'border-[#2D5947] bg-[#143025] hover:border-[#F2A33A]' : 'border-[#E6DFD5] bg-[#FAF8F5] hover:border-[#3A2418]/40'
+                }`}
+              >
+                <div className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
+                  <Sparkles className="w-3.5 h-3.5" aria-hidden="true" /> Revelația lunii
+                </div>
+                <div className="font-display text-[20px] mt-1 leading-tight">{awards?.revelation?.name ?? revelationVenue.name}</div>
+                <p className={`text-[12px] mt-1 ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
+                  {awards?.revelation
+                    ? `A urcat de pe locul #${awards.revelation.from} pe #${awards.revelation.to}`
+                    : revelationVenue.monthlyStatusLabel ?? 'Cea mai mare urcare a lunii'}
+                </p>
+              </button>
+            )}
+
+            {topLocalAward && (
+              <div
+                className={`rounded-[6px] border p-4 ${
+                  isDrink ? 'border-[#2D5947] bg-[#143025]' : 'border-[#E6DFD5] bg-[#FAF8F5]'
+                }`}
+              >
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#1F4E8C]">Localnicul lunii</div>
+                <div className="font-display text-[20px] mt-1 leading-tight">
+                  {topLocalAward.username ? (
+                    <Link href={`/u/${encodeURIComponent(topLocalAward.username)}`} className="hover:underline">
+                      {topLocalAward.displayName}
+                    </Link>
+                  ) : (
+                    topLocalAward.displayName
+                  )}
+                </div>
+                <p className={`text-[12px] mt-1 ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
+                  {topLocalAward.neighborhood ? `${topLocalAward.neighborhood} · ` : ''}{topLocalAward.reviews} contribuții apreciate
+                </p>
+              </div>
+            )}
+
+            {topInfluencerAward && (
+              <div
+                className={`rounded-[6px] border p-4 ${
+                  isDrink ? 'border-[#2D5947] bg-[#143025]' : 'border-[#E6DFD5] bg-[#FAF8F5]'
+                }`}
+              >
+                <div className={`text-[11px] font-bold uppercase tracking-wider ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
+                  Influencerul lunii
+                </div>
+                <div className="font-display text-[20px] mt-1 leading-tight">
+                  {topInfluencerAward.username ? (
+                    <Link href={`/u/${encodeURIComponent(topInfluencerAward.username)}`} className="hover:underline">
+                      {topInfluencerAward.displayName}
+                    </Link>
+                  ) : (
+                    topInfluencerAward.displayName
+                  )}
+                </div>
+                <p className={`text-[12px] mt-1 ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
+                  {topInfluencerAward.followers ? `${topInfluencerAward.followers.toLocaleString('ro-RO')} urmăritori · ` : ''}
+                  {topInfluencerAward.reviews} review-uri / postări
+                </p>
+              </div>
+            )}
+
+            {(awards?.employee || leadEmployee) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = awards?.employee?.venueSlug
+                    ? restaurants.find((r) => r.slug === awards.employee!.venueSlug)
+                    : leadEmployee?.venueObj;
+                  if (target) onSelectRestaurant(target);
+                }}
+                className={`text-left rounded-[6px] border p-4 transition-colors ${
+                  isDrink ? 'border-[#F2A33A] bg-[#143025] hover:bg-[#1E4335]' : 'border-[#3A2418] bg-[#FAF8F5] hover:bg-[#F2EFE9]'
+                }`}
+              >
+                <div className={`text-[11px] font-bold uppercase tracking-wider ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
+                  Angajatul lunii
+                </div>
+                <div className="font-display text-[20px] mt-1 leading-tight">
+                  {awards?.employee ? `${awards.employee.firstName} · ${awards.employee.venue}` : `${leadEmployee!.name} · ${leadEmployee!.venue}`}
+                </div>
+                <p className={`text-[12px] mt-1 ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
+                  Menționat pozitiv în {awards?.employee?.mentions ?? leadEmployee!.mentions} review-uri
+                </p>
+              </button>
+            )}
+          </div>
+        </section>
 
         {/* ===================================================================
             ANGAJATUL LUNII ÎN ORAȘ (Coherent Ecuson treatment from Pages 2 & 4)

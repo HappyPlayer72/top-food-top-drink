@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eligible, employeeOfMonth, localOfMonth, previousMonth, rankMonth, revelation, type MonthVenue } from "./compute.ts";
+import { eligible, employeeOfMonth, influencerOfMonth, localOfMonth, previousMonth, rankMonth, revelation, type MonthVenue } from "./compute.ts";
 
 const now = new Date("2026-10-31T23:59:59Z");
 const review = (o: Partial<MonthVenue["reviews"][number]> = {}): MonthVenue["reviews"][number] => ({
@@ -50,6 +50,11 @@ describe("leaderboard lunar", () => {
     const v = venue("a", 9, 3, { authorId: "andreea" });
     v.reviews.push(review({ authorId: "radu" }));
     expect(localOfMonth([v])).toEqual({ userId: "andreea", reviews: 3 });
+  });
+  it("influencerul lunii", () => {
+    const v = venue("a", 9, 3, { authorId: "alina", authorIsInfluencer: true, authorFollowers: 4200 });
+    v.reviews.push(review({ authorId: "mara", authorIsInfluencer: true, authorFollowers: 9000 }));
+    expect(influencerOfMonth([v])).toEqual({ userId: "alina", reviews: 3, followers: 4200 });
   });
   it("luna trecută", () => {
     expect(previousMonth("2026-01")).toBe("2025-12");

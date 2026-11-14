@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { keywordAspects } from "./aspects.ts";
-import { adSignals, classifyAuthor, detectLanguage, fakeProbability, fakeSignals, isGeneric, textSimilarity, type FakeContext } from "./rules.ts";
+import {
+  adSignals,
+  classifyAuthor,
+  computeTextEmbedding,
+  cosineSimilarity,
+  detectLanguage,
+  fakeProbability,
+  fakeSignals,
+  isGeneric,
+  textSimilarity,
+  type FakeContext,
+} from "./rules.ts";
 
 const now = new Date("2026-11-13T12:00:00Z");
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000);
@@ -72,6 +83,15 @@ describe("review-uri false", () => {
     expect(textSimilarity("ciorba de burta foarte buna", "pizza cu ton si ceapa rosie")).toBe(0);
     expect(isGeneric("Top, recomand")).toBe(true);
     expect(isGeneric("Ciorba e bună, dar desertul e slab și terasa mică")).toBe(false);
+  });
+  it("embedding-ul de 384 dimensiuni detectează texte parafrazate", () => {
+    const a = computeTextEmbedding("Ciorba de burtă foarte bună și servire rapidă în centru");
+    const b = computeTextEmbedding("Servire rapidă și ciorba de burtă foarte bună în centru");
+    const c = computeTextEmbedding("Pizza cu ton, ceapă roșie și mult busuioc");
+    expect(a).toHaveLength(384);
+    expect(cosineSimilarity(a, b)).toBeGreaterThan(0.85);
+    expect(cosineSimilarity(a, c)).toBeLessThan(0.5);
+    expect(fakeSignals(ctx({ maxEmbeddingSimilarity: 0.91 }))).toContain("similarText");
   });
 });
 

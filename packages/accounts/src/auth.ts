@@ -2,7 +2,7 @@
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { eq, or } from "drizzle-orm";
-import { ServiceError, invalid, users, type Db } from "@tftd/db";
+import { ServiceError, invalid, rateLimited, users, type Db } from "@tftd/db";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
@@ -50,16 +50,36 @@ export async function register(
   return publicUser(user!);
 }
 
+export const MAX_LOGIN_ATTEMPTS = 10;
+export const LOGIN_WINDOW_MS = 15 * 60_000;
+const loginFailures = new Map<string, number[]>();
+
+/** Resetează fereastra de limitare pentru login (folosit în teste). */
+export function resetLoginRateLimit(key?: string) {
+  if (key) loginFailures.delete(key.trim().toLowerCase());
+  else loginFailures.clear();
+}
+
 /** `login` = username, email sau telefon. */
-export async function login(db: Db, input: { login: string; password: string }) {
+export async function login(db: Db, input: { login: string; password: string }, now = new Date()) {
   const l = input.login.trim();
+  const key = l.toLowerCase();
+  const cutoff = now.getTime() - LOGIN_WINDOW_MS;
+  const recent = (loginFailures.get(key) ?? []).filter((t) => t > cutoff);
+  if (recent.length >= MAX_LOGIN_ATTEMPTS) {
+    loginFailures.set(key, recent);
+    throw rateLimited("Prea multe încercări de autentificare. Așteaptă câteva minute înainte de a reîncerca.");
+  }
+
   const [user] = await db
     .select()
     .from(users)
-    .where(or(eq(users.username, l.toLowerCase()), eq(users.email, l), eq(users.phone, l)));
+    .where(or(eq(users.username, key), eq(users.email, l), eq(users.phone, l)));
   if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
+    loginFailures.set(key, [...recent, now.getTime()]);
     throw new ServiceError("unauthorized", "Date de autentificare greșite.");
   }
+  loginFailures.delete(key);
   return publicUser(user);
 }
 

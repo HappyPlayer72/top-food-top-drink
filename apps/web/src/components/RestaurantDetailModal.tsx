@@ -1,15 +1,19 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { embedSrc } from '@/lib/embed';
 import {
   Accessibility,
   AlertTriangle,
   BookOpen,
   Bookmark,
   Calendar,
+  Camera,
   Check,
   ChevronLeft,
   Clock,
+  Film,
   MapPin,
   Pencil,
   Plug,
@@ -59,7 +63,7 @@ export interface RestaurantDetailModalProps {
   onClose: () => void;
   onAddReview: (
     restaurantId: string,
-    review: Review
+    review: Review & { receiptPhotoUrl?: string }
   ) => void | Promise<{ ok: boolean; message?: string; error?: string }>;
   onEditReview?: (
     restaurantId: string,
@@ -74,6 +78,10 @@ export interface RestaurantDetailModalProps {
   onVoteHelpful?: (
     reviewId: string
   ) => Promise<{ ok: true; voted: boolean; helpfulCount: number } | { ok: false; error: string }>;
+  onSubmitVideo?: (
+    restaurantId: string,
+    url: string
+  ) => Promise<{ ok: boolean; error?: string }>;
   onRequireLogin?: () => void;
   onLocateOnMap?: (restaurant: Restaurant) => void;
   isSaved?: boolean;
@@ -172,6 +180,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   onEditReview,
   onDeleteReview,
   onVoteHelpful,
+  onSubmitVideo,
   onRequireLogin,
   onLocateOnMap,
   isSaved = false,
@@ -200,6 +209,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [noiseLevel, setNoiseLevel] = useState<NoiseLevel | null>(null);
   const [praisedEmployee, setPraisedEmployee] = useState<string>('');
   const [reviewText, setReviewText] = useState('');
+  const [receiptPhotoUrl, setReceiptPhotoUrl] = useState<string | null>(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const [videoUrlInput, setVideoUrlInput] = useState('');
+  const [videoStatus, setVideoStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const [videoBusy, setVideoBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
   const [localPreferenceAnswers, setLocalPreferenceAnswers] = useState<
@@ -261,6 +275,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setHelpfulVotedKeys({});
     setPraisedEmployee('');
     setReviewText('');
+    setReceiptPhotoUrl(null);
+    setVideoUrlInput('');
+    setVideoStatus(null);
     const initialGrade = Math.min(
       10,
       Math.max(1, Math.round(restaurant.foodQualityScore))
@@ -617,7 +634,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       helpfulCount: 0,
     };
 
-    const result = await onAddReview(restaurant.id, newReview);
+    const result = await onAddReview(restaurant.id, {
+      ...newReview,
+      ...(receiptPhotoUrl ? { receiptPhotoUrl } : {}),
+    });
     if (result && !result.ok) {
       setFormError(result.error ?? 'Review-ul nu s-a putut publica. Încearcă din nou.');
       return;
@@ -625,6 +645,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewFilter(currentUser.role);
     setIsReviewDrawerOpen(false);
     setReviewText('');
+    setReceiptPhotoUrl(null);
     setPraisedEmployee('');
     setMarkAsTrap(false);
     setSafetyScore(null);
@@ -1799,8 +1820,29 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 flex-wrap">
                           <span className="font-bold text-[15px]">
-                            {rev.authorName}
+                            {rev.authorUsername ? (
+                              <Link
+                                href={`/u/${encodeURIComponent(rev.authorUsername)}`}
+                                className="hover:underline"
+                              >
+                                {rev.authorName}
+                              </Link>
+                            ) : (
+                              rev.authorName
+                            )}
                           </span>
+                          {rev.isVerifiedVisit && (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[11px] font-semibold ${
+                                isDrink
+                                  ? 'bg-[#285443] text-[#F4EEE2]'
+                                  : 'bg-patrunjel/12 text-patrunjel'
+                              }`}
+                            >
+                              <ShieldCheck className="w-3 h-3" aria-hidden="true" />
+                              Vizită verificată
+                            </span>
+                          )}
                           {(rev.authorRole === 'verified-local' ||
                             rev.authorRole === 'regular') && (
                             <LocalnicBadge
@@ -2187,6 +2229,127 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 >
                   {employeeOfMonth.name} a fost lăudată pe nume în{' '}
                   {employeeOfMonth.positiveMentions} de review-uri luna asta.
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* VIDEOURI DIN COMUNITATE (Item 2: embed TikTok/IG/YouTube + „Lipește un link”) */}
+          {((restaurant.videos && restaurant.videos.length > 0) || onSubmitVideo) && (
+            <section
+              aria-label="Videouri din comunitate"
+              className={`pt-5 border-t space-y-3.5 ${
+                isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Film className="w-5 h-5 opacity-75" aria-hidden="true" />
+                <h2 className="font-display text-[28px] sm:text-[32px] leading-none">
+                  Videouri din comunitate
+                </h2>
+              </div>
+
+              {restaurant.videos && restaurant.videos.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {restaurant.videos.map((vid) => {
+                    const src = embedSrc(vid.url);
+                    return (
+                      <div
+                        key={vid.url}
+                        className={`rounded-[6px] border p-3 space-y-2 ${
+                          isDrink ? 'border-[#285443] bg-[#143025]' : 'border-[#E6DFD5] bg-[#FAF8F5]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider">
+                          <span>{vid.platform}</span>
+                          {(vid.isPaid || vid.adSignal !== 'organic') && (
+                            <span className="rounded bg-[#B3261E]/15 px-1.5 py-0.5 text-[#B3261E]">
+                              {vid.adSignal === 'marcat_reclama' ? 'Marcat reclamă' : 'Posibil reclamă'}
+                            </span>
+                          )}
+                        </div>
+                        {src ? (
+                          <div className="aspect-video w-full overflow-hidden rounded-[4px] bg-black/20">
+                            <iframe
+                              src={src}
+                              title={`Video ${restaurant.name} (${vid.platform})`}
+                              className="h-full w-full border-0"
+                              allowFullScreen
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : (
+                          <a
+                            href={vid.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block truncate text-[13px] font-semibold underline"
+                          >
+                            Deschide clipul pe {vid.platform} →
+                          </a>
+                        )}
+                        {(vid.dishes.length > 0 || vid.prices.length > 0) && (
+                          <p className={`text-[12px] ${isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}`}>
+                            {vid.dishes.length > 0 && <>Menționat: {vid.dishes.join(', ')}</>}
+                            {vid.prices.length > 0 && (
+                              <> · Prețuri: {vid.prices.map((p) => `${p.item} ${p.priceLei} lei`).join(', ')}</>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={`text-[13px] ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
+                  Încă nu există videouri adăugate pentru acest local.
+                </p>
+              )}
+
+              {onSubmitVideo && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (videoBusy || !videoUrlInput.trim()) return;
+                    setVideoBusy(true);
+                    setVideoStatus(null);
+                    const res = await onSubmitVideo(restaurant.id, videoUrlInput.trim());
+                    setVideoBusy(false);
+                    if (!res.ok) {
+                      setVideoStatus({ text: res.error ?? 'Link invalid.', error: true });
+                      return;
+                    }
+                    setVideoUrlInput('');
+                    setVideoStatus({ text: 'Video adăugat și analizat.', error: false });
+                  }}
+                  className="flex flex-wrap gap-2"
+                >
+                  <input
+                    type="url"
+                    value={videoUrlInput}
+                    onChange={(e) => setVideoUrlInput(e.target.value)}
+                    placeholder="Lipește un link TikTok, Instagram, YouTube sau Facebook"
+                    aria-label="Link video TikTok, Instagram, YouTube sau Facebook"
+                    className={`min-w-[220px] flex-1 rounded-[4px] border px-3 py-2 text-[13px] ${
+                      isDrink
+                        ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder:text-[#F4EEE2]/60'
+                        : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder:text-[#6E5649]'
+                    }`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={videoBusy || !videoUrlInput.trim()}
+                    className={`btn-press rounded-[4px] px-3.5 py-2 text-[13px] font-bold disabled:opacity-50 ${
+                      isDrink ? 'bg-[#F2A33A] text-[#17382C]' : 'bg-[#3A2418] text-white'
+                    }`}
+                  >
+                    {videoBusy ? 'Se procesează…' : 'Adaugă video'}
+                  </button>
+                </form>
+              )}
+              {videoStatus && (
+                <p className={`text-[12px] font-semibold ${videoStatus.error ? 'text-[#B3261E]' : 'text-patrunjel'}`}>
+                  {videoStatus.text}
                 </p>
               )}
             </section>
@@ -2699,6 +2862,52 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="rev-receipt"
+                    className="flex items-center gap-1.5 text-[12px] font-semibold"
+                  >
+                    <Camera className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Fotografie bon fiscal (opțional — după aprobare primești ×1,3)</span>
+                  </label>
+                  <input
+                    id="rev-receipt"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={receiptBusy}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) {
+                        setReceiptPhotoUrl(null);
+                        return;
+                      }
+                      setReceiptBusy(true);
+                      setFormError(null);
+                      try {
+                        const compressed = await compressReceiptFile(file);
+                        setReceiptPhotoUrl(compressed);
+                      } catch {
+                        setFormError('Nu am putut procesa fotografia bonului. Încearcă un JPG/PNG mai mic.');
+                      } finally {
+                        setReceiptBusy(false);
+                      }
+                    }}
+                    className="block w-full text-[12px]"
+                  />
+                  {receiptPhotoUrl && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <img src={receiptPhotoUrl} alt="Previzualizare bon fiscal" className="h-14 w-14 rounded border object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setReceiptPhotoUrl(null)}
+                        className="text-[12px] font-semibold underline"
+                      >
+                        Scoate bonul
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {formError && (
                   <p
                     id="review-form-error"
@@ -2918,3 +3127,31 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 };
 
 export default RestaurantDetailModal;
+
+async function compressReceiptFile(file: File): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('read_failed'));
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('decode_failed'));
+    el.src = dataUrl;
+  });
+  const maxDim = 960;
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height, 1));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  for (const quality of [0.78, 0.62, 0.48]) {
+    const out = canvas.toDataURL('image/jpeg', quality);
+    if (out.length <= 380_000) return out;
+  }
+  throw new Error('too_large');
+}

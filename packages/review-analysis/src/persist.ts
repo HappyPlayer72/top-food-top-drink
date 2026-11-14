@@ -1,11 +1,12 @@
 /** Analizează review-urile unui local și scrie rezultatele în DB (înainte de recalcularea scorului). */
 import type Anthropic from "@anthropic-ai/sdk";
-import { and, eq, inArray, isNull } from "drizzle-orm";
-import { employees, reviews, users, venueManagers, venues, type Db } from "@tftd/db";
+import { and, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { employees, ensureExtendedSchema, reviews, users, venueManagers, venues, type Db } from "@tftd/db";
 import { analyzeAspects } from "./aspects.ts";
-import { adSignals, classifyAuthor, detectLanguage, fakeProbability, fakeSignals } from "./rules.ts";
+import { adSignals, classifyAuthor, computeTextEmbedding, detectLanguage, fakeProbability, fakeSignals, toVectorLiteral } from "./rules.ts";
 
 export async function analyzeVenueReviews(db: Db, venueId: string, opts: { onlyNew?: boolean; client?: Anthropic | null; now?: Date } = {}) {
+  await ensureExtendedSchema(db);
   const now = opts.now ?? new Date();
   const [venue] = await db.select().from(venues).where(eq(venues.id, venueId));
   if (!venue) throw new Error(`Localul ${venueId} nu există.`);
@@ -59,6 +60,18 @@ export async function analyzeVenueReviews(db: Db, venueId: string, opts: { onlyN
     const isVerifiedLocal = r.localCitySlug === venue.citySlug && !!r.localUntil && r.localUntil > now;
     const authorRatings = r.authorId ? (history.get(r.authorId) ?? []) : [];
     const authorReviewCount = r.authorId ? authorRatings.length : (r.externalAuthor?.reviewCount ?? 1);
+    const embedding = computeTextEmbedding(r.text);
+    let maxEmbeddingSimilarity = 0;
+    if (embedding) {
+      const vecLiteral = toVectorLiteral(embedding);
+      const [simRow] = await db
+        .select({ sim: sql<number>`1 - (${reviews.embedding} <=> ${vecLiteral}::vector)` })
+        .from(reviews)
+        .where(and(eq(reviews.venueId, venueId), ne(reviews.id, r.id), isNotNull(reviews.embedding)))
+        .orderBy(desc(sql`1 - (${reviews.embedding} <=> ${vecLiteral}::vector)`))
+        .limit(1);
+      maxEmbeddingSimilarity = Number(simRow?.sim ?? 0) || 0;
+    }
     const signals = fakeSignals({
       rating: r.rating,
       text: r.text,
@@ -68,6 +81,7 @@ export async function analyzeVenueReviews(db: Db, venueId: string, opts: { onlyN
       authorRatings,
       authorIsOwnerOrStaff: !!r.authorId && staff.has(r.authorId),
       venueReviews: all.filter((o) => o.id !== r.id),
+      maxEmbeddingSimilarity,
     });
     await db
       .update(reviews)
@@ -78,6 +92,7 @@ export async function analyzeVenueReviews(db: Db, venueId: string, opts: { onlyN
         isPaid: r.isPaid || adSignals(r.text).length > 0,
         fakeSignals: signals,
         fakeProbability: fakeProbability(signals),
+        embedding,
         aspects: aspects.get(r.id) ?? null,
         analyzedAt: now,
       })
