@@ -1,5 +1,5 @@
 {
- "exportedAt": "2026-11-14T20:13:33.929Z",
+ "exportedAt": "2026-11-14T20:20:33.714Z",
  "citySlug": "timisoara",
  "note": "Date Google Places pentru demo (repo privat). Se încarcă cu `npm run seed`, fără apeluri Google. De șters după hackathon.",
  "venues": [
@@ -10681,16 +10681,130 @@
    "categories": [
     "romanesc"
    ],
-   "lat": 45.7453,
-   "lng": 21.2285,
+   "lat": 45.7326038,
+   "lng": 21.2201426,
    "address": "Str. Mareșal Alexandru Averescu nr. 1B, Timișoara",
    "neighborhood": "Elisabetin",
-   "phone": null,
-   "website": null,
+   "phone": "0723 656 918",
+   "website": "http://www.casa-bunicii.ro/",
    "priceLevel": null,
-   "openingHours": null,
-   "google": null,
-   "reviews": []
+   "openingHours": {
+    "fri": [
+     [
+      "12:00",
+      "22:00"
+     ]
+    ],
+    "mon": [
+     [
+      "12:00",
+      "22:00"
+     ]
+    ],
+    "sat": [
+     [
+      "12:00",
+      "22:00"
+     ]
+    ],
+    "sun": [
+     [
+      "12:00",
+      "22:00"
+     ]
+    ],
+    "thu": [
+     [
+      "12:00",
+      "22:00"
+     ]
+    ],
+    "tue": [
+     [
+      "12:00",
+      "22:00"
+     ]
+    ],
+    "wed": [
+     [
+      "12:00",
+      "22:00"
+     ]
+    ]
+   },
+   "google": {
+    "placeId": "ChIJOxih85xdRUcRRD7MnLYDdV0",
+    "rating": 4.3,
+    "reviewCount": 3068,
+    "url": "https://maps.google.com/?cid=6734292900652006980&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+   },
+   "reviews": [
+    {
+     "externalId": "places/ChIJOxih85xdRUcRRD7MnLYDdV0/reviews/Ci9DQUlRQUNvZENodHljRjlvT21obWNuYzVkalEzZEdGc1VWSlBTVWs1V2xOdVkwRRAB",
+     "author": {
+      "name": "Lucian Crisan",
+      "profileUrl": "https://www.google.com/maps/contrib/115980805535595775497/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "Am luat meniul zilei la terasa Casei Bunicii și ne-a plăcut tare mult, recomandăm cu încredere. Terasa este un loc tare fain de luat masa când e cald aici în Banat.\nCe mi a plăcut la meniu, a fost ca sunt multe rețete locale, bănățene cu ingrediente luate de la producătorii regionali, ceea ce îi dă un gust tare bun mâncării.\nPS după o zi am revenit la cină, recomandăm clătită cu piept de rață și sos de brânză. E wow.\nDe revenit și încercat alte bunătăți.",
+     "language": "ro",
+     "postedAt": "2026-06-23T19:34:58.928Z"
+    },
+    {
+     "externalId": "places/ChIJOxih85xdRUcRRD7MnLYDdV0/reviews/Ci9DQUlRQUNvZENodHljRjlvT2tOb04wZGlOa3hoWTI1bUxVbGZabmhWWjI5WlJHYxAB",
+     "author": {
+      "name": "Ofelia Hobincu",
+      "profileUrl": "https://www.google.com/maps/contrib/111401932370250889545/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "Un cadru mirific, grădină care stimulează imaginația și buna dispoziție. Tot localul a fost conceput cu bun gust, dragoste pentru frumos și respect pentru clienți.",
+     "language": "ro",
+     "postedAt": "2026-06-07T13:36:44.610Z"
+    },
+    {
+     "externalId": "places/ChIJOxih85xdRUcRRD7MnLYDdV0/reviews/Ci9DQUlRQUNvZENodHljRjlvT2tsQ1JUSlRja2hCVHpsa1FqWnRPSEZSVWsxNGMzYxAB",
+     "author": {
+      "name": "Claudio Constantin",
+      "profileUrl": "https://www.google.com/maps/contrib/110254024960407537046/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "Am avut parte de o experiență excelentă în Timișoara. Deși am venit singur, m-am simțit foarte bine datorită serviciului excepțional și atenției oferite de personal.\nMâncarea a fost delicioasă, iar papanașii au fost, fără îndoială, cei mai buni pe care i-am mâncat în România. Înainte de felul principal am savurat un platou de aperitive foarte gustoase, servit cu pâine proaspătă, iar limonada a fost perfectă pentru o zi călduroasă. Totul a fost prezentat frumos, iar atmosfera de pe terasă este liniștită și primitoare.\nUn restaurant care pune accent pe calitate și pe experiența clienților. Cu siguranță voi reveni și îl recomand cu mare plăcere! ⭐⭐⭐⭐⭐",
+     "language": "ro",
+     "postedAt": "2026-06-22T18:06:07.483Z"
+    },
+    {
+     "externalId": "places/ChIJOxih85xdRUcRRD7MnLYDdV0/reviews/Ci9DQUlRQUNvZENodHljRjlvT2xaQk9XTnFWVGR2ZFc1QlZteHFSRFpTTFd4aVpWRRAB",
+     "author": {
+      "name": "Crăciun Anca",
+      "profileUrl": "https://www.google.com/maps/contrib/118234370128708405079/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "Casa Bunicii din Timișoara este unul dintre acele locuri care te cuceresc din primul moment. De la atmosfera elegantă și primitoare, până la fiecare detaliu din decor, totul este gândit cu mult bun gust și rafinament. Restaurantul reușește să îmbine perfect tradiția cu modernul, oferind un spațiu cald, sofisticat și extrem de plăcut.\n\nPreparatele sunt cu adevărat speciale – atent prezentate, pline de savoare și realizate cu ingrediente de calitate. Fiecare farfurie arată impecabil și demonstrează pasiunea pentru gastronomie. Gusturile sunt echilibrate, porțiile generoase, iar experiența culinară este una care merită savurată pe îndelete.\n\nServiciile sunt ireproșabile. Personalul este amabil, atent și profesionist, reușind să creeze acel sentiment rar în care te simți binevenit și apreciat. Totul se desfășoară natural, elegant și fără grabă.\n\nCasa Bunicii nu este doar un restaurant, ci un loc unde vii pentru atmosferă, gust și starea de bine pe care ți-o oferă. Este alegerea perfectă pentru o cină specială, o întâlnire frumoasă sau pur și simplu pentru momente în care vrei să te răsfeți.\n\nUn loc superb în Timișoara, unde tradiția, eleganța și calitatea se întâlnesc perfect. Recomand cu drag! ✨🍽️",
+     "language": "ro",
+     "postedAt": "2026-04-22T13:19:02.397Z"
+    },
+    {
+     "externalId": "places/ChIJOxih85xdRUcRRD7MnLYDdV0/reviews/Ci9DQUlRQUNvZENodHljRjlvT2xoR1psZFJTRzE1WjA1RFZtdHBlRGxJYTI5NGFWRRAB",
+     "author": {
+      "name": "Daniela Pataky",
+      "profileUrl": "https://www.google.com/maps/contrib/111332821039415425696/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "\"Casa Bunicii\", restaurantul cu terasă, care își merită pe deplin numele!\nNoua descoperire (pentru noi) ne-a surprins plăcut, prin tot ceea ce ne-a oferit, prin atitudinea personalului, decor și mai ales prin calitatea produselor oferite.\nCăldura cu care am fost întâmpinați, grijă de a ne plasa cât mai comod, meniul oferit și gustul nemaipomenit al felurilor servite, m-au dus cu gândul la vacanțele petrecute la bunici.\nDacă aveți drum prin zonă, nu ocoliți această oază de răsfăț.\nNoi ne gândim deja să repetăm această experiență plăcută!",
+     "language": "ro",
+     "postedAt": "2026-06-07T14:34:46.775Z"
+    }
+   ]
   },
   {
    "slug": "cattedrale-pizzeria",
@@ -19443,16 +19557,87 @@
    "categories": [
     "romanesc"
    ],
-   "lat": 45.7582,
-   "lng": 21.2294,
+   "lat": 45.7570045,
+   "lng": 21.228752099999998,
    "address": "Str. Florimund Mercy nr. 7, Timișoara",
    "neighborhood": "Cetate",
-   "phone": null,
-   "website": null,
+   "phone": "0729 666 705",
+   "website": "https://www.facebook.com/mioritatimisoara/?locale=ro_RO",
    "priceLevel": null,
    "openingHours": null,
-   "google": null,
-   "reviews": []
+   "google": {
+    "placeId": "ChIJe4FBMoBnRUcR1TfhoKEo10A",
+    "rating": 4.3,
+    "reviewCount": 1407,
+    "url": "https://maps.google.com/?cid=4672247813074139093&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+   },
+   "reviews": [
+    {
+     "externalId": "places/ChIJe4FBMoBnRUcR1TfhoKEo10A/reviews/ChdDSUhNMG9nS0VJQ0FnSUMzc3B6Q21BRRAB",
+     "author": {
+      "name": "Alina Predescu",
+      "profileUrl": "https://www.google.com/maps/contrib/106421798888675454901/reviews"
+     },
+     "rating": 6,
+     "originalRating": 3,
+     "originalScale": 5,
+     "text": "Toate tacamurile erau murdare, cu resturi de alimente lipite.\nMancarea nu a fost asa buna pe cat de bune sunt review-urile de pe gmaps.\nCe m-a dezamagit rau a fost ca panasii au venit reci si plini de ulei.\nNu ne-a placut experienta.",
+     "language": "ro",
+     "postedAt": "2024-11-04T10:27:46.076Z"
+    },
+    {
+     "externalId": "places/ChIJe4FBMoBnRUcR1TfhoKEo10A/reviews/ChdDSUhNMG9nS0VJQ0FnSUN2aXA3SjJRRRAB",
+     "author": {
+      "name": "Claudiu Nițu",
+      "profileUrl": "https://www.google.com/maps/contrib/104535329560716839171/reviews"
+     },
+     "rating": 2,
+     "originalRating": 1,
+     "originalScale": 5,
+     "text": "Am fost miercuri în 04 decembrie ,după prânz, 4 persoane și un preot pentru o  masa \"parastas\" . NU  RECOMAND aceasta bombă,căci nu se poate numi restaurant ! La un moment  dat a început să ne usture ochii de la fumul din bucătărie, am zis sa pornească ventilatoarele ,dar soluția lor a fost să urce și să deschidă ușa de afară pentru ventilație naturala ,rezultând un curent rece cu o alta trapă  de aerisire de lângă masă ,deci a trebuit să ne îmbrăcăm . Fața de masă desigur murdară , pătată de vin cred. Eram numai 2 mese in tot restaurantul și am vorbit cu doamna de la bar să ne mutăm la o altă masă mai departe de trapa \"ventilator \" dar am fost îndrumat către un chelner tinerel , un mic șefuț ,pe care îl chema  IONUȚ și care foarte revoltat a zis că nu ne putem muta la alta masă că sunt rezervate dar de fapt cum să le deranjăm... Despre mâncare nu  mai pot zice nimic,am vrut sa renunțăm la felul doi dar ....\nPentru un spatiu situat la subsol, cu fumul imens de la o sursa de foc și cu a doua ieșire de incendiu blocată de ambalaje , PREZINTĂ  UN  REAL  PERICOL !\nPăcat  și RUȘINE pentru un local situat in centrul Timișoarei pe pietonal !",
+     "language": "ro",
+     "postedAt": "2025-01-08T10:57:59.567Z"
+    },
+    {
+     "externalId": "places/ChIJe4FBMoBnRUcR1TfhoKEo10A/reviews/ChdDSUhNMG9nS0VJQ0FnSURmLXBxV3pBRRAB",
+     "author": {
+      "name": "Gabriel Bultoc",
+      "profileUrl": "https://www.google.com/maps/contrib/107159419023523553863/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "Doamna Luminița a fost de nota 10 merită mărire de salariu. Prietenoasă bucuroasă, ne-am simțit ca la prieteni acasă .\nMâncarea a fost foarte bună și pe săturate .\nPorțiile mari .\nSingurul minus , în Ciorba da fasole , ciolanul afumat a fost rece .\nDacă aș fi ghid turistic în Timișoara, aici aș duce turiștii .",
+     "language": "ro",
+     "postedAt": "2025-01-05T20:48:27.461Z"
+    },
+    {
+     "externalId": "places/ChIJe4FBMoBnRUcR1TfhoKEo10A/reviews/ChdDSUhNMG9nS0VJQ0FnSURQdXBQbDhRRRAB",
+     "author": {
+      "name": "dan botoman",
+      "profileUrl": "https://www.google.com/maps/contrib/114440378133314413524/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "Un restaurant deosebit cu specific romanesc cu terasa dar și mult loc în interior într-un beci frumos amenajat cu produse vechi românești începând cu celebra funie cu căpățâni de usturoi știuleți de porumb ștergare coarne de berbec celebrul cojoc de lana al ciobanilor un mic restaurant că un muzeu   mâncare românească pentru toate gusturile preturi decente și în plus și meniul zilei cu trei feluri de mâncare la doar 35 de lei într-o ambianță frumoasa cu muzica românească plăcută auzului. Cât timp am mâncat am văzut mulți localnici care veneau cu străini să le arate diverse obiecte pe cere ei nu le înțelegeau sau despre care au auzit și nu le-au văzut niciodată. Un loc plin de istorie în centrul orașului chiar langa Piata Unirii cu mâncare gustoasa  un personal foarte amabil și unde revin cu drag de fiecare dată când acasă nu avem chef să gătim îl recomand cu drag iar pentru cei care nu au fost niciodată mergeți  și veți descoperi adevarata ospitalitate românească",
+     "language": "ro",
+     "postedAt": "2025-05-09T06:28:57.950Z"
+    },
+    {
+     "externalId": "places/ChIJe4FBMoBnRUcR1TfhoKEo10A/reviews/ChZDSUhNMG9nS0VJQ0FnSUNZaWFXRURBEAE",
+     "author": {
+      "name": "Gabriela Luca",
+      "profileUrl": "https://www.google.com/maps/contrib/100683985737265862659/reviews"
+     },
+     "rating": 10,
+     "originalRating": 5,
+     "originalScale": 5,
+     "text": "Atmosfera tradițional românească. Ca și primire restaurantul oferă untură cu pâine și cu ceapă. Mâncarea gustoasă, ospătari de nota 10+ iar prețurile decente. Locația frumos amenajată. Mă voi întoarce cu fiecare ocazie cu drag.",
+     "language": "ro",
+     "postedAt": "2019-04-14T12:01:51.337Z"
+    }
+   ]
   },
   {
    "slug": "restaurant-nora",

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Navigation, Sparkles } from 'lucide-react';
 import { Coordinates, Restaurant, Vertical, formatScore } from '../../types';
-import { generateTasteTour, parseTasteRequest, TASTE_CATEGORIES } from './tasteTour';
+import { generateTasteTour, parseTasteRequest, TASTE_CATEGORIES } from './tasteTourLogic';
 import { getTasteTourGoogleData } from '../../app/actions/taste-tour';
 
 interface TasteTourProps {
