@@ -246,6 +246,9 @@ export function MapView({
   const [verticalFilter, setVerticalFilter] = useState<MapVerticalFilter>('all');
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(() => {
     if (selectedRestaurant) return selectedRestaurant.id;
+    if (isDrink) {
+      return restaurants.find((r) => r.vertical === 'drink')?.id ?? restaurants[0]?.id ?? null;
+    }
     return restaurants[0]?.id ?? null;
   });
 
@@ -362,8 +365,9 @@ export function MapView({
         tierFilter,
         selectedTastes,
         query: sidebarQuery,
+        preferredVertical: vertical,
       }),
-    [restaurants, verticalFilter, tierFilter, sidebarQuery, selectedTastes]
+    [restaurants, verticalFilter, tierFilter, sidebarQuery, selectedTastes, vertical]
   );
 
   useEffect(() => {

@@ -46,6 +46,7 @@ import {
   getVenueWarnings,
   getVenueWeeklyHours,
 } from '../data/venueExtras';
+import { getVenueMonthlyCategoryAwards } from '../data/monthlyCategoryTops';
 import {
   AvertizareaCard,
   MugScore,
@@ -58,6 +59,7 @@ import {
   TuristBadge,
   PartnerBadge,
   TrapBadge,
+  TrophyMedalBadge,
 } from './BrandPrimitives';
 import { EMPTY_VISIT_PROOF, VisitProofField, type VisitProofState } from './VisitProofField';
 import { attachReceipt } from '@/app/actions/visits';
@@ -889,6 +891,48 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     />
                   </div>
                 )}
+
+                {(() => {
+                  const monthlyCategoryAwards = getVenueMonthlyCategoryAwards(
+                    restaurant.vertical,
+                    restaurant.slug
+                  );
+                  if (monthlyCategoryAwards.length === 0) return null;
+                  const medalName = (r: 1 | 2 | 3) =>
+                    r === 1 ? 'Aur · Locul 1' : r === 2 ? 'Argint · Locul 2' : 'Bronz · Locul 3';
+
+                  return (
+                    <div
+                      aria-label="Distincții din votul lunii"
+                      className="flex flex-wrap items-stretch gap-2.5 pt-1.5"
+                    >
+                      {monthlyCategoryAwards.map((award) => (
+                        <div
+                          key={award.categoryId}
+                          className={`inline-flex items-center gap-2.5 px-3 py-2 rounded-[4px] border ${
+                            isDrink
+                              ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                              : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                          }`}
+                        >
+                          <TrophyMedalBadge rank={award.rank} categoryId={award.categoryId} size="md" />
+                          <div className="min-w-0 leading-tight">
+                            <div
+                              className={`text-[10px] font-bold uppercase tracking-[0.06em] ${
+                                isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+                              }`}
+                            >
+                              Votul lunii · {medalName(award.rank)}
+                            </div>
+                            <div className="font-display text-[17px] leading-tight mt-0.5">
+                              {award.categoryTitle}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Dreapta: scorul ca în clasament — farfurie (food) / halbă (drink) + „Scor Onest” */}

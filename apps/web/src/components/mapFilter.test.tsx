@@ -55,6 +55,20 @@ describe('filtrarea hărții comune topfood + topdrink', () => {
     expect(searchDrink.some((r) => r.id === firstDrink.id)).toBe(true);
   });
 
+  it('pune localurile de băutură primele când preferredVertical este drink', () => {
+    const ordered = filterMapRestaurants(ALL_VENUES, {
+      verticalFilter: 'all',
+      tierFilter: 'all',
+      selectedTastes: [],
+      query: '',
+      preferredVertical: 'drink',
+    });
+    expect(ordered.length).toBe(ALL_VENUES.length);
+    expect(ordered[0]?.vertical).toBe('drink');
+    expect(ordered[DRINK_VENUES.length - 1]?.vertical).toBe('drink');
+    expect(ordered[DRINK_VENUES.length]?.vertical).toBe('food');
+  });
+
   it('randează controalele comune Toate / Mâncare / Băutură în MapView', () => {
     const html = renderToStaticMarkup(
       <MapView

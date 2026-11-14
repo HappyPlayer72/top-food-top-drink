@@ -776,3 +776,18 @@ export const outingPollVotes = pgTable("outing_poll_votes", {
   venueSlug: text().notNull(),
   updatedAt: createdAt(),
 }, (t) => [primaryKey({ columns: [t.pollToken, t.voterHash] })]);
+
+/** Voturi lunare pe categorii din „Topul lunii” (1 vot per user per secțiune per lună). */
+export const monthlyCategoryVotes = pgTable(
+  "monthly_category_votes",
+  {
+    month: text().notNull(),
+    vertical: vertical().notNull(),
+    categoryId: text().notNull(),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    venueSlug: text().notNull(),
+    venueName: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.month, t.vertical, t.categoryId, t.userId] })],
+);

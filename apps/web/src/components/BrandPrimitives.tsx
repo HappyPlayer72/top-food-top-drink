@@ -839,3 +839,372 @@ export const CrowdMeter: React.FC<{
     <span className="text-[12px] text-[#F4EEE2]/75">{label}</span>
   </div>
 );
+
+/**
+ * 14. TrophyMedalBadge — Trofee editoriale personalizate per categorie (Aur #1, Argint #2, Bronz #3)
+ */
+const TROPHY_MEDAL_STYLE: Record<
+  1 | 2 | 3,
+  {
+    label: string;
+    metalLabel: string;
+    cupLight: string;
+    cupMain: string;
+    cupShade: string;
+    rimFill: string;
+    ribbonStripe: string;
+    ink: string;
+  }
+> = {
+  1: {
+    label: 'Aur · Locul 1',
+    metalLabel: 'Aur',
+    cupLight: '#FFF0B8',
+    cupMain: '#FAD47A',
+    cupShade: '#E6AE3C',
+    rimFill: '#FAF3E6',
+    ribbonStripe: '#C5A99B',
+    ink: '#541731',
+  },
+  2: {
+    label: 'Argint · Locul 2',
+    metalLabel: 'Argint',
+    cupLight: '#FFFFFF',
+    cupMain: '#DCE3EC',
+    cupShade: '#B4C0CF',
+    rimFill: '#F8FAFC',
+    ribbonStripe: '#94A3B8',
+    ink: '#293548',
+  },
+  3: {
+    label: 'Bronz · Locul 3',
+    metalLabel: 'Bronz',
+    cupLight: '#F7D2B8',
+    cupMain: '#E39B6D',
+    cupShade: '#C27143',
+    rimFill: '#FAF0E6',
+    ribbonStripe: '#B98A6C',
+    ink: '#4A2111',
+  },
+};
+
+function renderCategoryCupContent(categoryId: string | undefined, ink: string) {
+  switch (categoryId) {
+    case 'pizza':
+      return (
+        <g>
+          <path
+            d="M17.5 28.5 L31 11.5 L45 27.5 Z"
+            fill="#FAD47A"
+            stroke={ink}
+            strokeWidth="2.1"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M27.5 13.5 Q31.5 9.5 35.5 13"
+            fill="#D9822B"
+            stroke={ink}
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+          <circle cx="29.5" cy="19.5" r="2.1" fill="#B3261E" />
+          <circle cx="35.5" cy="22.5" r="2.2" fill="#B3261E" />
+          <circle cx="25.5" cy="24.5" r="1.9" fill="#B3261E" />
+          <ellipse cx="32.2" cy="24.8" rx="1.6" ry="1" transform="rotate(-25 32.2 24.8)" fill="#2D5130" />
+        </g>
+      );
+
+    case 'mancare-gatita':
+      return (
+        <g>
+          <path d="M39.5 25 L47.5 11.5" stroke="#C7A68B" strokeWidth="3.2" strokeLinecap="round" />
+          <path d="M39.5 25 L47.5 11.5" stroke={ink} strokeWidth="1.6" strokeLinecap="round" />
+          <ellipse cx="32" cy="26.8" rx="16.2" ry="4.6" fill="#D96426" stroke={ink} strokeWidth="2" />
+          <path d="M21 26.2 Q26.5 24.2 32 25.8 Q38 27.2 43 25.4" fill="none" stroke="#F6A85E" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="26.5" cy="25.6" r="1.6" fill="#F2B84B" />
+          <circle cx="35.2" cy="26.2" r="1.4" fill="#FAF3E6" />
+          <ellipse cx="30.5" cy="24.6" rx="2.1" ry="1.1" transform="rotate(-18 30.5 24.6)" fill="#2D5130" />
+          <path d="M25.5 21.5 Q24 18.5 26 16" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" opacity="0.65" />
+          <path d="M33.5 20.5 Q35 17.5 33 14.5" fill="none" stroke={ink} strokeWidth="1.6" strokeLinecap="round" opacity="0.65" />
+        </g>
+      );
+
+    case 'burger':
+      return (
+        <g>
+          <path
+            d="M19 25.5 C19 16.5 24.8 13.5 32 13.5 C39.2 13.5 45 16.5 45 25.5 Z"
+            fill="#E2953E"
+            stroke={ink}
+            strokeWidth="2.1"
+            strokeLinejoin="round"
+          />
+          <ellipse cx="27" cy="17.5" rx="1.2" ry="0.7" transform="rotate(-20 27 17.5)" fill="#FAF3E6" />
+          <ellipse cx="32.5" cy="16.2" rx="1.2" ry="0.7" fill="#FAF3E6" />
+          <ellipse cx="37.5" cy="18" rx="1.2" ry="0.7" transform="rotate(20 37.5 18)" fill="#FAF3E6" />
+          <path d="M18 25.5 Q21.5 23.2 25 25.5 Q28.5 27.2 32 25.2 Q35.5 23.2 39 25.5 Q42.5 27 46 25.2" fill="none" stroke="#4B8B46" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M23 26.2 L28 29.2 L33 26.2 Z" fill="#F7C631" stroke={ink} strokeWidth="1.2" strokeLinejoin="round" />
+        </g>
+      );
+
+    case 'shaorma':
+      return (
+        <g>
+          <path
+            d="M21 28 L25.5 13.5 L38.5 15 L36.5 28.5 Z"
+            fill="#EED6AF"
+            stroke={ink}
+            strokeWidth="2.1"
+            strokeLinejoin="round"
+          />
+          <path d="M25.5 13.5 Q32 11 38.5 15" fill="#B35C2E" stroke={ink} strokeWidth="1.8" />
+          <rect x="27.5" y="10.5" width="2.4" height="5" rx="0.8" transform="rotate(-12 28.7 13)" fill="#F7C631" stroke={ink} strokeWidth="1.1" />
+          <rect x="32" y="10.8" width="2.4" height="5" rx="0.8" transform="rotate(14 33.2 13.3)" fill="#F7C631" stroke={ink} strokeWidth="1.1" />
+          <circle cx="30.5" cy="15.5" r="1.8" fill="#B3261E" />
+          <circle cx="34.5" cy="16" r="1.6" fill="#4B8B46" />
+          <path d="M25 19.5 L35 21.5 M24.5 23.5 L34.5 25.5" stroke="#B98A5E" strokeWidth="1.5" strokeLinecap="round" />
+        </g>
+      );
+
+    case 'asiatic':
+      return (
+        <g>
+          <path d="M35 25 L48 11.5" stroke={ink} strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M38.5 26 L50.5 15" stroke={ink} strokeWidth="2.2" strokeLinecap="round" />
+          <ellipse cx="26.5" cy="21" rx="4.8" ry="4" transform="rotate(-15 26.5 21)" fill="#FAF3E6" stroke={ink} strokeWidth="1.8" />
+          <circle cx="26.8" cy="21.2" r="2.1" fill="#F2A33A" />
+          <path d="M18.5 26.5 Q22 22.5 25.5 26 Q29 29 33 25 Q37 22 41.5 26" fill="none" stroke="#F5C75B" strokeWidth="3.2" strokeLinecap="round" />
+          <path d="M18.5 26.5 Q22 22.5 25.5 26 Q29 29 33 25 Q37 22 41.5 26" fill="none" stroke={ink} strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+        </g>
+      );
+
+    case 'brunch':
+      return (
+        <g>
+          <path
+            d="M18.5 25.5 C19.5 17.5 27 14 35.5 16.5 C41 18 44 22 44.5 26 Z"
+            fill="#E0943A"
+            stroke={ink}
+            strokeWidth="2.1"
+            strokeLinejoin="round"
+          />
+          <path d="M25.5 16.5 L27.5 24 M32.5 16.2 L32.5 24.5 M38.5 18 L37.5 24.5" stroke={ink} strokeWidth="1.3" strokeLinecap="round" opacity="0.55" />
+          <path d="M21 26 C21 22.5 25.5 21.5 29.5 22.8 C33 21.8 36 24 35.5 27 Z" fill="#FFFDF7" stroke={ink} strokeWidth="1.6" />
+          <circle cx="28" cy="24.5" r="2.3" fill="#F2A33A" />
+        </g>
+      );
+
+    case 'bere':
+      return (
+        <g>
+          <ellipse cx="32" cy="26.5" rx="16.2" ry="4" fill="#E39724" stroke={ink} strokeWidth="1.8" />
+          <path
+            d="M17 26.5 C16.5 20.5 20 17 24.5 18.2 C26.5 14 33 13.5 36.5 17 C41.5 15.8 46.5 19.5 46.5 25.8 C44 28 39 27.5 36 26.8 C33 28.2 28 28 25 26.8 C22 27.8 18.5 27.5 17 26.5 Z"
+            fill="#FFFDF7"
+            stroke={ink}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path d="M21 26.5 V31.5 C21 32.8 23.4 32.8 23.4 31.5 V27" fill="#FFFDF7" stroke={ink} strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="29.5" cy="21" r="1.1" fill="#E39724" opacity="0.45" />
+          <circle cx="35.5" cy="22.5" r="0.9" fill="#E39724" opacity="0.45" />
+        </g>
+      );
+
+    case 'cocktail':
+      return (
+        <g>
+          <path d="M25.5 26 L20.5 12" stroke="#FAF3E6" strokeWidth="2.8" strokeLinecap="round" />
+          <path d="M25.5 26 L20.5 12" stroke={ink} strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="43.5" cy="22.5" r="5.4" fill="#F2A33A" stroke={ink} strokeWidth="1.9" />
+          <circle cx="43.5" cy="22.5" r="3.4" fill="#FCE28B" />
+          <ellipse cx="32" cy="26.5" rx="16" ry="4.2" fill="#C93434" stroke={ink} strokeWidth="1.8" />
+          <rect x="29.5" y="21.5" width="4.8" height="4.8" rx="1" transform="rotate(14 31.9 23.9)" fill="#FAF3E6" fillOpacity="0.7" stroke={ink} strokeWidth="1.4" />
+        </g>
+      );
+
+    case 'atmosfera':
+      return (
+        <g>
+          <circle cx="32" cy="23.5" r="9.8" fill="#2F1922" stroke={ink} strokeWidth="2" />
+          <circle cx="32" cy="23.5" r="6.8" fill="none" stroke="#FAF3E6" strokeWidth="0.9" opacity="0.3" />
+          <circle cx="32" cy="23.5" r="3.5" fill="#E0A526" stroke={ink} strokeWidth="1.3" />
+          <circle cx="32" cy="23.5" r="1.1" fill={ink} />
+        </g>
+      );
+
+    default:
+      return (
+        <g>
+          <rect
+            x="17.5"
+            y="16"
+            width="29"
+            height="15"
+            rx="3"
+            transform="rotate(5 32 23.5)"
+            fill="#FAF3E6"
+            stroke={ink}
+            strokeWidth="2"
+          />
+          <rect x="19.5" y="18.2" width="8.5" height="7.5" rx="1.5" transform="rotate(5 23.7 22)" fill={ink} />
+          <path d="M21.5 23 H26.2 M22.5 21.5 C23.2 20 24.8 20 25.4 21.5" stroke="#FAF3E6" strokeWidth="1.3" strokeLinecap="round" />
+        </g>
+      );
+  }
+}
+
+export const TrophyMedalBadge: React.FC<{
+  rank: 1 | 2 | 3;
+  categoryId?: string;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}> = ({ rank, categoryId, size = 'md', className = '' }) => {
+  const medal = TROPHY_MEDAL_STYLE[rank];
+  const dims =
+    size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-12 h-12' : 'w-10 h-10';
+
+  return (
+    <span
+      role="img"
+      aria-label={medal.label}
+      title={medal.label}
+      className={`relative inline-flex items-center justify-center shrink-0 select-none ${dims} ${className}`}
+    >
+      <svg viewBox="0 0 64 68" className="w-full h-full overflow-visible" aria-hidden="true">
+        <path
+          d="M21.5 11.5 L18 6.5 M32 9.5 L32 3.5 M42.5 11.5 L46 6.5"
+          stroke={medal.ink}
+          strokeWidth="2.8"
+          strokeLinecap="round"
+        />
+        <ellipse cx="32" cy="27.2" rx="17" ry="4.2" fill={medal.ink} />
+        {renderCategoryCupContent(categoryId, medal.ink)}
+        <path
+          d="M15 28.5 C9.5 28.5 7.5 31.8 7.5 35.8 C7.5 40 10.5 42.5 16.5 42.5"
+          fill="none"
+          stroke={medal.ink}
+          strokeWidth="5.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M15 28.5 C9.5 28.5 7.5 31.8 7.5 35.8 C7.5 40 10.5 42.5 16.5 42.5"
+          fill="none"
+          stroke={medal.cupMain}
+          strokeWidth="2.1"
+          strokeLinecap="round"
+        />
+        <path
+          d="M49 28.5 C54.5 28.5 56.5 31.8 56.5 35.8 C56.5 40 53.5 42.5 47.5 42.5"
+          fill="none"
+          stroke={medal.ink}
+          strokeWidth="5.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M49 28.5 C54.5 28.5 56.5 31.8 56.5 35.8 C56.5 40 53.5 42.5 47.5 42.5"
+          fill="none"
+          stroke={medal.cupMain}
+          strokeWidth="2.1"
+          strokeLinecap="round"
+        />
+        <path
+          d="M27.5 49.5 H36.5 C36.5 53 38 55 40 56 H24 C26 55 27.5 53 27.5 49.5 Z"
+          fill={medal.cupShade}
+          stroke={medal.ink}
+          strokeWidth="2.4"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M14.5 27 Q32 31.2 49.5 27 C49.5 41.8 41.5 49.5 32 50.5 C22.5 49.5 14.5 41.8 14.5 27 Z"
+          fill={medal.cupMain}
+          stroke={medal.ink}
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M17.5 30.5 C18 39 22.5 45 27.5 47.2"
+          fill="none"
+          stroke={medal.cupLight}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          opacity="0.75"
+        />
+        <path
+          d="M26 44.5 C22.5 42.5 20.5 38.5 21 34.5"
+          fill="none"
+          stroke={medal.ink}
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M20.5 36.2 L18.5 35.2 M21.2 39 L19 38.5 M22.8 41.5 L20.5 41.5"
+          stroke={medal.ink}
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+        <path
+          d="M38 44.5 C41.5 42.5 43.5 38.5 43 34.5"
+          fill="none"
+          stroke={medal.ink}
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M43.5 36.2 L45.5 35.2 M42.8 39 L45 38.5 M41.2 41.5 L43.5 41.5"
+          stroke={medal.ink}
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+        <text
+          x="32"
+          y="44.2"
+          textAnchor="middle"
+          fill={medal.ink}
+          fontFamily="Archivo, sans-serif"
+          fontWeight="800"
+          fontSize="13.5"
+        >
+          {rank}
+        </text>
+        <path
+          d="M21.5 55.5 H42.5 L46.5 63.5 H17.5 Z"
+          fill={medal.ink}
+          stroke={medal.ink}
+          strokeWidth="2.2"
+          strokeLinejoin="round"
+        />
+        <rect x="16" y="63" width="32" height="3" rx="1.5" fill={medal.ink} />
+        <path d="M24 57.5 H40 L41.8 61.8 H22.2 Z" fill={medal.rimFill} />
+        <rect x="27" y="59.1" width="10" height="1.4" rx="0.7" fill={medal.ribbonStripe} />
+      </svg>
+    </span>
+  );
+};
+
+/**
+ * 15. EditorialVoteSeal — Ștampilă crenelată pentru secțiunea „Votul publicului”
+ */
+export const EditorialVoteSeal: React.FC<{
+  drink?: boolean;
+  className?: string;
+}> = ({ drink = false, className = '' }) => {
+  const fill = drink ? '#F2A33A' : '#B3261E';
+  const ink = drink ? '#17382C' : '#FBF6EA';
+  return (
+    <svg
+      viewBox="0 0 28 28"
+      aria-hidden="true"
+      className={`w-6 h-6 shrink-0 ${className}`}
+    >
+      <path
+        d="M14 1.5l2.4 2.1 3.1-.5 1.1 3 3 1.1-.5 3.1 2.1 2.4-2.1 2.4.5 3.1-3 1.1-1.1 3-3.1-.5L14 26.5l-2.4-2.1-3.1.5-1.1-3-3-1.1.5-3.1L2.8 14l2.1-2.4-.5-3.1 3-1.1 1.1-3 3.1.5Z"
+        fill={fill}
+      />
+      <path
+        d="M14 7.6l1.7 3.5 3.8.5-2.7 2.7.6 3.8-3.4-1.8-3.4 1.8.6-3.8-2.7-2.7 3.8-.5Z"
+        fill={ink}
+      />
+    </svg>
+  );
+};

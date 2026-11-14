@@ -52,6 +52,13 @@ import { FidelityView } from './FidelityView';
 import { Footer } from './Footer';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
 
+type EasterEggId = 'hamster' | 'demon';
+
+const EASTER_EGGS: Record<EasterEggId, { src: string; alt: string }> = {
+  hamster: { src: '/easter-hamster.jpg', alt: 'Hamster' },
+  demon: { src: '/easter-demon.jpg', alt: 'Demon' },
+};
+
 const USER_ACCOUNTS: UserAccount[] = [
   {
     id: 'andreea-m',
@@ -197,13 +204,13 @@ export function TopFoodShell({
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [storageHydrated, setStorageHydrated] = useState<boolean>(false);
-  const [showHamsterEasterEgg, setShowHamsterEasterEgg] =
-    useState<boolean>(false);
+  const [activeEasterEgg, setActiveEasterEgg] =
+    useState<EasterEggId | null>(null);
 
   const urlReadyRef = useRef<boolean>(false);
   const lastTrackedVenueIdRef = useRef<string | null>(null);
-  const hamsterKeyBufferRef = useRef<string>('');
-  const hamsterSearchTriggeredRef = useRef<boolean>(false);
+  const easterEggKeyBufferRef = useRef<string>('');
+  const easterEggSearchTriggeredRef = useRef<EasterEggId | null>(null);
   const scrollPositionsRef = useRef<Partial<Record<NavSection, number>>>({});
   const preLoginScrollYRef = useRef<number>(0);
   const pendingScrollYRef = useRef<number | null>(null);
@@ -808,25 +815,27 @@ export function TopFoodShell({
 
   useEffect(() => {
     const normalized = searchQuery.trim().toLowerCase();
+    const matchedEgg: EasterEggId | null =
+      normalized === 'hamster' || normalized === 'demon' ? normalized : null;
     if (
-      normalized === 'hamster' &&
+      matchedEgg &&
       navSection === 'top' &&
       !showLoginScreen &&
       selectedRestaurantId === null
     ) {
-      if (!hamsterSearchTriggeredRef.current) {
-        hamsterSearchTriggeredRef.current = true;
-        setShowHamsterEasterEgg(true);
+      if (easterEggSearchTriggeredRef.current !== matchedEgg) {
+        easterEggSearchTriggeredRef.current = matchedEgg;
+        setActiveEasterEgg(matchedEgg);
       }
     } else {
-      hamsterSearchTriggeredRef.current = false;
+      easterEggSearchTriggeredRef.current = null;
     }
   }, [searchQuery, navSection, showLoginScreen, selectedRestaurantId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && showHamsterEasterEgg) {
-        setShowHamsterEasterEgg(false);
+      if (event.key === 'Escape' && activeEasterEgg) {
+        setActiveEasterEgg(null);
         return;
       }
 
@@ -834,7 +843,7 @@ export function TopFoodShell({
         navSection !== 'top' ||
         showLoginScreen ||
         selectedRestaurantId !== null ||
-        showHamsterEasterEgg
+        activeEasterEgg
       ) {
         return;
       }
@@ -845,21 +854,24 @@ export function TopFoodShell({
         !event.metaKey &&
         !event.altKey
       ) {
-        hamsterKeyBufferRef.current = (
-          hamsterKeyBufferRef.current + event.key.toLowerCase()
+        easterEggKeyBufferRef.current = (
+          easterEggKeyBufferRef.current + event.key.toLowerCase()
         ).slice(-7);
-        if (hamsterKeyBufferRef.current === 'hamster') {
-          hamsterKeyBufferRef.current = '';
-          setShowHamsterEasterEgg(true);
+        const matchedEgg = (Object.keys(EASTER_EGGS) as EasterEggId[]).find(
+          (id) => easterEggKeyBufferRef.current.endsWith(id)
+        );
+        if (matchedEgg) {
+          easterEggKeyBufferRef.current = '';
+          setActiveEasterEgg(matchedEgg);
         }
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [navSection, showLoginScreen, selectedRestaurantId, showHamsterEasterEgg]);
+  }, [navSection, showLoginScreen, selectedRestaurantId, activeEasterEgg]);
 
-  const handleCloseHamsterEasterEgg = () => setShowHamsterEasterEgg(false);
+  const handleCloseEasterEgg = () => setActiveEasterEgg(null);
 
   if (showLoginScreen) {
     return (
@@ -958,6 +970,9 @@ export function TopFoodShell({
             awards={isDrink ? drinkAwards : foodAwards}
             selectedMonth={selectedMonth}
             onSelectMonth={(m) => setSelectedMonth(m)}
+            currentUser={currentUser}
+            backendOnline={backendOnline}
+            onRequireLogin={() => handleOpenLogin({ openReview: false })}
             onBack={() => navigateToSection('top')}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
           />
@@ -1030,12 +1045,12 @@ export function TopFoodShell({
         onToggleSave={handleToggleSave}
       />
 
-      {showHamsterEasterEgg && (
+      {activeEasterEgg && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Hamster"
-          onClick={handleCloseHamsterEasterEgg}
+          aria-label={EASTER_EGGS[activeEasterEgg].alt}
+          onClick={handleCloseEasterEgg}
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-fadeIn"
         >
           <div
@@ -1044,15 +1059,15 @@ export function TopFoodShell({
           >
             <button
               type="button"
-              onClick={handleCloseHamsterEasterEgg}
+              onClick={handleCloseEasterEgg}
               aria-label="Închide"
               className="btn-press absolute top-2.5 right-2.5 z-10 w-11 h-11 rounded-full bg-black/60 text-white hover:bg-black/80 flex items-center justify-center"
             >
               <X className="w-5 h-5" />
             </button>
             <img
-              src="/easter-hamster.jpg"
-              alt="Hamster"
+              src={EASTER_EGGS[activeEasterEgg].src}
+              alt={EASTER_EGGS[activeEasterEgg].alt}
               className="block w-full h-auto max-h-[80dvh] object-contain"
             />
           </div>
