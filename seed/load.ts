@@ -15,6 +15,7 @@ import {
   checkins, cities, createDb, employees, localVerifications, loyaltyPrograms, menuItems, partnerships, posts, reviewVotes, reviews, touristZones,
   userSocialLinks, users, venueManagers, venues, vibeChecks, type OpeningHours,
 } from "@tftd/db";
+import { hashPassword } from "@tftd/accounts";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
 import { freezeMonth, lastMonth } from "@tftd/leaderboard";
@@ -84,6 +85,17 @@ async function main() {
       });
     }
   }
+  // Conturile demo de pe ecranul de login (parola DEMO_PASSWORD, implicit „demo1234”)
+  const demoHash = await hashPassword(process.env.DEMO_PASSWORD ?? "demo1234");
+  await db.update(users).set({ email: "andreea@e-uvt.ro", passwordHash: demoHash, localNeighborhood: "Iosefin" }).where(sql`${users.id} = ${userIds.get("u0")!}`);
+  const [luca] = await db
+    .insert(users)
+    .values({ username: "luca.t", displayName: "Luca T.", email: "luca@visit.ro", passwordHash: demoHash, roles: ["user"] })
+    .returning({ id: users.id });
+  userIds.set("luca", luca!.id);
+  await db.insert(users).values({ username: "admin", displayName: "Admin topfood", email: "admin@topfood.ro", passwordHash: demoHash, roles: ["user", "admin"] });
+  await db.update(users).set({ passwordHash: demoHash }).where(sql`${users.id} = ${userIds.get("owner-sandu")!}`);
+
   await db.insert(userSocialLinks).values({
     userId: userIds.get("influencer")!, platform: "tiktok", url: "https://www.tiktok.com/@exemplu", verified: true, followers: 24_000,
   });
@@ -121,10 +133,15 @@ async function main() {
     body: "O fierbem de la zero, șase ore. Nu putem face asta zilnic, deci nu o vindem zilnic.",
     publishAt: new Date(now.getTime() - 3 * DAY),
   });
-  const saturday = new Date(now.getTime() + ((6 - now.getUTCDay() + 7) % 7) * DAY);
+  // Evenimentele cad mereu în weekendul curent sau următor, după ora de acum (pagina ascunde ce a trecut)
+  const day0 = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const fri = new Date(day0.getTime() + ((5 - now.getUTCDay() + 7) % 7) * DAY - (now.getUTCDay() === 6 ? DAY : now.getUTCDay() === 0 ? 2 * DAY : 0));
+  const upcoming = (d: Date, fallbackHours: number) => (d > now ? d : new Date(now.getTime() + fallbackHours * 3_600_000));
+  const bluesAt = upcoming(new Date(fri.getTime() + 19 * 3_600_000), 1); // vineri 21:00 ora României
+  const vinylAt = upcoming(new Date(fri.getTime() + DAY + 21 * 3_600_000), 2); // sâmbătă 23:00
   await db.insert(posts).values([
-    { venueId: venueIds.get("pivnita-cu-bolta")!, authorId: ownerId, type: "event", title: "Concert de blues", body: "De la 21:00. Intrare liberă.", eventAt: new Date(saturday.getTime() - DAY) },
-    { venueId: venueIds.get("depoul-de-tramvaie")!, authorId: ownerId, type: "event", title: "Noaptea de vinil", body: "De la 23:00. 30 lei.", eventAt: saturday },
+    { venueId: venueIds.get("pivnita-cu-bolta")!, authorId: ownerId, type: "event", title: "Concert de blues", body: "De la 21:00. Intrare liberă.", eventAt: bluesAt },
+    { venueId: venueIds.get("depoul-de-tramvaie")!, authorId: ownerId, type: "event", title: "Noaptea de vinil", body: "De la 23:00. 30 lei.", eventAt: vinylAt },
   ]);
 
   // ---------- Program, meniu, prezentare ----------

@@ -154,6 +154,7 @@ export function toRestaurant(
 
   return {
     id: v.slug,
+    venueId: v.id,
     slug: v.slug,
     name: v.name,
     vertical: v.vertical,
@@ -222,6 +223,9 @@ export function toRestaurant(
     crowdSegments: p.vibe ? (Math.max(1, Math.min(5, p.vibe.level)) as 1 | 2 | 3 | 4 | 5) : undefined,
     crowdLabel: p.vibe ? `${p.vibe.label}, acum ${p.vibe.minutesAgo} min` : undefined,
     drinkTags: v.drinkTags.length ? (v.drinkTags as Restaurant['drinkTags']) : fb?.drinkTags,
+
+    warnings: fb?.warnings,
+    facilities: fb?.facilities,
 
     reviewCounts: { locals: p.reviewCounts.local, tourists: p.reviewCounts.tourist, influencers: p.reviewCounts.influencer },
     reviews: p.reviews.map((r) => toReview(r, ctx.now)),

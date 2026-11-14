@@ -20,12 +20,16 @@ import {
   X,
 } from 'lucide-react';
 import type { LoyaltyIconId, LoyaltyProgram, UserAccount, Vertical } from '../types';
+import { createFidelityCard, fidelityWallet, stampFidelity } from '@/app/actions/loyalty';
+import { QrScanPanel } from './QrScanPanel';
 
 interface FidelityViewProps {
   vertical: Vertical;
   currentUser: UserAccount | null;
   onBack: () => void;
   onRequireLogin?: () => void;
+  /** true = cardurile vin din baza de date (ștampile reale, max una pe zi); altfel localStorage */
+  useBackend?: boolean;
 }
 
 const STORAGE_KEY = 'topfood-fidelity-programs';
@@ -212,6 +216,7 @@ export function FidelityView({
   currentUser,
   onBack,
   onRequireLogin,
+  useBackend = false,
 }: FidelityViewProps) {
   const isDrink = vertical === 'drink';
   const [activeTab, setActiveTab] = useState<'cards' | 'vendor'>('cards');
@@ -219,6 +224,7 @@ export function FidelityView({
   const [hydrated, setHydrated] = useState(false);
   const [expandedQrProgramId, setExpandedQrProgramId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastIsError, setToastIsError] = useState(false);
 
   // Vendor signup form state
   const [venueName, setVenueName] = useState('');
@@ -229,7 +235,24 @@ export function FidelityView({
   const [accentColor, setAccentColor] = useState<string>(isDrink ? '#17382C' : '#B3261E');
   const [formError, setFormError] = useState<string | null>(null);
 
+  /** Reîncarcă portofelul din backend; false = backend indisponibil (rămânem pe localStorage). */
+  const refreshFromBackend = async (): Promise<boolean> => {
+    const res = await fidelityWallet();
+    if (res.ok) {
+      setPrograms(res.programs);
+      return true;
+    }
+    if (!res.offline) showToast(res.error, true);
+    return false;
+  };
+
   useEffect(() => {
+    if (useBackend) {
+      void refreshFromBackend().then((ok) => {
+        if (ok) setHydrated(true);
+      });
+      return;
+    }
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -246,7 +269,7 @@ export function FidelityView({
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || useBackend) return;
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(programs));
     } catch {
@@ -254,14 +277,32 @@ export function FidelityView({
     }
   }, [programs, hydrated]);
 
-  const showToast = (msg: string) => {
+  /** Succes: dispare după 10 s. Eroare: rămâne până o închide userul (WCAG 2.2.1). */
+  const showToast = (msg: string, isError = false) => {
     setToastMessage(msg);
+    setToastIsError(isError);
+    if (isError) return;
     window.setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev));
-    }, 3200);
+    }, 10000);
+  };
+
+  /** Ștampilă / premiu pe backend (același apel: cardul plin + scanare = premiul). */
+  const stampOnBackend = async (id: string) => {
+    if (!currentUser) {
+      onRequireLogin?.();
+      return;
+    }
+    const res = await stampFidelity(id);
+    showToast(res.ok ? res.message : res.error, !res.ok);
+    await refreshFromBackend();
   };
 
   const handleScanStamp = (id: string) => {
+    if (useBackend) {
+      void stampOnBackend(id);
+      return;
+    }
     setPrograms((prev) =>
       prev.map((prog) => {
         if (prog.id !== id) return prog;
@@ -278,6 +319,10 @@ export function FidelityView({
   };
 
   const handleRedeem = (id: string) => {
+    if (useBackend) {
+      void stampOnBackend(id);
+      return;
+    }
     setPrograms((prev) =>
       prev.map((prog) => {
         if (prog.id !== id || prog.stampsCollected < prog.stampsRequired) return prog;
@@ -307,6 +352,26 @@ export function FidelityView({
     }
 
     setFormError(null);
+    if (useBackend) {
+      if (!currentUser) {
+        onRequireLogin?.();
+        return;
+      }
+      void createFidelityCard({ name: cleanName, rewardTitle: cleanReward, stampsRequired, icon: selectedIcon, accentColor }).then(
+        async (res) => {
+          if (!res.ok) {
+            setFormError(res.error);
+            return;
+          }
+          await refreshFromBackend();
+          setVenueName('');
+          setRewardTitle('');
+          setActiveTab('cards');
+          showToast(res.message);
+        },
+      );
+      return;
+    }
     const slug = cleanName
       .toUpperCase()
       .replace(/[^A-Z0-9]+/g, '-')
@@ -427,10 +492,20 @@ export function FidelityView({
         </p>
       </div>
 
-      {/* Toast Notification */}
+      {useBackend && currentUser && activeTab === 'cards' && (
+        <QrScanPanel
+          isDrink={isDrink}
+          onResult={(message, isError) => {
+            showToast(message, isError);
+            void refreshFromBackend();
+          }}
+        />
+      )}
+
+      {/* Toast Notification — zona live există mereu, se schimbă doar conținutul */}
+      <div role={toastIsError ? 'alert' : 'status'} aria-live={toastIsError ? 'assertive' : 'polite'}>
       {toastMessage && (
         <div
-          role="status"
           className={`mb-6 flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-sm ${
             isDrink
               ? 'bg-[#143025] border-[#F2A33A]/50 text-[#F4EEE2]'
@@ -451,6 +526,7 @@ export function FidelityView({
           </button>
         </div>
       )}
+      </div>
 
       {/* Segmented Switch: Cardurile mele / Înscriere local */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">

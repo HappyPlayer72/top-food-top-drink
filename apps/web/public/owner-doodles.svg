@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">
+  <!-- Tapetul zonei /owner: mâzgăleli de masă și de bar. Folosit doar ca mască (vezi .owner-shell::before în globals.css), deci contează numai forma, nu culoarea. -->
+  <style>
+    g.d { fill: none; stroke: #000; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    g.d * { vector-effect: non-scaling-stroke; }
+  </style>
+  <defs>
+    <g id="fork"><path d="M22 6v16M32 6v16M42 6v16M22 22c0 7 4 10 10 10s10-3 10-10M32 32v28"/></g>
+    <g id="knife"><path d="M26 6c12 2 16 14 12 30H26zM26 36v24"/></g>
+    <g id="mug"><path d="M10 18h26v32c0 3-2 5-5 5H15c-3 0-5-2-5-5zM36 24h6c4 0 6 3 6 7v6c0 4-2 7-6 7h-6M10 18c-5-1-5-9 1-9 2-6 10-6 12-1 5-2 11 1 9 6 3 1 4 3 4 4M18 28v18M27 28v18"/></g>
+    <g id="wine"><path d="M14 6h28c0 16-5 26-14 26S14 22 14 6zM28 32v22M18 56h20M17 14h22"/></g>
+    <g id="pizza"><path d="M6 12c16-8 36-8 52 0L32 58zM12 19c13-6 27-6 40 0"/><circle cx="26" cy="26" r="3"/><circle cx="38" cy="30" r="3"/><circle cx="32" cy="42" r="2.5"/></g>
+    <g id="lemon"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="18"/><path d="M32 14v36M14 32h36M19 19l26 26M45 19L19 45"/></g>
+    <g id="heart"><path d="M32 54C10 38 6 24 14 16c6-6 14-2 18 4 4-6 12-10 18-4 8 8 4 22-18 38z"/></g>
+    <g id="bubbles"><circle cx="14" cy="42" r="8"/><circle cx="36" cy="26" r="5"/><circle cx="46" cy="48" r="3.5"/><circle cx="26" cy="10" r="3"/></g>
+    <g id="sparkle"><path d="M32 6v52M6 32h52M14 14l36 36M50 14L14 50"/></g>
+    <g id="squiggle"><path d="M2 32c6-14 10 14 15 0s10 14 15 0 10 14 15 0 8-6 12 0"/></g>
+    <g id="spiral"><path d="M32 32c3-3 8-1 8 4s-6 9-12 7-9-9-6-16 11-12 20-9 14 12 12 22"/></g>
+    <g id="arrow"><path d="M6 44c10-30 36-34 52-12M48 22l10 10-14 3"/></g>
+    <g id="pepper"><path d="M42 16c-18 2-32 16-32 40 18-4 34-18 30-36M42 16c0-5 3-8 8-9"/></g>
+    <g id="star"><path d="M32 6l7 18 19 2-14 13 4 19-16-10-16 10 4-19L6 26l19-2z"/></g>
+  </defs>
+  <g class="d">
+    <use href="#fork" transform="translate(62 66) rotate(-20) scale(.9) translate(-32 -32)"/>
+    <use href="#bubbles" transform="translate(170 50) scale(.8) translate(-32 -32)"/>
+    <use href="#mug" transform="translate(290 66) rotate(12) scale(.9) translate(-32 -32)"/>
+    <use href="#star" transform="translate(400 60) rotate(10) scale(.55) translate(-32 -32)"/>
+    <use href="#squiggle" transform="translate(420 140) rotate(-30) scale(.8) translate(-32 -32)"/>
+    <use href="#lemon" transform="translate(60 170) scale(.75) translate(-32 -32)"/>
+    <use href="#wine" transform="translate(170 168) rotate(-14) scale(.85) translate(-32 -32)"/>
+    <use href="#pizza" transform="translate(290 176) rotate(16) scale(.85) translate(-32 -32)"/>
+    <use href="#heart" transform="translate(400 232) rotate(12) scale(.6) translate(-32 -32)"/>
+    <use href="#sparkle" transform="translate(230 238) scale(.35) translate(-32 -32)"/>
+    <use href="#knife" transform="translate(50 290) rotate(14) scale(.85) translate(-32 -32)"/>
+    <use href="#spiral" transform="translate(140 290) scale(.7) translate(-32 -32)"/>
+    <use href="#pepper" transform="translate(240 306) rotate(-20) scale(.8) translate(-32 -32)"/>
+    <use href="#arrow" transform="translate(350 312) scale(.7) translate(-32 -32)"/>
+    <use href="#sparkle" transform="translate(440 330) scale(.4) translate(-32 -32)"/>
+    <use href="#bubbles" transform="translate(70 410) rotate(20) scale(.7) translate(-32 -32)"/>
+    <use href="#squiggle" transform="translate(170 420) rotate(10) scale(.9) translate(-32 -32)"/>
+    <use href="#mug" transform="translate(300 420) rotate(-10) scale(.7) translate(-32 -32)"/>
+    <use href="#star" transform="translate(410 420) rotate(-12) scale(.5) translate(-32 -32)"/>
+  </g>
+</svg>

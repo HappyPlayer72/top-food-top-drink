@@ -19,6 +19,14 @@ export interface PreferenceRecommenderProps {
 }
 
 type BudgetChoice = 'any' | 'budget' | 'mid' | 'treat';
+type ContextChoice = 'any' | 'quick-lunch' | 'evening' | 'group-table';
+
+const CONTEXT_OPTIONS: { id: ContextChoice; label: string }[] = [
+  { id: 'any', label: 'Oricând' },
+  { id: 'quick-lunch', label: 'Prânz rapid' },
+  { id: 'evening', label: 'Ieșire de seară' },
+  { id: 'group-table', label: 'Masă mare de gașcă' },
+];
 
 const VIBE_OPTIONS = [
   { id: 'localnici', label: 'Autentic / Localnici' },
@@ -28,6 +36,47 @@ const VIBE_OPTIONS = [
 ] as const;
 
 type VibeChoice = (typeof VIBE_OPTIONS)[number]['id'];
+
+function matchesContext(r: Restaurant, context: ContextChoice): boolean {
+  if (context === 'any') return true;
+  const hay = [
+    ...r.occasionTags,
+    ...(r.drinkTags ?? []),
+    r.editorialHeadline,
+    r.cuisine,
+    r.hours,
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  if (context === 'quick-lunch') {
+    return (
+      r.avgMealPriceRon <= 55 ||
+      hay.includes('prânz') ||
+      hay.includes('rapid') ||
+      hay.includes('street') ||
+      hay.includes('patiserie')
+    );
+  }
+  if (context === 'evening') {
+    return (
+      hay.includes('sear') ||
+      hay.includes('vineri') ||
+      hay.includes('cocktail') ||
+      hay.includes('muzic') ||
+      hay.includes('vin') ||
+      hay.includes('bere')
+    );
+  }
+  return (
+    hay.includes('grup') ||
+    hay.includes('terasă') ||
+    hay.includes('pizza') ||
+    hay.includes('pub') ||
+    hay.includes('tradițional') ||
+    (r.crowdSegments ?? 3) >= 3
+  );
+}
 
 function matchesBudget(r: Restaurant, budget: BudgetChoice): boolean {
   if (budget === 'any') return true;
@@ -93,8 +142,12 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
   const [selectedCuisine, setSelectedCuisine] = useState<string>('any');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('any');
   const [selectedVibe, setSelectedVibe] = useState<VibeChoice | null>(null);
+  const [selectedContext, setSelectedContext] = useState<ContextChoice>('any');
   const [noTrapsOnly, setNoTrapsOnly] = useState<boolean>(true);
   const [openNowOnly, setOpenNowOnly] = useState<boolean>(false);
+  const [excludeLastSeen, setExcludeLastSeen] = useState<boolean>(true);
+  const [showTopThree, setShowTopThree] = useState<boolean>(false);
+  const [lastSeenId, setLastSeenId] = useState<string | null>(null);
 
   const [hasSearched, setHasSearched] = useState(false);
   const [pickIndex, setPickIndex] = useState(0);
@@ -160,6 +213,18 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
         }
       }
 
+      if (selectedContext !== 'any') {
+        if (matchesContext(r, selectedContext)) {
+          score += 2;
+          const ctxLabel = CONTEXT_OPTIONS.find(
+            (c) => c.id === selectedContext
+          )?.label;
+          if (ctxLabel) reasons.push(ctxLabel);
+        } else {
+          score -= 2;
+        }
+      }
+
       if (noTrapsOnly) {
         if (r.touristTrapIndex <= 25) {
           score += 2;
@@ -181,10 +246,11 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
       // Quality tie-breaker + deterministic-per-roll jitter
       const qualityBonus = r.foodQualityScore * 0.25;
       const jitter = (((idx + 1) * (shuffleSeed + 7)) % 11) * 0.03;
+      const seenPenalty = excludeLastSeen && lastSeenId === r.id ? -3.5 : 0;
 
       return {
         restaurant: r,
-        totalScore: score + qualityBonus + jitter,
+        totalScore: score + qualityBonus + jitter + seenPenalty,
         matchScore: score,
         reasons,
         isExact:
@@ -193,6 +259,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
           (selectedNeighborhood === 'any' ||
             r.neighborhood === selectedNeighborhood) &&
           matchesVibe(r, selectedVibe) &&
+          matchesContext(r, selectedContext) &&
           (!noTrapsOnly || r.touristTrapIndex <= 25) &&
           (!openNowOnly || r.openNow),
       };
@@ -205,8 +272,11 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
     selectedCuisine,
     selectedNeighborhood,
     selectedVibe,
+    selectedContext,
     noTrapsOnly,
     openNowOnly,
+    excludeLastSeen,
+    lastSeenId,
     shuffleSeed,
   ]);
 
@@ -215,9 +285,20 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
       ? rankedMatches[pickIndex % rankedMatches.length]
       : null;
 
+  const alternativePicks = useMemo(() => {
+    if (!showTopThree || rankedMatches.length <= 1) return [];
+    const activeId = currentPick?.restaurant.id;
+    return rankedMatches
+      .filter((m) => m.restaurant.id !== activeId)
+      .slice(0, 2);
+  }, [showTopThree, rankedMatches, currentPick]);
+
   const exactCount = rankedMatches.filter((m) => m.isExact).length;
 
   const handleRecommend = () => {
+    if (currentPick) {
+      setLastSeenId(currentPick.restaurant.id);
+    }
     setHasSearched(true);
     setPickIndex(0);
     setShuffleSeed((s) => s + 1);
@@ -225,6 +306,9 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
 
   const handleNextMatch = () => {
     if (rankedMatches.length <= 1) return;
+    if (currentPick) {
+      setLastSeenId(currentPick.restaurant.id);
+    }
     setPickIndex((prev) => (prev + 1) % Math.min(rankedMatches.length, 5));
   };
 
@@ -383,8 +467,30 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
           </div>
         </div>
 
+        {/* Context / Moment */}
+        <div className="space-y-1.5">
+          <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
+            Momentul / Contextul
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {CONTEXT_OPTIONS.map((ctx) => (
+              <button
+                key={ctx.id}
+                type="button"
+                onClick={() => {
+                  setSelectedContext(ctx.id);
+                  setPickIndex(0);
+                }}
+                className={chipClass(selectedContext === ctx.id)}
+              >
+                {ctx.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Toggles */}
-        <div className="flex flex-wrap gap-4 pt-1">
+        <div className="flex flex-wrap gap-x-5 gap-y-2 pt-1">
           <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
             <input
               type="checkbox"
@@ -408,6 +514,24 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
               className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
             />
             <span>Doar deschis acum</span>
+          </label>
+          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={excludeLastSeen}
+              onChange={(e) => setExcludeLastSeen(e.target.checked)}
+              className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
+            />
+            <span>Exclude ultimul local văzut</span>
+          </label>
+          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showTopThree}
+              onChange={(e) => setShowTopThree(e.target.checked)}
+              className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
+            />
+            <span>Arată top 3 alternative</span>
           </label>
         </div>
 
@@ -558,6 +682,51 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
               </button>
             )}
           </div>
+
+          {alternativePicks.length > 0 && (
+            <div
+              className={`pt-4 border-t space-y-2.5 ${
+                isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+              }`}
+            >
+              <div className="text-[11px] font-bold uppercase tracking-wider opacity-70">
+                Alte 2 variante potrivite
+              </div>
+              <div className="grid sm:grid-cols-2 gap-2.5">
+                {alternativePicks.map((alt) => (
+                  <button
+                    key={alt.restaurant.id}
+                    type="button"
+                    onClick={() => onSelectRestaurant(alt.restaurant)}
+                    className={`btn-press rounded-[4px] border p-3 text-left space-y-1 transition-colors ${
+                      isDrink
+                        ? 'bg-[#143025] border-[#285443] hover:border-[#F2A33A]'
+                        : 'bg-[#FAF8F5] border-[#E6DFD5] hover:border-[#3A2418]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-[14px] truncate">
+                        {alt.restaurant.name}
+                      </span>
+                      <span
+                        className={`text-[12px] font-bold tabular-nums shrink-0 ${
+                          isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+                        }`}
+                      >
+                        {formatScore(alt.restaurant.foodQualityScore)}
+                      </span>
+                    </div>
+                    <div className="text-[12px] opacity-75 truncate">
+                      {alt.restaurant.shortNeighborhood ??
+                        alt.restaurant.neighborhood}{' '}
+                      · {alt.restaurant.cuisine} · ~
+                      {alt.restaurant.avgMealPriceRon} lei
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

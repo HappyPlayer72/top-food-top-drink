@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { BarChart3, BookOpenText, ChevronLeft, Clapperboard, MessageSquareText, UsersRound } from 'lucide-react';
-import { owner, venuePage } from '@tftd/api';
+import { BarChart3, BookOpenText, ChevronLeft, Clapperboard, MessageSquareText, Stamp, UsersRound } from 'lucide-react';
+import QRCode from 'qrcode';
+import { loyalty, owner, venuePage } from '@tftd/api';
+import { LoyaltyPanel } from '@/components/owner/LoyaltyPanel';
 import { BlogPanel } from '@/components/owner/BlogPanel';
 import { ReviewsPanel } from '@/components/owner/ReviewsPanel';
+import { StandingPanel } from '@/components/owner/Standing';
 import { StatsPanel } from '@/components/owner/StatsPanel';
 import { TeamPanel } from '@/components/owner/TeamPanel';
 import { SocialLinks } from '@/components/SocialLinks';
@@ -18,6 +21,7 @@ const SECTIONS = [
   { id: 'blog', label: 'Blog', description: 'Noutăți, meniuri și evenimente pentru clienții tăi.', icon: BookOpenText },
   { id: 'echipa', label: 'Echipa', description: 'Gestionează oamenii care dau viață localului.', icon: UsersRound },
   { id: 'videouri', label: 'Videouri', description: 'Adaugă și urmărește videourile despre localul tău.', icon: Clapperboard },
+  { id: 'fidelitate', label: 'Fidelitate', description: 'Card cu ștampile: clienții scanează codul QR de la casă.', icon: Stamp },
 ] as const;
 
 type Section = (typeof SECTIONS)[number]['id'];
@@ -43,8 +47,8 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
   let content: React.ReactNode;
   switch (selected.id as Section) {
     case 'statistici': {
-      const stats = await owner.venueStats(db, userId, venue.id);
-      content = <StatsPanel venueId={venue.id} venueName={venue.name} stats={stats} vertical={venue.vertical} />;
+      const [stats, standing] = await Promise.all([owner.venueStats(db, userId, venue.id), owner.standing(db, userId, venue.id)]);
+      content = <StatsPanel venueId={venue.id} venueName={venue.name} stats={stats} vertical={venue.vertical} afterScore={<StandingPanel standing={standing} vertical={venue.vertical} />} />;
       break;
     }
     case 'review-uri': {
@@ -65,6 +69,21 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
     case 'videouri': {
       const page = await venuePage(db, { citySlug: venue.citySlug, vertical: venue.vertical, slug: venue.slug, reviews: 'all', limit: 50 });
       content = <SocialLinks venueId={venue.id} venueName={venue.name} videos={page.videos} />;
+      break;
+    }
+    case 'fidelitate': {
+      const program = await loyalty.venueProgram(db, venue.id);
+      const current = program ? await loyalty.currentStampCode(db, userId, program.id) : null;
+      const qrSvg = current ? await QRCode.toString(current.code, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) : null;
+      content = (
+        <LoyaltyPanel
+          venueId={venue.id}
+          program={program ? { rewardTitle: program.rewardTitle, stampsRequired: program.stampsRequired, icon: program.icon } : null}
+          qrSvg={qrSvg}
+          code={current?.code ?? null}
+          expiresInSeconds={current?.expiresInSeconds ?? null}
+        />
+      );
       break;
     }
   }

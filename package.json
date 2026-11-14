@@ -13,7 +13,9 @@
     "db:migrate": "npm run migrate -w @tftd/db",
     "seed": "tsx --env-file-if-exists=.env seed/load.ts",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "import:google": "npm run job -w @tftd/worker -- descopera-locale && npm run job -w @tftd/worker -- actualizeaza-ratinguri",
+    "build:web": "npm run build -w @topfood/web"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
