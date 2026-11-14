@@ -32,7 +32,7 @@ Copiază [`.env.example`](../.env.example) și completează pentru producție:
 | `META_OEMBED_TOKEN` | Opțional | Extragere preview Instagram / Facebook oEmbed (`app_id\|client_token`) |
 | `ANTHROPIC_API_KEY` | Opțional | Analiză aspecte cu Claude (`claude-haiku-5-5`); fără cheie, folosește fallback pe cuvinte-cheie |
 | `STRIPE_SECRET_KEY` | Opțional | Rezervat pentru integrare billing externă |
-| `DEMO_PASSWORD` / `DEMO_CLAIM_CODE` / `DEMO_SCAN` / `DEMO_EMAIL_CODES` | **Nu în prod** | Lăsate necompletate în producție! Nu păstra shortcut-uri de demo active |
+| `DEMO_LOGIN` / `DEMO_CLAIM_CODE` / `DEMO_SCAN` / `DEMO_EMAIL_CODES` | **Nu în prod** | Lăsate necompletate în producție! Nu păstra shortcut-uri de demo active |
 
 ---
 
@@ -61,7 +61,7 @@ npx tsx --env-file-if-exists=.env apps/worker/src/main.ts --once recalculeaza-sc
 ## 4. Checklist înainte de lansare
 
 - [ ] `NODE_ENV=production` și `SESSION_SECRET` generat criptografic (`openssl rand -hex 32`)
-- [ ] `DEMO_EMAIL_CODES`, `DEMO_SCAN`, `DEMO_CLAIM_CODE`, `DEMO_PASSWORD` eliminate/golite din mediul de producție
+- [ ] `DEMO_EMAIL_CODES`, `DEMO_SCAN`, `DEMO_CLAIM_CODE`, `DEMO_LOGIN` eliminate/golite din mediul de producție
 - [ ] `npm test` și `npm run typecheck` trec fără erori
 - [ ] `npm run build:web` reușește cu `DATABASE_URL` accesibil
 - [ ] Worker-ul `@tftd/worker` are conexiune la același `DATABASE_URL` și rulează continuu
