@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Restaurant } from '../../types';
-import { toRestaurant, toTopReviewer, toWeekendEvent, trapTier } from './toRestaurant';
+import { groupMenu, toRestaurant, toTopReviewer, toWeekendEvent, trapTier } from './toRestaurant';
 
 type VenuePage = Parameters<typeof toRestaurant>[0];
 const now = new Date('2026-11-14T10:00:00Z');
@@ -123,4 +123,15 @@ it('evenimentul de weekend și recenzentul de top', () => {
   expect(e).toMatchObject({ dayShort: 'sâm.', dayNumber: '14', venueId: 'pivnita-cu-bolta', title: 'Concert de blues, Pivnița cu Boltă' });
   const t = toTopReviewer({ userId: 'u1', username: 'andreea0', displayName: 'Andreea M.', neighborhood: 'Iosefin', roles: ['user', 'local'], followers: null, helpfulVotes: 26, reviews: 4, role: 'verified-local', badgeLabel: 'Localnic din Iosefin' });
   expect(t).toEqual({ id: 'u1', initials: 'AM', name: 'Andreea M.', role: 'verified-local', badgeLabel: 'Localnic din Iosefin', helpfulVotes: 26 });
+});
+
+it('groupMenu: categoriile în ordinea primei apariții, fără categorie → titlul implicit', () => {
+  const row = (category: string, name: string) => ({ id: name, category, name, priceLei: 10, description: null, mustOrder: false, hasPhoto: name === 'Burtă' });
+  const groups = groupMenu([row('Ciorbe', 'Burtă'), row('Desert', 'Papanași'), row('Ciorbe', 'Perișoare'), row('', 'Pâine')], 'food');
+  expect(groups.map((g) => [g.title, g.items.map((i) => i.name)])).toEqual([
+    ['Ciorbe', ['Burtă', 'Perișoare']],
+    ['Desert', ['Papanași']],
+    ['Preparate', ['Pâine']],
+  ]);
+  expect(groups[0]!.items.map((i) => i.photoUrl)).toEqual(['/api/menu-photo/Burtă', undefined]);
 });

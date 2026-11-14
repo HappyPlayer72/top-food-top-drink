@@ -13,9 +13,9 @@ it("clasament: locul, câte localuri sunt și diferența până la cel de deasup
 });
 
 it("profil: fiecare punct bifat după datele lui; review-urile fără răspuns îl lasă nebifat", () => {
-  const gol = profileChecklist({ hasMenu: false, recentPost: false, hasTeam: false, hasVideo: false, unanswered: 3 });
+  const gol = profileChecklist({ hasMenu: false, hasPost: false, hasTeam: false, hasVideo: false, unanswered: 3 });
   expect(gol).toMatchObject({ done: 0, total: 5 });
-  const complet = profileChecklist({ hasMenu: true, recentPost: true, hasTeam: true, hasVideo: true, unanswered: 0 });
+  const complet = profileChecklist({ hasMenu: true, hasPost: true, hasTeam: true, hasVideo: true, unanswered: 0 });
   expect(complet).toMatchObject({ done: 5, total: 5 });
-  expect(profileChecklist({ hasMenu: true, recentPost: false, hasTeam: false, hasVideo: false, unanswered: 0 }).done).toBe(2);
+  expect(profileChecklist({ hasMenu: true, hasPost: false, hasTeam: false, hasVideo: false, unanswered: 0 }).done).toBe(2);
 });

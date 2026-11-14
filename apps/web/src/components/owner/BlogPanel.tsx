@@ -1,18 +1,18 @@
 'use client';
 
 import { useActionState } from 'react';
-import { BadgePercent, Clock, Megaphone, PenLine, UtensilsCrossed } from 'lucide-react';
+import { BadgePercent, Clock, Megaphone, PenLine } from 'lucide-react';
 import type { owner } from '@tftd/api';
 import { createPostAction, deletePostAction, updatePostAction } from '@/app/owner/[venueId]/actions-blog';
 import { EMPTY } from '@/lib/form';
 import { toBucharestInput } from '@/lib/time';
-import { Disclosure, EmptyState, Field, FormMessage, StatStrip, SubHeading, SubmitButton, Tag } from './ui';
+import { AlsoVenues, Disclosure, EmptyState, Field, FormMessage, StatStrip, SubHeading, SubmitButton, Tag } from './ui';
 import { fieldGrid, frameClass, inputClass, stagger } from './ui-classes';
 
 export type OwnerPost = Awaited<ReturnType<typeof owner.postsForOwner>>[number];
 
+// Meniul are secțiunea lui; aici doar postări.
 const TYPES = [
-  ['menu', 'Meniu'],
   ['event', 'Eveniment'],
   ['offer', 'Ofertă'],
   ['news', 'Noutate'],
@@ -24,7 +24,7 @@ const dateFmt = new Intl.DateTimeFormat('ro-RO', { dateStyle: 'long', timeStyle:
 const weekdayFmt = new Intl.DateTimeFormat('ro-RO', { weekday: 'short', timeZone: 'Europe/Bucharest' });
 const dayFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', timeZone: 'Europe/Bucharest' });
 
-export function BlogPanel({ venueId, posts }: { venueId: string; posts: OwnerPost[] }) {
+export function BlogPanel({ venueId, posts, otherVenues }: { venueId: string; posts: OwnerPost[]; otherVenues: { id: string; name: string }[] }) {
   const [state, create] = useActionState(createPostAction.bind(null, venueId), EMPTY);
   return (
     <div className="flex flex-col gap-10">
@@ -46,10 +46,11 @@ export function BlogPanel({ venueId, posts }: { venueId: string; posts: OwnerPos
               <h3 id="postare-noua" className="font-display text-[28px] leading-none">
                 Postare nouă
               </h3>
-              <p className="mt-1 text-[13px] text-o-muted">Meniul zilei, o ofertă, un eveniment sau o noutate.</p>
+              <p className="mt-1 text-[13px] text-o-muted">O ofertă, un eveniment sau o noutate.</p>
             </div>
           </div>
           <PostFields values={state.values} />
+          <AlsoVenues venues={otherVenues} legend="Publică și la" selected={state.values?.alsoVenueIds} />
           <FormMessage state={state} />
           <div>
             <SubmitButton>Publică postarea</SubmitButton>
@@ -69,7 +70,7 @@ export function BlogPanel({ venueId, posts }: { venueId: string; posts: OwnerPos
           </ul>
         ) : (
           <EmptyState title="Încă nu ai postări" icon={<PenLine size={26} />}>
-            Scrie meniul zilei, o ofertă sau un eveniment de weekend. Completează formularul de mai sus.
+            Scrie o ofertă, o noutate sau un eveniment de weekend. Completează formularul de mai sus.
           </EmptyState>
         )}
       </section>
@@ -83,7 +84,7 @@ function PostFields({ post, values }: { post?: OwnerPost; values?: Record<string
     <>
       <div className={fieldGrid}>
         <Field label="Tip">
-          <select name="type" defaultValue={values?.type ?? post?.type ?? 'menu'} className={inputClass}>
+          <select name="type" defaultValue={values?.type ?? post?.type ?? 'news'} className={inputClass}>
             {TYPES.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -123,9 +124,10 @@ function DateBox({ date }: { date: Date }) {
   );
 }
 
-const TYPE_ICON = { menu: UtensilsCrossed, offer: BadgePercent, news: Megaphone } as const;
+// `menu` rămâne în enum-ul din DB; migrarea 0004 a mutat postările vechi la „news”.
+const TYPE_ICON = { menu: Megaphone, offer: BadgePercent, news: Megaphone } as const;
 
-/** Meniu, ofertă, noutate: același chenar ca la dată, cu iconul tipului. */
+/** Ofertă, noutate: același chenar ca la dată, cu iconul tipului. */
 function TypeBox({ type }: { type: keyof typeof TYPE_ICON }) {
   const Icon = TYPE_ICON[type];
   return (

@@ -175,7 +175,8 @@ export async function venuePage(
     .from(venueSources)
     .where(eq(venueSources.venueId, venue.id));
   const menu = await db
-    .select({ name: menuItems.name, priceLei: menuItems.priceLei, description: menuItems.description, mustOrder: menuItems.mustOrder })
+    // Poza nu intră în pagină (data URL mare); doar dacă există, iar browserul o cere de la /api/menu-photo/{id}.
+    .select({ id: menuItems.id, category: menuItems.category, name: menuItems.name, priceLei: menuItems.priceLei, description: menuItems.description, mustOrder: menuItems.mustOrder, hasPhoto: isNotNull(menuItems.photo) })
     .from(menuItems)
     .where(eq(menuItems.venueId, venue.id))
     .orderBy(asc(menuItems.position));
@@ -344,4 +345,11 @@ export async function userProfile(db: Db, username: string) {
     socialLinks: links,
     reviews: recent,
   };
+}
+
+/** Poza unui fel din meniu (data URL), pentru /api/menu-photo/{id}. null dacă nu există. */
+export async function menuPhoto(db: Db, id: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const [row] = await db.select({ photo: menuItems.photo }).from(menuItems).where(eq(menuItems.id, id));
+  return row?.photo ?? null;
 }

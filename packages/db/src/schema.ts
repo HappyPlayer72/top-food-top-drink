@@ -405,13 +405,21 @@ export const menuItems = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    /** Secțiunea din meniu (ex. „Ciorbe”); ordinea secțiunilor = ordinea primului fel din fiecare. */
+    category: text().notNull().default(""),
     name: text().notNull(),
     priceLei: integer(),
     description: text(),
     mustOrder: boolean().notNull().default(false),
     position: integer().notNull().default(0),
+    /** Poză mică (data URL JPEG, micșorată în browser). Publicul o ia prin /api/menu-photo/{id}, nu inline. */
+    photo: text(),
   },
-  (t) => [index().on(t.venueId, t.position)],
+  (t) => [
+    index().on(t.venueId, t.position),
+    // shortcut: pozele stau în Postgres; când avem storage (ex. Supabase Storage), aici rămâne doar URL-ul.
+    check("menu_items_photo_size", sql`length(${t.photo}) <= 40000`),
+  ],
 );
 
 /** Voturi „util” pe review-uri: un vot per user per review. */

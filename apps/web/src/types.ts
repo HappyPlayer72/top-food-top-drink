@@ -144,6 +144,8 @@ export interface MenuItem {
   description?: string;
   portion?: string;
   isMustOrder?: boolean;
+  /** Poza pusă de owner (servită de /api/menu-photo/{id}). */
+  photoUrl?: string;
 }
 
 export interface MenuCategory {

@@ -1070,7 +1070,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                                 key={item.name}
                                 className="py-2 first:pt-0 last:pb-0 flex items-start justify-between gap-3"
                               >
-                                <div className="min-w-0 space-y-0.5">
+                                {item.photoUrl && (
+                                  // onError: dacă ownerul a resalvat meniul între timp, id-ul vechi dă 404; ascundem poza ruptă.
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={item.photoUrl} alt="" width={56} height={56} loading="lazy" onError={(e) => { e.currentTarget.hidden = true; }} className="size-14 shrink-0 rounded-[3px] object-cover" />
+                                )}
+                                <div className="min-w-0 flex-1 space-y-0.5">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-semibold text-[14px] leading-snug">
                                       {item.name}
