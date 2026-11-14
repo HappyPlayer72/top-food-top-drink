@@ -9,8 +9,10 @@
 import { inArray } from 'drizzle-orm';
 import { venues } from '@tftd/db';
 import { getDb } from '../../lib/server/db';
+// Constantele stau în lib/: un fișier 'use server' poate exporta doar funcții async
+import { haversineM, PRICE_BANDS, WALK } from '../../lib/tasteTourEstimate';
 
-type Point = { lat: number; lng: number };
+import type { Point } from '../../lib/tasteTourEstimate';
 type Stop = Point & { venueId?: string };
 export type TourAttribution = 'Estimare demo';
 type Price = { start: number | null; end: number | null; currency: string; attribution: TourAttribution };
@@ -22,19 +24,6 @@ type TourData = {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const inCity = (p: Point) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.lat >= 45.65 && p.lat <= 45.85 && p.lng >= 21.10 && p.lng <= 21.38;
 
-/** Cât de mult mai lung e drumul pe stradă decât linia dreaptă, și viteza de mers. */
-export const WALK = { streetFactor: 1.3, kmPerHour: 4.8 } as const;
-/** Nivelul de preț (1 = ieftin … 4 = scump) → interval orientativ per persoană, în lei. */
-export const PRICE_BANDS: Record<number, [number, number]> = { 1: [20, 40], 2: [40, 70], 3: [70, 120], 4: [120, 200] };
-
-function haversineM(a: Point, b: Point) {
-  const R = 6_371_000;
-  const toRad = (x: number) => (x * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
 
 export async function getTasteTourGoogleData(input: { origin: Point; stops: Stop[] }): Promise<TourData> {
   const stops = Array.isArray(input?.stops) && input.stops.length <= 3 ? input.stops : [];
