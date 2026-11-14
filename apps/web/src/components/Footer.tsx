@@ -19,7 +19,7 @@ export interface FooterProps {
 
 const EXPLORE_ITEMS: { section: NavSection; label: string; foodHref: string; drinkHref: string }[] = [
   { section: 'top', label: 'Top localuri', foodHref: '/topfood/timisoara', drinkHref: '/topdrink/timisoara' },
-  { section: 'map', label: 'Hartă Timișoara', foodHref: '/topfood/timisoara', drinkHref: '/topdrink/timisoara' },
+  { section: 'map', label: 'Hartă Timișoara', foodHref: '/harta', drinkHref: '/harta' },
   { section: 'monthly', label: 'Topul lunii', foodHref: '/topfood/timisoara/top-luna', drinkHref: '/topdrink/timisoara/top-luna' },
   { section: 'scarnavii', label: 'Scârnăvii', foodHref: '/scarnavii', drinkHref: '/scarnavii' },
   { section: 'fidelitate', label: 'Carduri fidelitate', foodHref: '/fidelitate', drinkHref: '/fidelitate' },
