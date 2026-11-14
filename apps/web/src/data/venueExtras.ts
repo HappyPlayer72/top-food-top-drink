@@ -1002,8 +1002,29 @@ export function getVenueWeeklyHours(restaurant: Restaurant): WeeklyHoursEntry[] 
   if (VENUE_EXTRAS[restaurant.id]?.weeklyHours) {
     return VENUE_EXTRAS[restaurant.id].weeklyHours;
   }
+  const parsed = parseHoursText(restaurant.hours);
+  if (parsed) return parsed;
   const fallback = restaurant.hours.replace(/^[^:]+:\s*/, '');
   return makeDailyHours(fallback, fallback, fallback, fallback);
+}
+
+const WEEK_ORDER = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+
+/** Programul din backend, ca text: „Luni închis, Marți–Miercuri 17:00–00:00, Vineri 11:00–23:00”. */
+export function parseHoursText(text: string | undefined): WeeklyHoursEntry[] | null {
+  if (!text) return null;
+  const byDay = new Map<string, string>();
+  for (const part of text.split(',').map((segment) => segment.trim()).filter(Boolean)) {
+    const match = /^(\p{L}+)(?:\s*[–-]\s*(\p{L}+))?\s+(.+)$/u.exec(part);
+    if (!match) return null;
+    const from = WEEK_ORDER.indexOf(match[1]);
+    const to = match[2] ? WEEK_ORDER.indexOf(match[2]) : from;
+    if (from < 0 || to < from) return null;
+    const hours = /^[iî]nchis$/i.test(match[3]) ? 'Închis' : match[3].replace(/\s*[–-]\s*/, ' – ');
+    for (let day = from; day <= to; day += 1) byDay.set(WEEK_ORDER[day], hours);
+  }
+  // O zi care lipsește din text rămâne necunoscută („—”), nu o declarăm închisă.
+  return byDay.size ? WEEK_ORDER.map((day) => ({ day, hours: byDay.get(day) ?? '—' })) : null;
 }
 
 export function getVenueMenu(restaurant: Restaurant): MenuCategory[] {
