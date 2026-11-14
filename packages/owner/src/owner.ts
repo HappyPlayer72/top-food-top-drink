@@ -2,9 +2,9 @@
  * Modulul G: ce poate face proprietarul/managerul unui local.
  * Regula 2: owner-ul NU poate șterge sau ascunde review-uri — doar răspunde sau raportează (decide un admin).
  */
-import { and, avg, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, avg, count, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import {
-  employeeRatings, employees, forbidden, invalid, menuItems, notFound, posts, reports, reviewReplies, reviews, ServiceError, users, venueManagers, venues, type Db,
+  employeeRatings, employees, forbidden, invalid, leaderboardSnapshots, menuItems, notFound, ownerClaims, posts, reports, reviewReplies, reviews, ServiceError, socialSubmissions, users, venueManagers, venues, type Db,
   type OpeningHours,
 } from "@tftd/db";
 
@@ -270,7 +270,10 @@ export async function venueStats(db: Db, userId: string, venueId: string, now = 
 /** Localele pe care userul le administrează (owner sau manager). */
 export async function managedVenues(db: Db, userId: string) {
   return db
-    .select({ id: venues.id, slug: venues.slug, name: venues.name, vertical: venues.vertical, citySlug: venues.citySlug, role: venueManagers.role })
+    .select({
+      id: venues.id, slug: venues.slug, name: venues.name, vertical: venues.vertical, citySlug: venues.citySlug, role: venueManagers.role,
+      iconSymbol: venues.ownerIconSymbol, iconColor: venues.ownerIconColor, iconImage: venues.ownerIconImage,
+    })
     .from(venueManagers)
     .innerJoin(venues, eq(venues.id, venueManagers.venueId))
     .where(eq(venueManagers.userId, userId))
@@ -307,4 +310,173 @@ export async function pendingInvites(db: Db, userId: string) {
 export async function userIdByUsername(db: Db, username: string): Promise<string | null> {
   const [u] = await db.select({ id: users.id }).from(users).where(eq(users.username, username.trim().toLowerCase()));
   return u?.id ?? null;
+}
+
+// ---------- Pictograma localului în lista /owner ----------
+
+/** Cheile simbolurilor și culorilor (apps/web le mapează la iconițe și la culorile din design; tipurile de acolo se potrivesc cu astea). Fără albastru: albastrul de plăcuță înseamnă doar „localnic”. */
+export const ICON_SYMBOLS = ["utensils", "pizza", "beer", "wine", "coffee", "martini", "soup", "sandwich", "cake", "fish", "salad", "music"] as const;
+export const ICON_COLORS = ["carou", "cafea", "sticla", "chihlimbar", "carton"] as const;
+
+export type VenueIconInput =
+  | { kind: "symbol"; symbol: string; color: string }
+  | { kind: "image"; image: string }
+  | { kind: "reset" };
+
+const IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const MAX_IMAGE_CHARS = 30_000;
+
+/** Valorile de salvat în coloanele localului; aruncă invalid() pentru orice nu e din lista permisă. */
+export function parseVenueIcon(input: VenueIconInput) {
+  if (input.kind === "reset") return { ownerIconSymbol: null, ownerIconColor: null, ownerIconImage: null };
+  if (input.kind === "symbol") {
+    if (!(ICON_SYMBOLS as readonly string[]).includes(input.symbol) || !(ICON_COLORS as readonly string[]).includes(input.color)) {
+      throw invalid("Simbolul sau culoarea nu sunt valide.");
+    }
+    return { ownerIconSymbol: input.symbol, ownerIconColor: input.color, ownerIconImage: null };
+  }
+  if (input.image.length > MAX_IMAGE_CHARS || !IMAGE_DATA_URL.test(input.image)) throw invalid("Poza trebuie să fie JPG, PNG sau WebP, mică (circa 96×96 px).");
+  return { ownerIconSymbol: null, ownerIconColor: null, ownerIconImage: input.image };
+}
+
+/** Doar owner-ul (nu managerul) schimbă pictograma localului. */
+export async function setVenueIcon(db: Db, userId: string, venueId: string, input: VenueIconInput) {
+  const values = parseVenueIcon(input);
+  if ((await assertManager(db, userId, venueId)) !== "owner") throw forbidden("Doar proprietarul poate schimba pictograma localului.");
+  await db.update(venues).set(values).where(eq(venues.id, venueId));
+}
+
+// ---------- Rezumatul din pagina /owner ----------
+
+/** Review-urile publicate fără niciun răspuns, per local administrat de user (venueId → număr). */
+export async function unansweredReviews(db: Db, userId: string) {
+  const rows = await db
+    .select({ venueId: reviews.venueId, n: count() })
+    .from(reviews)
+    .innerJoin(venueManagers, and(eq(venueManagers.venueId, reviews.venueId), eq(venueManagers.userId, userId)))
+    .leftJoin(reviewReplies, eq(reviewReplies.reviewId, reviews.id))
+    .where(and(eq(reviews.status, "published"), isNull(reviewReplies.id)))
+    .groupBy(reviews.venueId);
+  return new Map(rows.map((r) => [r.venueId, r.n]));
+}
+
+/** Ultima revendicare începută (cod cerut, neconfirmat, în ultimele 24 h), ca userul să o poată continua. */
+export async function pendingClaim(db: Db, userId: string) {
+  const [claim] = await db
+    .select({ claimId: ownerClaims.id, venueId: venues.id, venueName: venues.name, vertical: venues.vertical, sendTo: venues.phone })
+    .from(ownerClaims)
+    .innerJoin(venues, eq(venues.id, ownerClaims.venueId))
+    .where(
+      and(
+        eq(ownerClaims.userId, userId),
+        eq(ownerClaims.status, "pending"),
+        eq(ownerClaims.method, "phone_code"),
+        lt(ownerClaims.attempts, 5),
+        gte(ownerClaims.createdAt, new Date(Date.now() - 86_400_000)),
+        sql`not exists (select 1 from ${venueManagers} where ${venueManagers.venueId} = ${ownerClaims.venueId} and ${venueManagers.role} = 'owner')`,
+      ),
+    )
+    .orderBy(desc(ownerClaims.createdAt))
+    .limit(1);
+  return claim ?? null;
+}
+
+/** Numele afișat al userului, pentru salut. */
+export async function displayName(db: Db, userId: string) {
+  const [u] = await db.select({ name: users.displayName }).from(users).where(eq(users.id, userId));
+  return u?.name ?? null;
+}
+
+// ---------- Profil complet, contestații deschise, locul în clasament ----------
+
+export type ChecklistInput = { hasMenu: boolean; recentPost: boolean; hasTeam: boolean; hasVideo: boolean; unanswered: number };
+
+/** Ce ține ownerul în mână ca profilul localului să fie complet; fiecare punct duce la secțiunea unde se rezolvă. */
+export function profileChecklist(i: ChecklistInput) {
+  const items = [
+    { key: "meniu", label: "Meniul publicat", section: "blog", done: i.hasMenu },
+    { key: "postare", label: "O postare din ultimele 30 de zile", section: "blog", done: i.recentPost },
+    { key: "echipa", label: "Cel puțin un om din echipă, cu invitația acceptată", section: "echipa", done: i.hasTeam },
+    { key: "video", label: "Un video sau un link social", section: "videouri", done: i.hasVideo },
+    { key: "review-uri", label: "Toate review-urile au un răspuns", section: "review-uri", done: i.unanswered === 0 },
+  ];
+  return { items, done: items.filter((x) => x.done).length, total: items.length };
+}
+
+/** Checklist-ul fiecărui local administrat de user (venueId → rezultat). */
+export async function profileChecklists(db: Db, userId: string, now = new Date()) {
+  const mine = await db.select({ id: venueManagers.venueId }).from(venueManagers).where(eq(venueManagers.userId, userId));
+  const ids = mine.map((m) => m.id);
+  if (!ids.length) return new Map<string, ReturnType<typeof profileChecklist>>();
+  const monthAgo = now.getTime() - 30 * 86_400_000;
+  const [postRows, teamRows, videoRows, unanswered] = await Promise.all([
+    db.select({ venueId: posts.venueId, type: posts.type, publishAt: posts.publishAt }).from(posts).where(inArray(posts.venueId, ids)),
+    db
+      .select({ venueId: employees.venueId })
+      .from(employees)
+      .where(and(inArray(employees.venueId, ids), eq(employees.accepted, true), eq(employees.active, true))),
+    db.select({ venueId: socialSubmissions.venueId }).from(socialSubmissions).where(inArray(socialSubmissions.venueId, ids)),
+    unansweredReviews(db, userId),
+  ]);
+  return new Map(
+    ids.map((id) => {
+      const published = postRows.filter((p) => p.venueId === id && p.publishAt <= now);
+      return [
+        id,
+        profileChecklist({
+          hasMenu: published.some((p) => p.type === "menu"),
+          recentPost: published.some((p) => p.publishAt.getTime() >= monthAgo),
+          hasTeam: teamRows.some((t) => t.venueId === id),
+          hasVideo: videoRows.some((v) => v.venueId === id),
+          unanswered: unanswered.get(id) ?? 0,
+        }),
+      ] as const;
+    }),
+  );
+}
+
+/** Localurile cu o contestație de capcană încă deschisă (un admin n-a decis). */
+export async function openTrapAppeals(db: Db, userId: string) {
+  const rows = await db
+    .select({ venueId: venueManagers.venueId })
+    .from(reports)
+    .innerJoin(venueManagers, and(sql`${venueManagers.venueId}::text = ${reports.targetId}`, eq(venueManagers.userId, userId)))
+    .where(and(eq(reports.targetType, "trap_appeal"), eq(reports.status, "open")));
+  return new Set(rows.map((r) => r.venueId));
+}
+
+/** `rows` vin sortate ca topul orașului (scor descrescător). Locul, câte locuri sunt și cât lipsește până la cel de deasupra. */
+export function rankStanding(rows: { id: string; name: string; score: number }[], venueId: string) {
+  const i = rows.findIndex((r) => r.id === venueId);
+  if (i < 0) return null;
+  const above = i > 0 ? rows[i - 1]! : null;
+  return {
+    rank: i + 1,
+    total: rows.length,
+    nextName: above?.name ?? null,
+    gap: above ? Math.round((above.score - rows[i]!.score) * 10) / 10 : null,
+  };
+}
+
+/** Locul de acum (din scorul curent) și locul din ultimul clasament lunar înghețat. */
+export async function standing(db: Db, userId: string, venueId: string) {
+  await assertManager(db, userId, venueId);
+  const [v] = await db.select({ citySlug: venues.citySlug, vertical: venues.vertical }).from(venues).where(eq(venues.id, venueId));
+  if (!v) throw notFound("Localul");
+  const rows = await db
+    .select({ id: venues.id, name: venues.name, score: venues.honestScore })
+    .from(venues)
+    .where(and(eq(venues.citySlug, v.citySlug), eq(venues.vertical, v.vertical), eq(venues.status, "active"), isNotNull(venues.honestScore)))
+    .orderBy(desc(venues.honestScore), desc(venues.totalWeight));
+  const [snap] = await db
+    .select({ month: leaderboardSnapshots.month, entries: leaderboardSnapshots.entries })
+    .from(leaderboardSnapshots)
+    .where(and(eq(leaderboardSnapshots.citySlug, v.citySlug), eq(leaderboardSnapshots.vertical, v.vertical), eq(leaderboardSnapshots.category, "all")))
+    .orderBy(desc(leaderboardSnapshots.month))
+    .limit(1);
+  const entry = snap?.entries.find((e) => e.venueId === venueId) ?? null;
+  return {
+    live: rankStanding(rows.map((r) => ({ id: r.id, name: r.name, score: r.score! })), venueId),
+    month: snap ? { month: snap.month, rank: entry?.rank ?? null, movement: entry?.movement ?? null, size: snap.entries.length } : null,
+  };
 }

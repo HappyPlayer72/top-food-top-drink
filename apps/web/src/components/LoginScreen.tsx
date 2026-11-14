@@ -21,6 +21,13 @@ export interface LoginScreenProps {
   demoUsers: UserAccount[];
   onLoginSuccess: (user: UserAccount) => void;
   onContinueAsGuest: () => void;
+  /** Cu backend: login/cont nou reale. `offline` = fără bază de date, se continuă local. */
+  authenticate?: (req: {
+    mode: 'login' | 'register' | 'demo';
+    email: string;
+    password?: string;
+    name?: string;
+  }) => Promise<{ ok: true; user: UserAccount } | { ok: false; error: string; offline?: boolean }>;
 }
 
 type AuthMode = 'login' | 'register';
@@ -49,7 +56,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   demoUsers,
   onLoginSuccess,
   onContinueAsGuest,
+  authenticate,
 }) => {
+  const [submitting, setSubmitting] = useState(false);
   const isDrink = vertical === 'drink';
 
   const [mode, setMode] = useState<AuthMode>('login');
@@ -90,8 +99,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  /** Încearcă pe backend; true = s-a rezolvat (logat sau eroare afișată), false = continuă local. */
+  const tryBackend = async (
+    req: Parameters<NonNullable<typeof authenticate>>[0]
+  ): Promise<boolean> => {
+    if (!authenticate) return false;
+    setSubmitting(true);
+    try {
+      const res = await authenticate(req);
+      if (res.ok) {
+        onLoginSuccess(res.user);
+        return true;
+      }
+      if (res.offline) return false;
+      setError(res.error);
+      return true;
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setError(null);
 
     const trimmedEmail = email.trim().toLowerCase();
@@ -109,6 +139,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       const trimmedName = name.trim();
       if (trimmedName.length < 2) {
         setError('Introdu numele sau inițialele pe care vrei să le afișăm.');
+        return;
+      }
+
+      if (await tryBackend({ mode: 'register', email: trimmedEmail, password, name: trimmedName })) {
         return;
       }
 
@@ -145,6 +179,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       setPendingUser(newUser);
       return;
     }
+
+    if (await tryBackend({ mode: 'login', email: trimmedEmail, password })) return;
 
     // Login mode: match demo user by email if present, otherwise create session account
     const matchedDemo = demoUsers.find(
@@ -368,7 +404,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <button
                     key={acc.id}
                     type="button"
-                    onClick={() => onLoginSuccess(acc)}
+                    aria-disabled={submitting}
+                    onClick={async () => {
+                      if (submitting) return;
+                      setError(null);
+                      if (acc.email && (await tryBackend({ mode: 'demo', email: acc.email }))) return;
+                      onLoginSuccess(acc);
+                    }}
                     className={`btn-press w-full min-h-[52px] rounded-[6px] border px-3.5 py-2.5 text-left flex items-center justify-between gap-3 ${
                       isDrink
                         ? 'bg-[#143025] border-[#285443] hover:border-[#F2A33A]'
@@ -905,6 +947,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
                 <button
                   type="submit"
+                  aria-disabled={submitting}
                   className={`btn-press w-full min-h-[48px] py-3 px-4 rounded-[4px] text-[15px] sm:text-[14px] font-bold flex items-center justify-center gap-2 ${
                     isDrink
                       ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
@@ -912,7 +955,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   }`}
                 >
                   <span>
-                    {mode === 'login' ? 'Intră în cont' : 'Creează cont și intră'}
+                    {submitting ? 'Se verifică…' : mode === 'login' ? 'Intră în cont' : 'Creează cont și intră'}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>

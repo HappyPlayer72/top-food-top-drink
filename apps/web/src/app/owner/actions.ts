@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { accounts, owner, ServiceError } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { errorMessage, getUserId } from '@/lib/server/session';
-import { field, type ClaimState } from '@/lib/form';
+import { field, type ClaimState, type FormState } from '@/lib/form';
 
 async function requireUser(): Promise<string> {
   const userId = await getUserId();
@@ -38,6 +38,26 @@ export async function confirmClaimAction(prev: ClaimState, fd: FormData): Promis
   }
   revalidatePath('/owner');
   return { ok: true, message: 'Gata, acum administrezi localul.' };
+}
+
+// ---------- Pictograma localului ----------
+
+export async function setVenueIconAction(_: FormState, fd: FormData): Promise<FormState> {
+  try {
+    const userId = await requireUser();
+    const kind = field(fd, 'kind');
+    const input: owner.VenueIconInput =
+      kind === 'reset'
+        ? { kind: 'reset' }
+        : kind === 'image'
+          ? { kind: 'image', image: field(fd, 'image') }
+          : { kind: 'symbol', symbol: field(fd, 'symbol'), color: field(fd, 'color') };
+    await owner.setVenueIcon(getDb(), userId, field(fd, 'venueId'), input);
+  } catch (e) {
+    return { error: errorMessage(e) };
+  }
+  revalidatePath('/owner');
+  return { ok: true, message: 'Gata, pictograma e salvată.' };
 }
 
 // ---------- Invitații primite ca angajat ----------

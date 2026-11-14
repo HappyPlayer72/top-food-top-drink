@@ -163,6 +163,32 @@ export async function venueProgram(db: Db, venueId: string) {
   return p ? publicProgram(p) : null;
 }
 
+/** Toate programele active ale localurilor dintr-un oraș (pentru portofel: „poți aduna ștampile aici”). */
+export async function cityPrograms(db: Db, citySlug: string) {
+  const rows = await db
+    .select({ program: loyaltyPrograms, venueName: venues.name, venueSlug: venues.slug, neighborhood: venues.neighborhood, vertical: venues.vertical })
+    .from(loyaltyPrograms)
+    .innerJoin(venues, eq(venues.id, loyaltyPrograms.venueId))
+    .where(and(eq(loyaltyPrograms.active, true), eq(venues.citySlug, citySlug)));
+  return rows.map((r) => ({ ...publicProgram(r.program), venueName: r.venueName, venueSlug: r.venueSlug, neighborhood: r.neighborhood, vertical: r.vertical }));
+}
+
+/**
+ * Codul curent al unui program, FĂRĂ verificarea owner-ului. Doar pentru modul demo („simulează scanarea
+ * la tejghea”, când nu există un al doilea telefon); aplicația îl permite doar cu DEMO_SCAN activ.
+ */
+export async function demoStampCode(db: Db, programId: string, now = new Date()) {
+  const [p] = await db.select().from(loyaltyPrograms).where(eq(loyaltyPrograms.id, programId));
+  if (!p || !p.active || !p.stampSecret) throw notFound("Programul");
+  return signCode(p.id, windowOf(now), p.stampSecret);
+}
+
+/** Cardul unui user la un program (sau null). */
+export async function cardFor(db: Db, userId: string, programId: string) {
+  const [c] = await db.select().from(loyaltyCards).where(and(eq(loyaltyCards.programId, programId), eq(loyaltyCards.userId, userId)));
+  return c ?? null;
+}
+
 // ---------- Interne ----------
 
 async function programForOwner(db: Db, ownerId: string, programId: string) {

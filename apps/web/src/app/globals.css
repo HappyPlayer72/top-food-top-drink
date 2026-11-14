@@ -693,7 +693,7 @@ html.dark .bg-\[\#F2A33A\] {
 /* ============================================================================
    /owner: aceeași identitate ca pe paginile publice.
    Food: alb, carduri #FAF8F5, Carou (și Evening Slate când site-ul e în mod întunecat).
-   Drink: Sticlă mereu întunecat, carduri #143025, Chihlimbar.
+   Drink: luminos = cerneală Sticlă pe #F6F3EB; întunecat = Sticlă, carduri #143025, Chihlimbar.
    Dashboard-ul pune `data-vertical`, iar :has() recolorează tot shell-ul, inclusiv antetul.
    ============================================================================ */
 .owner-shell {
@@ -722,6 +722,21 @@ html.dark .bg-\[\#F2A33A\] {
   background-color: var(--o-bg);
   color: var(--o-fg);
   color-scheme: light;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Tapet: mâzgălelile din /owner-doodles.svg, desenate cu culoarea textului la opacitate mică, deci se adaptează la fiecare temă. */
+.owner-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--o-fg);
+  opacity: 0.07;
+  -webkit-mask: url(/owner-doodles.svg) 0 0 / 480px 480px repeat;
+  mask: url(/owner-doodles.svg) 0 0 / 480px 480px repeat;
 }
 
 html.dark .owner-shell {
@@ -746,7 +761,33 @@ html.dark .owner-shell {
   color-scheme: dark;
 }
 
-.owner-shell:has([data-vertical="drink"]),
+/* Drink, mod luminos (design/README.md): cerneală Sticlă pe #F6F3EB, butoane Sticlă. */
+.owner-shell:has([data-vertical="drink"]) {
+  --o-bg: #F6F3EB;
+  --o-fg: #17382C;
+  --o-muted: #4A5F54;
+  --o-line: #D9D3C3;
+  --o-card: #FBF9F3;
+  --o-surface: #ECE7D9;
+  --o-quiet: #ECE7D9;
+  --o-field: #FFFFFF;
+  --o-field-line: #6B7D72;
+  --o-accent: #17382C;
+  --o-accent-fg: #F4EEE2;
+  --o-accent-hover: #1E4335;
+  --o-active: #17382C;
+  --o-active-fg: #F4EEE2;
+  --o-outline: #17382C;
+  --o-danger: #B3261E;
+  --o-focus: #17382C;
+  --o-star: #C47F14;
+  --o-star-off: rgba(23, 56, 44, 0.18);
+  --o-avatar: #17382C;
+  --o-avatar-fg: #F4EEE2;
+  color-scheme: light;
+}
+
+/* Drink, mod întunecat: Sticlă, ca până acum. */
 html.dark .owner-shell:has([data-vertical="drink"]) {
   --o-bg: #17382C;
   --o-fg: #F4EEE2;

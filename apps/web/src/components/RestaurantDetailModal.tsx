@@ -55,7 +55,14 @@ export interface RestaurantDetailModalProps {
   restaurant: Restaurant | null;
   currentUser: UserAccount | null;
   onClose: () => void;
-  onAddReview: (restaurantId: string, review: Review) => void;
+  onAddReview: (
+    restaurantId: string,
+    review: Review
+  ) => void | Promise<{ ok: boolean; message?: string; error?: string }>;
+  /** Cu backend: votul „util” se salvează și întoarce numărul real */
+  onVoteHelpful?: (
+    reviewId: string
+  ) => Promise<{ ok: true; voted: boolean; helpfulCount: number } | { ok: false; error: string }>;
   onRequireLogin?: () => void;
   onLocateOnMap?: (restaurant: Restaurant) => void;
   isSaved?: boolean;
@@ -151,6 +158,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   currentUser,
   onClose,
   onAddReview,
+  onVoteHelpful,
   onRequireLogin,
   onLocateOnMap,
   isSaved = false,
@@ -168,6 +176,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [activeQuickVote, setActiveQuickVote] = useState<'safety' | 'noise' | null>(null);
   const [localSaved, setLocalSaved] = useState(false);
   const [helpfulVotedKeys, setHelpfulVotedKeys] = useState<Record<string, boolean>>({});
+  /** Răspunsurile backend-ului la „util”: votat sau nu + numărul real */
+  const [helpfulServer, setHelpfulServer] = useState<Record<string, { voted: boolean; count: number }>>({});
 
   // Review form state (identity derived from currentUser)
   const [scoreInput, setScoreInput] = useState<number>(9);
@@ -537,7 +547,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setGradeText(String(clamped));
   };
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -586,7 +596,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       helpfulCount: 0,
     };
 
-    onAddReview(restaurant.id, newReview);
+    const result = await onAddReview(restaurant.id, newReview);
+    if (result && !result.ok) {
+      setFormError(result.error ?? 'Review-ul nu s-a putut publica. Încearcă din nou.');
+      return;
+    }
     setReviewFilter(currentUser.role);
     setIsReviewDrawerOpen(false);
     setReviewText('');
@@ -595,6 +609,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setSafetyScore(null);
     setNoiseLevel(null);
     setSubmittedNotice(
+      result?.message ??
       `Review publicat ca ${currentUser.name} (${formatScore(
         currentUser.weightMultiplier
       )}×)${
@@ -667,7 +682,13 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewFilter((prev) => (prev === tab ? 'all' : tab));
   };
 
-  const handleToggleHelpful = (key: string) => {
+  const handleToggleHelpful = async (key: string, reviewId?: string) => {
+    if (onVoteHelpful && reviewId) {
+      const res = await onVoteHelpful(reviewId);
+      if (res.ok) setHelpfulServer((prev) => ({ ...prev, [key]: { voted: res.voted, count: res.helpfulCount } }));
+      else setSubmittedNotice(res.error);
+      return;
+    }
     setHelpfulVotedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -1295,6 +1316,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             </div>
           </section>
 
+          <div role="status" aria-live="polite">
           {submittedNotice && (
             <div
               className={`px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold flex items-center gap-2 ${
@@ -1307,6 +1329,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               <span>{submittedNotice}</span>
             </div>
           )}
+          </div>
 
           {/* AVERTIZĂRI & FACILITĂȚI */}
           <section
@@ -1682,8 +1705,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               >
                 {filteredReviews.map((rev, idx) => {
                   const reviewKey = rev.id ?? `${restaurant.id}-rev-${idx}`;
-                  const isHelpfulVoted = Boolean(helpfulVotedKeys[reviewKey]);
-                  const helpfulTotal = (rev.helpfulCount ?? 0) + (isHelpfulVoted ? 1 : 0);
+                  const server = helpfulServer[reviewKey];
+                  const isHelpfulVoted = server ? server.voted : Boolean(helpfulVotedKeys[reviewKey]);
+                  const helpfulTotal = server
+                    ? server.count
+                    : (rev.helpfulCount ?? 0) + (isHelpfulVoted ? 1 : 0);
 
                   return (
                     <article
@@ -1811,7 +1837,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
 
                         <button
                           type="button"
-                          onClick={() => handleToggleHelpful(reviewKey)}
+                          onClick={() => handleToggleHelpful(reviewKey, rev.id)}
                           aria-pressed={isHelpfulVoted}
                           className={`btn-press inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-[3px] border text-[12px] font-semibold ${
                             isHelpfulVoted

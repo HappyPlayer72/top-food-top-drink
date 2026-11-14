@@ -306,6 +306,8 @@ export interface VenueFacilities {
 
 export interface Restaurant {
   id: string;
+  /** UUID-ul din baza de date (lipsește la datele statice); îl folosesc acțiunile din backend. */
+  venueId?: string;
   slug: string;
   name: string;
   vertical?: Vertical;

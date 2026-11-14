@@ -33,6 +33,8 @@ export interface NavbarProps {
   onSelectUser: (userId: string) => void;
   onOpenLogin: () => void;
   onLogout: () => void;
+  /** Conținut extra în panoul de profil (ex. „Devino localnic verificat”, cu backend pornit) */
+  profileExtra?: React.ReactNode;
   darkMode: boolean;
   onToggleDarkMode: () => void;
 }
@@ -58,6 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectUser,
   onOpenLogin,
   onLogout,
+  profileExtra,
   darkMode,
   onToggleDarkMode,
 }) => {
@@ -373,6 +376,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {currentUser.description}
         </p>
+
+        {profileExtra}
 
         {/* Switch active demo account only when signed into a demo account */}
         {DEMO_USER_IDS.has(currentUser.id) && (
