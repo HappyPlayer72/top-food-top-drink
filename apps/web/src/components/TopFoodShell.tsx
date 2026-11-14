@@ -166,7 +166,7 @@ export function TopFoodShell({
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
     string | null
   >(null);
-  const [savedIds, setSavedIds] = useState<string[]>(['ciorba-lui-sandu']);
+  const [savedIds, setSavedIds] = useState<string[]>(['restaurant-nora']);
   const [accounts, setAccounts] = useState<UserAccount[]>(USER_ACCOUNTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLoginScreen, setShowLoginScreen] = useState<boolean>(false);

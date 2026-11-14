@@ -65,6 +65,7 @@ const FOOD_FILTER_PILLS: { id: FoodQuickFilter; label: string }[] = [
   { id: 'fara-capcane', label: 'Fără capcane' },
   { id: 'deschis-acum', label: 'Deschis acum' },
   { id: 'sub-50-lei', label: 'Sub 50 lei' },
+  { id: 'livrare', label: 'Cu livrare' },
 ];
 
 const DRINK_FILTER_PILLS: { id: DrinkQuickFilter; label: string }[] = [
@@ -197,7 +198,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // Vibe Check modal state for topdrink
   const [isVibeModalOpen, setIsVibeModalOpen] = useState(false);
   const [vibeVenueId, setVibeVenueId] = useState<string>(
-    drinkVenues[0]?.id ?? 'pivnita-cu-bolta'
+    drinkVenues[0]?.id ?? 'scart-loc-lejer'
   );
   const [vibeSegments, setVibeSegments] = useState<1 | 2 | 3 | 4 | 5>(4);
   const [vibeSubmittedNotice, setVibeSubmittedNotice] = useState<string | null>(
@@ -353,11 +354,17 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         if (foodFilters.includes('sub-50-lei') && r.avgMealPriceRon > 50) {
           return false;
         }
+        if (foodFilters.includes('livrare') && !r.delivery?.available) {
+          return false;
+        }
         if (q) {
+          const deliveryHay = r.delivery?.available
+            ? `livrare delivery ${r.delivery.platforms?.join(' ') ?? ''}`
+            : 'doar in local fara livrare';
           const hay = normalizeRo(
             `${r.name} ${r.shortCategory ?? r.cuisine} ${
               r.shortNeighborhood ?? r.neighborhood
-            } ${r.whatToOrder.map((d) => d.name).join(' ')}`
+            } ${r.whatToOrder.map((d) => d.name).join(' ')} ${deliveryHay}`
           );
           if (!hay.includes(q)) return false;
         }
@@ -378,10 +385,13 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
       .filter((r) => r.touristTrapIndex >= 60)
       .filter((r) => {
         if (q) {
+          const deliveryHay = r.delivery?.available
+            ? `livrare delivery ${r.delivery.platforms?.join(' ') ?? ''}`
+            : 'doar in local fara livrare';
           const hay = normalizeRo(
             `${r.name} ${r.shortCategory ?? r.cuisine} ${
               r.shortNeighborhood ?? r.neighborhood
-            } ${r.whatToOrder.map((d) => d.name).join(' ')}`
+            } ${r.whatToOrder.map((d) => d.name).join(' ')} ${deliveryHay}`
           );
           if (!hay.includes(q)) return false;
         }
@@ -571,6 +581,22 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               label={`Localnici ${formatScore(venue.localsScore)}`}
               size="xs"
             />
+            {venue.delivery && (
+              <span
+                className={`text-[11px] font-medium px-1.5 py-0.5 rounded-[3px] border shrink-0 ${
+                  venue.delivery.available
+                    ? 'bg-[#EEF6F0] border-[#CFE3D5] text-[#1E6B43]'
+                    : 'bg-[#FAF7F2] border-[#E6DFD5] text-[#6E5649]'
+                }`}
+              >
+                {venue.delivery.available
+                  ? `Livrare: ${
+                      venue.delivery.platforms?.slice(0, 2).join(', ') ||
+                      'Disponibilă'
+                    }`
+                  : 'Doar în local'}
+              </span>
+            )}
             {venue.whatToOrder[0] && (
               <span className="text-[11px] text-[#6E5649] truncate max-w-full">
                 {venue.whatToOrder[0].name}
@@ -1331,21 +1357,38 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                     </p>
 
                     <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
-                      {featuredFood.whatToOrder[0] ? (
-                        <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-white border border-[#E6DFD5] text-[#3A2418]">
-                          <span className="text-[#B3261E] font-semibold shrink-0">
-                            Recomandat:
+                      <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
+                        {featuredFood.whatToOrder[0] && (
+                          <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-white border border-[#E6DFD5] text-[#3A2418]">
+                            <span className="text-[#B3261E] font-semibold shrink-0">
+                              Recomandat:
+                            </span>
+                            <span className="min-w-0 truncate">
+                              {featuredFood.whatToOrder[0].name}
+                            </span>
+                            <span className="shrink-0 font-semibold tabular-nums">
+                              · {featuredFood.whatToOrder[0].priceRon} lei
+                            </span>
+                          </div>
+                        )}
+                        {featuredFood.delivery && (
+                          <span
+                            className={`inline-flex items-center text-[11px] font-medium px-2 py-1 rounded-[3px] border shrink-0 ${
+                              featuredFood.delivery.available
+                                ? 'bg-[#EEF6F0] border-[#CFE3D5] text-[#1E6B43]'
+                                : 'bg-white border-[#E6DFD5] text-[#6E5649]'
+                            }`}
+                          >
+                            {featuredFood.delivery.available
+                              ? `Livrare: ${
+                                  featuredFood.delivery.platforms
+                                    ?.slice(0, 2)
+                                    .join(', ') || 'Disponibilă'
+                                }`
+                              : 'Doar în local'}
                           </span>
-                          <span className="min-w-0 truncate">
-                            {featuredFood.whatToOrder[0].name}
-                          </span>
-                          <span className="shrink-0 font-semibold tabular-nums">
-                            · {featuredFood.whatToOrder[0].priceRon} lei
-                          </span>
-                        </div>
-                      ) : (
-                        <span />
-                      )}
+                        )}
+                      </div>
 
                       <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#B3261E] ml-auto shrink-0">
                         <span>Vezi fișa</span>

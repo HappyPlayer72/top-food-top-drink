@@ -232,6 +232,7 @@ export function toRestaurant(
 
     warnings: fb?.warnings,
     facilities: fb?.facilities,
+    delivery: fb?.delivery,
 
     reviewCounts: { locals: p.reviewCounts.local, tourists: p.reviewCounts.tourist, influencers: p.reviewCounts.influencer },
     reviews: p.reviews.map((r) => toReview(r, ctx.now)),

@@ -1,62 +1,68 @@
-# Pus online: Neon (baza de date) + Vercel (site)
+# Deploy în producție
 
-Pașii pentru când avem conturile. Durează ~20 de minute. Nimic din cod nu trebuie schimbat.
+Proiectul rulează în 3 componente: **PostgreSQL 16 + pgvector**, aplicația web **Next.js (`@topfood/web`)** și procesul **Worker (`@tftd/worker`)**.
 
-## 1. Baza de date pe Neon
+---
 
-1. Cont pe [neon.tech](https://neon.tech) → proiect nou, regiunea **Frankfurt (eu-central-1)**, Postgres 16.
-2. Din „Connection details” copiază două adrese:
-   - **directă** (fără `-pooler`): pentru migrații și seed, de pe laptop;
-   - **pooled** (cu `-pooler` în nume): pentru site, pe Vercel.
-3. Pe laptop, cu adresa **directă**:
+## 1. Bază de date PostgreSQL + `pgvector`
 
+Imaginea Docker din [`packages/db/docker/Dockerfile`](../packages/db/docker/Dockerfile) pornește `postgres:16` cu extensia `vector` preinstalată. În producție (ex. Supabase, Neon, RDS, server propriu):
+1. Activează extensia: `CREATE EXTENSION IF NOT EXISTS vector;`
+2. Setează `DATABASE_URL` în mediul aplicației web și al worker-ului.
+3. Aplică schema:
    ```bash
-   DATABASE_URL="postgresql://…neon.tech/neondb?sslmode=require" npm run db:migrate
-   DATABASE_URL="postgresql://…neon.tech/neondb?sslmode=require" npm run seed -- --reset
+   npm run db:migrate
    ```
+   *(Opțional, pentru date inițiale în Timișoara: `npm run seed`.)*
+4. Dacă folosești un pooler extern (PgBouncer / Supabase Transaction Pooler), lasă `DATABASE_PREPARE=false` și ajustează `DATABASE_POOL_MAX` (implicit `10`).
 
-   Migrația inițială creează singură extensiile `postgis` și `vector`; Neon le are pe amândouă.
+---
 
-> Supabase merge la fel: adresa directă e pe portul 5432, cea prin pool pe 6543. Extensiile se activează din Database → Extensions dacă migrația nu are drepturi.
+## 2. Variabile de mediu obligatorii și opționale
 
-## 2. Site-ul pe Vercel
+Copiază [`.env.example`](../.env.example) și completează pentru producție:
 
-1. Cont pe [vercel.com](https://vercel.com) cu GitHub → **Add New Project** → repo-ul `top-food-top-drink`.
-2. **Root Directory:** `apps/web`. Lasă bifat „Include files outside of the Root Directory” (pachetele `@tftd/*` sunt în rădăcină).
-3. **Environment Variables:**
+| Variabilă | Obligatorie | Rol |
+|---|---|---|
+| `DATABASE_URL` | **Da** | Conexiunea PostgreSQL + pgvector |
+| `SESSION_SECRET` | **Da** | Secret lung aleatoriu pentru semnarea cookie-ului `tf_session` și a QR-urilor de fidelitate |
+| `SITE_URL` | **Da** | URL-ul public (folosit în `sitemap.xml`, `robots.txt` și OG tags), ex. `https://topfood.ro` |
+| `GOOGLE_PLACES_API_KEY` | Recomandat | Descoperire și actualizare localuri prin Google Places API (New) |
+| `TRIPADVISOR_API_KEY` | Opțional | Rating și surse TripAdvisor |
+| `META_OEMBED_TOKEN` | Opțional | Extragere preview Instagram / Facebook oEmbed (`app_id\|client_token`) |
+| `ANTHROPIC_API_KEY` | Opțional | Analiză aspecte cu Claude (`claude-haiku-5-5`); fără cheie, folosește fallback pe cuvinte-cheie |
+| `STRIPE_SECRET_KEY` | Opțional | Rezervat pentru integrare billing externă |
+| `DEMO_PASSWORD` / `DEMO_CLAIM_CODE` / `DEMO_SCAN` / `DEMO_EMAIL_CODES` | **Nu în prod** | Lăsate necompletate în producție! Nu păstra shortcut-uri de demo active |
 
-| Variabilă | Valoare |
-| --- | --- |
-| `DATABASE_URL` | adresa **pooled** de la Neon (cu `-pooler`) |
-| `DATABASE_POOL_MAX` | `3` |
-| `SESSION_SECRET` | 48+ caractere aleatorii (`openssl rand -base64 48`). Fără ea, login-ul nu merge |
-| `SITE_URL` | adresa site-ului, ex. `https://topfood-timisoara.vercel.app` |
-| `DEMO_PASSWORD` | `demo1234` (sau alta, aceeași ca la seed) |
-| `DEMO_SCAN` | `on` pentru demo; `off` după hackathon |
-| `DEMO_EMAIL_CODES` | `on` pentru demo; `off` când avem serviciu de email |
-| `GOOGLE_PLACES_API_KEY` | opțional: „caută pe internet” + localuri reale |
-| `ANTHROPIC_API_KEY` | opțional: aspectele review-urilor cu Claude (altfel dicționarul) |
+---
 
-4. **Deploy.** Build-ul local trece (`npm run build:web`), deci ar trebui să treacă și acolo.
-5. Verifică: `/topfood/timisoara`, un local (`/topfood/timisoara/ciorba-lui-sandu`), login cu un cont demo, `/owner`, `/sitemap.xml`.
+## 3. Build & Pornire servicii
 
-## 3. Localuri reale din Timișoara (când avem cheia Google)
-
+### Aplicația Web (`@topfood/web`)
 ```bash
-# în .env: DATABASE_URL (directă) + GOOGLE_PLACES_API_KEY
-npm run import:google
+npm ci
+npm run build:web
+npm run start -w @topfood/web
+```
+Rulează în spatele unui reverse proxy HTTPS (Caddy, Nginx, Cloudflare, Vercel/Railway).
+
+### Worker programat (`@tftd/worker`)
+```bash
+npm exec -w @tftd/worker -- tsx --env-file-if-exists=.env src/main.ts
+```
+Rulează ca serviciu permanent (`systemd`, container separat sau process manager) cu `TZ=Europe/Bucharest`.
+Pentru declanșarea manuală a unui job din cron extern:
+```bash
+npx tsx --env-file-if-exists=.env apps/worker/src/main.ts --once recalculeaza-scoruri
 ```
 
-Rulează două joburi: `descopera-locale` (caută restaurante și baruri pe o rază de 6 km și le potrivește cu ce avem) și `actualizeaza-ratinguri` (ratinguri + review-uri Google/Tripadvisor, apoi analiza și scorurile). Costă câteva cereri Google Places; cheia trebuie restricționată la Places API (New).
+---
 
-## 4. Joburile programate (după hackathon)
+## 4. Checklist înainte de lansare
 
-Worker-ul (`apps/worker`) rulează cele 5 joburi cu cron. Pe Vercel nu stă pornit permanent, deci:
-- pentru demo: nu e nevoie (seed-ul are deja tot, inclusiv topul lunii trecute);
-- după: worker-ul pe Railway/Render/Fly (`npm run start -w @tftd/worker`, aceleași variabile), sau Vercel Cron care cheamă rute API.
-
-## Probleme cunoscute
-
-- **„prepared statement … does not exist”**: `DATABASE_URL` e prin pool dar nu conține `-pooler`/`:6543`; pune `DATABASE_PREPARE=false`.
-- **Login-ul nu ține minte sesiunea**: lipsește `SESSION_SECRET` sau are sub 32 de caractere.
-- **Pagini goale/date statice**: site-ul nu ajunge la bază (vezi Logs în Vercel); fără bază folosește datele statice, deci nu crapă, dar nu arată datele reale.
+- [ ] `NODE_ENV=production` și `SESSION_SECRET` generat criptografic (`openssl rand -hex 32`)
+- [ ] `DEMO_EMAIL_CODES`, `DEMO_SCAN`, `DEMO_CLAIM_CODE`, `DEMO_PASSWORD` eliminate/golite din mediul de producție
+- [ ] `npm test` și `npm run typecheck` trec fără erori
+- [ ] `npm run build:web` reușește cu `DATABASE_URL` accesibil
+- [ ] Worker-ul `@tftd/worker` are conexiune la același `DATABASE_URL` și rulează continuu
+- [ ] Backup automat configurat pentru PostgreSQL

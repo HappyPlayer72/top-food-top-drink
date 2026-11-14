@@ -1,74 +1,69 @@
 # CLAUDE.md
 
-Guidance for Claude Code in this repository. The full spec is `docs/ARHITECTURA.md` (in Romanian); read the relevant section before building a module.
+Guidance for coding agents and contributors working in the **TopFood & TopDrink** (`Unihack 26`) repository.
 
-## What the program is
+## Project Summary
 
-TOP FOOD / TOP DRINK ranks restaurants (`topfood/{oras}`) and bars/clubs (`topdrink/{oras}`) by what **locals** think, not tourists or bought reviews. The first city is Timișoara. A hackathon team of 4 is building it.
+**TopFood & TopDrink** is a city guide for locals in Timișoara (architecture supports multiple cities via `config/cities/<city>.json`, while `apps/web` routes currently expose `/topfood/timisoara` and `/topdrink/timisoara`) with two verticals:
+- **TopFood** (where to eat)
+- **TopDrink** (where to drink & go out)
 
-- Reviews come from Google Places API, Tripadvisor Content API, owner-connected accounts (Google Business, Facebook, Instagram, TikTok) and links users submit. No scraping.
-- Each review is analysed: language, local vs tourist, sentiment per aspect, paid or not, probability of being fake.
-- Scores: **Scor Onest** (0–10, weighted average pulled toward the city mean), **Scor Localnici / Scor Turiști** shown separately, **Tourist Trap Index** (0–100) with visible reasons.
-- Owners can claim a venue, post a mini-blog, add employees ("rate the employee"), answer reviews. They pay for labelled "Sponsorizat" slots, never for score or rank.
-- A monthly leaderboard is computed on the 1st and frozen.
-- TOP DRINK uses the same engine; it adds day/time of visit (Fri–Sat night vs weekday), a live "vibe check" and weekend events.
+Places are ranked by **honest score** (`honestScore`, heavily weighting verified locals over tourists and down-weighting suspected fake or paid reviews) paired with a **tourist trap index** (`trapIndex`, 0–100) and plain-Romanian reasons.
 
-## Non-negotiable product rules
+## Architecture & Workspace Packages
 
-These override any convenience in the code:
+Monorepo managed with **npm workspaces** (`Node >= 20`, **TypeScript 5.8**, **Vitest 3**, **Drizzle ORM** over **PostgreSQL 16 + pgvector**):
 
-1. Payment never changes score or rank. `packages/scoring` and `packages/leaderboard` must never import from or query `packages/monetization` data.
-2. Owners cannot delete or hide reviews, only reply or report (an admin decides).
-3. Every score has a visible explanation.
-4. Locals and tourists are shown separately.
-5. Paid influencer reviews are weighted ×0.2.
-6. External data only via official APIs or user/owner-submitted links. Never write scrapers.
-7. GDPR: store only "day X, in city / at venue" from GPS, never the route. Employees appear only with consent.
+| Workspace | Package Name | Responsibility |
+|---|---|---|
+| `apps/web` | `@topfood/web` | Next.js 15 + React 19 + Tailwind CSS 4 + MapLibre GL frontend; calls `@tftd/api` on the server with static fallback in `src/data/restaurants.ts` when Postgres is unavailable |
+| `apps/worker` | `@tftd/worker` | Standalone `croner` scheduler running 6 recurring jobs in `Europe/Bucharest` timezone |
+| `packages/db` | `@tftd/db` | Drizzle schema (`schema.ts` + idempotent `ensureExtendedSchema` in `ensure.ts` = 32 tables), client, `ServiceError`, Docker Postgres+pgvector |
+| `packages/api` | `@tftd/api` | Single contract boundary imported by `apps/web`, `apps/worker`, and `seed/smoke.ts`; re-exports domain modules plus high-level page/action queries |
+| `packages/accounts` | `@tftd/accounts` | Password auth (`scrypt` + HMAC-SHA256 `tf_session` cookie), 3 local verification methods, owner claims (phone/CUI/Google), influencer social bio-code verification |
+| `packages/ingestion` | `@tftd/ingestion` | Google Places API (New), TripAdvisor Content API, TikTok/Instagram/Facebook/YouTube link submission & oEmbed, manual venue submissions |
+| `packages/matching` | `@tftd/matching` | Fuzzy source-to-venue matching (Levenshtein, Haversine distance, phone match) and admin confirmation queue |
+| `packages/review-analysis` | `@tftd/review-analysis` | Language detection (`franc-min` + RO diacritics), 6 fake signals (`pgvector(384)` cosine + 3-shingle Jaccard), aspect extraction (`claude-haiku-5-5` or keyword fallback) |
+| `packages/scoring` | `@tftd/scoring` | Bayesian honest score (180-day decay), 5-signal tourist trap index, food aspects vs drink time-bucket scores |
+| `packages/leaderboard` | `@tftd/leaderboard` | Monthly freeze of top 10 locals, top 10 food/drink venues, employee of the month, and best new venue |
+| `packages/owner` | `@tftd/owner` | Owner & employee dashboard queries/mutations, daily views, score history, posts/offers, team invites, profile completeness checklist |
+| `packages/loyalty` | `@tftd/loyalty` | Loyalty stamp programs, 60-second rotating HMAC QR codes, personal cards & scan redemption |
+| `packages/monetization` | `@tftd/monetization` | Partnerships, hourly-rotated sponsored cards (`<= 3` slots, blocked if `trapIndex >= 80`), `ad_slots` management |
+| `packages/moderation` | `@tftd/moderation` | Review reports, receipt photo verification (`×1.3` weight), suspicious account adjudication, venue match queue |
 
-## Repo layout
+City configuration lives in `config/cities/timisoara.json` (4 tourist zones of 300m radius, 14 neighborhoods, local average food/drink prices).
 
-| Path | Module | Owner role |
-| --- | --- | --- |
-| `apps/web` | F. Public pages, `/owner`, `/admin` (Next.js, SSR for SEO) | Frontend |
-| `apps/worker` | Queue + cron for the 5 scheduled jobs | Date/AI |
-| `packages/db` | Schema: PostgreSQL + PostGIS + pgvector (delivered first) | Backend |
-| `packages/ingestion` | A. Ingestion | Date/AI |
-| `packages/matching` | B. Match the same venue across platforms | Date/AI |
-| `packages/review-analysis` | C. Review analysis | Date/AI |
-| `packages/scoring` | D. Scoring formulas | Date/AI |
-| `packages/leaderboard` | I. Monthly leaderboard | Date/AI |
-| `packages/accounts` | E. Accounts, roles, local verification, owner claim | Backend |
-| `packages/owner` | G. Blog, employees, replies, stats | Backend + Frontend |
-| `packages/monetization` | H. Partnerships, Sponsorizat slots, ads | Backend |
-| `packages/moderation` | J. Moderation / admin | Backend |
-| `config/cities/` | One JSON per city. A new city is config only, no new code | — |
-| `seed/` | 30 Timișoara venues (20 food, 10 drink) | Design/Produs |
-| `design/` | Fonts and colours | Design/Produs |
+## Six Non-Negotiable Product Rules
 
-Stack: Next.js, PostgreSQL + PostGIS + pgvector, a separate worker, Claude Haiku for bulk classification, Stripe (after the hackathon), Vercel. No code exists yet, so set up tooling inside the module you're working on.
+1. **Honest score and trap index cannot be bought.** Paid partners never receive a score boost or trap exemption.
+2. **Owners cannot delete, hide, or suppress reviews.** They can only post public replies or flag a review to moderation (`reports`), which leaves the review visible while under review.
+3. **Sponsored slots are visibly separated and excluded from traps.** Paid highlights (`SPONSORED_SLOTS = 3`) are clearly labeled `"Sponsorizat"`, never sit inside the organic Top 10, and are blocked when `trapIndex >= 80`.
+4. **Influencer partnerships are transparent.** Reviews from accounts with `is_influencer = true` are tagged `paid` (`weight = 0.2`) and flagged visibly as `"Parteneriat plătit"`.
+5. **Tourist trap index always shows human-readable reasons.** Stored in `trap_reasons` in Romanian (price vs local baseline, tourist-zone distance, local-vs-tourist rating gap, non-local language share, one-time visitors).
+6. **External links never auto-publish without analysis.** Social/external submissions enter `social_submissions` (`pending`) and require ingestion + analysis before attribution.
 
-## Hackathon MVP order
+## Development Workflow & Commands
 
-1. DB schema + 30 seed venues.
-2. Scoring on the seed data.
-3. `topfood/timisoara`, `topdrink/timisoara` and the venue page.
-4. Accounts: user, local badge (simulated GPS check-in), simplified owner claim (fixed code).
-5. Separate "Sponsorizat" carousel, showing the ranking doesn't change.
-6. Monthly leaderboard from seed + mini-blog and rate the employee on 1–2 demo venues.
-7. Paste a TikTok/Instagram link → embed + "reclamă?" label.
+```bash
+npm install
+npm run db:up          # Docker PostgreSQL 16 + pgvector on :5432
+npm run db:migrate     # Drizzle migrations
+npm run seed           # Load deterministic Timisoara dataset (-- --reset to wipe first)
+npm run test           # Vitest across all workspace packages
+npm run typecheck      # tsc --noEmit across tsconfig
+npm run dev -w @topfood/web
+npm run dev -w @tftd/worker
+npm run build:web
+```
 
-Out of scope for the hackathon: real payments, automatic Facebook/Instagram ingestion, ML fraud detection (rules only), more cities.
+- All runtime commands execute `.ts` files via `tsx` or Next.js; package exports point directly to `./src/*.ts` with `"type": "module"`.
+- **UI language is Romanian** across all user-facing copy, labels, errors (`ServiceError` messages), and categories. Code comments and technical docs follow module conventions (Romanian in backend/product docs, English in `CLAUDE.md` and `design/design-language.md`).
+- **Testing**: Co-located `*.test.ts` files run with Vitest (`vitest.config.ts`). Keep domain logic pure where possible so unit tests run without a live database.
 
-## Git workflow
+## Key Documentation References
 
-- Team branches: `oli`, `serban`, `adi`, `alex`. Each person works only on their own branch.
-- Never commit directly to `main`. Changes reach `main` through a Pull Request from a personal branch.
-- Before starting work, check you're on the right branch (`git branch --show-current`) and run `git pull origin main` to pick up teammates' merged work.
-- Commit messages: `<module>: <what>`, e.g. `scoring: Scor Onest formula`.
-- Announce changes to `packages/db` to the team; everyone depends on the schema.
-- Secrets go in `.env` (gitignored). `.env.example` lists the keys.
-- If a personal `CLAUDE.local.md` exists, it says whose branch this checkout uses.
-
-## Language
-
-User-facing UI text is Romanian. Code identifiers may be English or Romanian, but stay consistent within a module.
+- Architecture & Data Model: [`docs/ARHITECTURA.md`](docs/ARHITECTURA.md)
+- `@tftd/api` & Backend Guide: [`docs/BACKEND.md`](docs/BACKEND.md)
+- Design System: [`design/design-language.md`](design/design-language.md) & [`design/README.md`](design/README.md)
+- Demo Runbook: [`docs/DEMO.md`](docs/DEMO.md)
+- Production Deploy: [`docs/DEPLOY.md`](docs/DEPLOY.md)

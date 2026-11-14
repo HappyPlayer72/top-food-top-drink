@@ -1,8 +1,16 @@
 # UX/UI review: apps/web
 
+> [!NOTE]
+> **Historical Snapshot (13 Nov 2026 — pre-backend integration)**
+>
+> This document is the archived v2 review of commit `5571e36` before backend (`@tftd/api`), SEO routes, and owner/admin portals were wired into `apps/web`. Since then, several major findings below have been resolved in the current codebase:
+> - **Real SSR routes added**: `/topfood/timisoara/[slug]`, `/topdrink/timisoara/[slug]`, `/categorie/[category]`, `/top-luna`, `/top-luna/[month]`, `/weekend`, `/u/[username]`, `/fidelitate`, `/scarnavii`, `/owner`, `/owner/[venueId]/[section]`, `/admin`, `/api/share/top-luna`, plus `opengraph-image.tsx`, `sitemap.ts`, and `robots.ts`.
+> - **Live DB backend (`@tftd/api`)**: Bayesian honest score (`PRIOR_WEIGHT = 10`) prevents a single review from swinging venue scores; auth uses `scrypt` + HMAC `tf_session` cookies; local status requires server-side verification (university email code, 5-day GPS check-in, or 2 local vouches) rather than a client checkbox (static `src/data/restaurants.ts` remains only as an offline fallback when PostgreSQL is unavailable).
+> - **TopDrink default surface**: [`TopFoodShell.tsx`](apps/web/src/components/TopFoodShell.tsx) renders TopDrink on `#17382C` (`--color-sticla`) with `#F4EEE2` ink.
+
 | | |
 | --- | --- |
-| **Version** | 2, 13 November 2026 |
+| **Version** | 2, 13 November 2026 (Archived — see note above) |
 | **Code reviewed** | `main` at `5571e36` ("Merge pull request #3 from HappyPlayer72/serban"), which matches the `oli` branch apart from this file |
 | **App** | `apps/web` (Next.js 15, React 19, Tailwind 4). The old `topfood-ui/` prototype was removed on `main` |
 | **Compared with** | `design/README.md` and `TOP FOOD TOP DRINK — Identitate vizuală.pdf` |

@@ -23,6 +23,7 @@ import {
   Sun,
   ThumbsUp,
   Trash2,
+  Truck,
   Volume2,
   X,
 } from 'lucide-react';
@@ -947,6 +948,31 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   >
                     {restaurant.openNow ? 'Deschis acum' : 'Închis acum'}
                   </span>
+                  {restaurant.delivery && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span
+                        className={`inline-flex items-center gap-1 font-semibold ${
+                          restaurant.delivery.available
+                            ? isDrink
+                              ? 'text-[#6EE7B7]'
+                              : 'text-[#1E6B43]'
+                            : isDrink
+                            ? 'text-[#F4EEE2]/70'
+                            : 'text-[#6E5649]'
+                        }`}
+                      >
+                        <Truck className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          {restaurant.delivery.available
+                            ? restaurant.delivery.platforms?.length
+                              ? `Livrare (${restaurant.delivery.platforms.join(', ')})`
+                              : 'Livrare disponibilă'
+                            : 'Doar în local'}
+                        </span>
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 {(restaurant.isPartner || restaurant.isSponsored) && (
@@ -1140,6 +1166,64 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         Ultima actualizare: <strong>{lastUpdated}</strong>
                       </span>
                     </div>
+
+                    {restaurant.delivery && (
+                      <div
+                        className={`rounded-[4px] border px-3.5 py-2.5 text-[12px] flex flex-wrap items-center justify-between gap-2 ${
+                          isDrink
+                            ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85'
+                            : 'bg-[#FAF7F2] border-[#E6DFD5] text-[#3A2418]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Truck
+                            className={`w-4 h-4 shrink-0 ${
+                              isDrink ? 'text-[#E0A526]' : 'text-[#B3261E]'
+                            }`}
+                          />
+                          <span className="font-semibold">
+                            {restaurant.delivery.available
+                              ? 'Livrare la domiciliu:'
+                              : 'Fără livrare (doar în local)'}
+                          </span>
+                          {restaurant.delivery.available &&
+                            restaurant.delivery.platforms &&
+                            restaurant.delivery.platforms.length > 0 && (
+                              <span>
+                                {restaurant.delivery.platforms.join(', ')}
+                              </span>
+                            )}
+                          {restaurant.delivery.ownDelivery && (
+                            <span
+                              className={`text-[11px] px-1.5 py-0.5 rounded-[3px] font-medium ${
+                                isDrink
+                                  ? 'bg-[#1F4A3A] text-[#6EE7B7]'
+                                  : 'bg-[#E9F3EC] text-[#1E6B43]'
+                              }`}
+                            >
+                              Livrare proprie
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className={`flex items-center gap-2 flex-wrap text-[11px] ${
+                            isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
+                          }`}
+                        >
+                          {restaurant.delivery.minimumOrderRon != null && (
+                            <span>
+                              Comandă minimă: {restaurant.delivery.minimumOrderRon} lei
+                            </span>
+                          )}
+                          {restaurant.delivery.estimatedTime && (
+                            <span>· {restaurant.delivery.estimatedTime}</span>
+                          )}
+                          {restaurant.delivery.note && (
+                            <span>· {restaurant.delivery.note}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-4">
                       {menuCategories.map((category) => (
@@ -1553,6 +1637,24 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   </span>
                 )}
 
+                {restaurant.delivery && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-[4px] border ${
+                      isDrink
+                        ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85'
+                        : 'bg-white border-[#E6DFD5] text-[#3A2418]'
+                    }`}
+                  >
+                    <Truck className="w-3 h-3 shrink-0 opacity-75" />
+                    <span>
+                      {restaurant.delivery.available
+                        ? restaurant.delivery.platforms?.length
+                          ? `Livrare: ${restaurant.delivery.platforms.join(', ')}`
+                          : 'Livrare disponibilă'
+                        : 'Fără livrare (doar în local)'}
+                    </span>
+                  </span>
+                )}
                 {venueFacilities.otherFacilities?.map((fac) => (
                   <span
                     key={fac}

@@ -38,7 +38,7 @@ export interface LoyaltyProgram {
   isCustomVendor?: boolean;
 }
 
-export type FoodQuickFilter = 'fara-capcane' | 'deschis-acum' | 'sub-50-lei';
+export type FoodQuickFilter = 'fara-capcane' | 'deschis-acum' | 'sub-50-lei' | 'livrare';
 export type DrinkQuickFilter =
   | 'vineri-noaptea'
   | 'in-timpul-saptamanii'
@@ -362,6 +362,21 @@ export interface VenueFacilities {
   otherFacilities?: string[];
 }
 
+export interface VenueDeliveryInfo {
+  /** Whether delivery is offered */
+  available: boolean;
+  /** Platforms or delivery channels (e.g. 'Wolt', 'Glovo', 'Bolt Food', 'Livrare proprie') */
+  platforms?: string[];
+  /** Whether the venue operates its own delivery fleet */
+  ownDelivery?: boolean;
+  /** Minimum order in RON, if known */
+  minimumOrderRon?: number;
+  /** Estimated delivery time label (e.g. '30–45 min') */
+  estimatedTime?: string;
+  /** Extra details in Romanian */
+  note?: string;
+}
+
 export interface Restaurant {
   id: string;
   /** UUID-ul din baza de date (lipsește la datele statice); îl folosesc acțiunile din backend. */
@@ -421,9 +436,10 @@ export interface Restaurant {
   crowdLabel?: string;
   drinkTags?: DrinkQuickFilter[];
 
-  // --- Warnings & Practical Facilities ---
+  // --- Warnings, Practical Facilities & Delivery ---
   warnings?: VenueWarnings;
   facilities?: VenueFacilities;
+  delivery?: VenueDeliveryInfo;
 
   // --- Reviews & Owner Kitchen Story & Team ---
   reviewCounts?: {

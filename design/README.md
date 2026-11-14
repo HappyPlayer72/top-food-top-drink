@@ -1,63 +1,64 @@
-# Design
+# TopFood & TopDrink — Ghid de identitate vizuală
 
-Responsabil: **Design / Produs**. Machetele și sistemul complet sunt în Claude Design: [TOP FOOD / TOP DRINK — Identitate vizuală](https://claude.ai/artifact/S46PhX5PXags3MXLNhp8KU). În cod, identitatea e implementată în `apps/web/src/app/globals.css` și `apps/web/src/components/BrandPrimitives.tsx`.
+Identitatea vizuală a aplicației este definită central în [`apps/web/src/app/globals.css`](../apps/web/src/app/globals.css) și implementată în [`apps/web/src/components/BrandPrimitives.tsx`](../apps/web/src/components/BrandPrimitives.tsx). Pentru specificația completă în engleză, vezi [design-language.md](design-language.md).
 
-## Idee
+---
 
-- **TOP FOOD**: fața de masă în carouri roșii de la cârciuma din cartier.
-- **TOP DRINK**: suportul de bere de pe masă, pe verdele unei sticle.
-- **Localnic**: plăcuța albastră de stradă, cu numele cartierului („Localnic din Iosefin”).
-- **Capcană turistică**: triunghiul de avertizare de pe stradă (`!` = capcană, `?` = posibilă capcană).
+## 1. Paletă de culori (8 tokeni core + suprafețe structurale)
 
-## Culori
+### Cei 8 tokeni de identitate (`globals.css`)
+- **Roșu carou** (`--color-carou`): `#B3261E` — fața de masă TopFood, accent primar food
+- **Maro cafea** (`--color-cafea`): `#3A2418` — text principal TopFood (mod luminos)
+- **Muștar** (`--color-mustar`): `#E0A526` — accent cald food, badge `Posibilă capcană`
+- **Albastru plăcuță** (`--color-placuta`): `#1F4E8C` (mod întunecat `#7DB4FF`) — insignă `Localnic`, plăcuță stradală
+- **Verde sticlă** (`--color-sticla`): `#17382C` — fundal public TopDrink și identitate băuturi
+- **Chihlimbar** (`--color-chihlimbar`): `#F2A33A` — accent TopDrink, stele/notă, badge `Local nou`
+- **Spumă** (`--color-spuma`): `#F4EEE2` — text pe Verde sticlă și text în modul întunecat
+- **Carton / Suber** (`--color-carton`): `#B98A5E` — suport suber / coaster și accente neutre calde
 
-| Nume | Hex | Folosire | În cod | Contrast |
-| --- | --- | --- | --- | --- |
-| Carou | `#B3261E` | semnul food, butoane, capcane | `CarouStrip`, insigna `Capcană turistică`, focus ring în mod luminos | alb pe el / el pe alb 6,5:1 |
-| Cafea | `#3A2418` | tot textul pe alb | stări active, `InfluencerBadge` | 14:1 pe alb |
-| Text secundar | `#6B5A4E` | meta, explicații | — | 6,5:1 pe alb |
-| Muștar | `#E0A526` | doar fundal, cu text Cafea; „Posibilă capcană” | insigna `Posibilă capcană turistică` | Cafea pe el 6,7:1 |
-| Plăcuță | `#1F4E8C` | **doar** insigna de localnic | `LocalnicBadge`, bara `Localnici`; `#7DB4FF` în mod întunecat | alb pe el 8:1 |
-| Sticlă | `#17382C` | fundalul TOP DRINK | fundal `topdrink` întunecat; cerneală `topdrink` pe `#F6F3EB` în mod luminos | — |
-| Chihlimbar | `#F2A33A` | accent drink, butoane | focus ring pe Sticlă și în mod întunecat, `CrowdMeter` | pe Sticlă 6:1 |
-| Spumă | `#F4EEE2` | text pe Sticlă | umplere `CoasterScore` / `CoasterMark`, text inversat în mod întunecat | 11:1 |
-| Spumă secundar | `#C9C1AE` | meta pe Sticlă | — | 7:1 |
-| Carton | `#B98A5E` | doar marginea suportului de bere | contur `CoasterMark`, `CoasterScore` | decorativ |
+### Suprafețe structurale (implementate în app)
+- **TopFood (Mod luminos)**:
+  - Fundal principal (`--color-paper`): `#FBF6EA` (Vanilla Ice Cream — clasa Tailwind `.bg-white` este remapată la `#FBF6EA` în modul luminos)
+  - Suprafețe secundare: `#F5EFE2`, sponsorizat (`--color-sponsored-food`): `#F2EFE9`, linii (`--color-hairline`): `#E6DFD5`
+  - Text secundar (`--color-muted-cafea`): `#6E5649`
+- **TopFood (Mod întunecat — `html.dark`)**:
+  - Fundal Evening Slate: `#22262E`, carduri `#2B303A` / `#313743`, text `#F4EEE2`, text secundar `#B6BAC4`
+- **TopDrink (paginile publice `/topdrink/timisoara/*`)**:
+  - Întotdeauna pe verde sticlă `#17382C` cu text `#F4EEE2`, card sponsorizat (`--color-sponsored-drink`) `#1E4335` și accente `#F2A33A`
+- **Dashboard `/owner` (`.owner-shell` + `--o-*`)**:
+  - Food luminos: `--o-bg: #FBF6EA`, `--o-fg: #3A2418`, `--o-card: #F5EFE2`, `--o-accent: #B3261E`
+  - Food întunecat (`html.dark`): `--o-bg: #22262E`, `--o-fg: #F4EEE2`, `--o-card: #2B303A`
+  - Drink luminos (`[data-vertical="drink"]`): `--o-bg: #F6F3EB`, `--o-fg: #17382C`, `--o-accent: #17382C`
+  - Drink întunecat (`html.dark [data-vertical="drink"]`): `--o-bg: #17382C`, `--o-fg: #F4EEE2`, `--o-accent: #F2A33A`
 
-Carourile în CSS (fundal alb + roșu la 55%):
+---
 
-```css
-background-color: #FFFFFF;
-background-image:
-  linear-gradient(90deg, rgba(179,38,30,.55) 50%, transparent 50%),
-  linear-gradient(rgba(179,38,30,.55) 50%, transparent 50%);
-background-size: 12px 12px;
-```
+## 2. Tipografie (`Archivo`)
 
-## Tipografie
+Font unic încărcat din Google Fonts în [`apps/web/src/app/layout.tsx`](../apps/web/src/app/layout.tsx): **`Archivo`** variabil (`wdth` 62–125, `wght` 100–900).
 
-Un singur font: **Archivo** (Google Fonts, variabil, axa `wdth` 62–125).
+| Clasă CSS | Setări | Utilizare |
+|---|---|---|
+| `.font-display` | `font-variation-settings: "wdth" 62; font-weight: 800;` | Titluri principale, scoruri, logo |
+| `.font-display-light` | `font-variation-settings: "wdth" 62; font-weight: 300;` | Subtitluri mari editoriale |
+| `.font-display-regular` | `font-variation-settings: "wdth" 62; font-weight: 400;` | Etichete condensat regulate |
+| Body implicit | `"wdth" 100; line-height: 1.5;` | Text curent, descrieri, formulare |
 
-| Rol | Setare | Clasă în cod |
-| --- | --- | --- |
-| Logo, titluri, scoruri, ranguri | `font-stretch: 62%`, greutate 800–850 | `font-display` |
-| Logo, partea „/timișoara” | `font-stretch: 62%`, greutate 300 | `font-display-light` |
-| Text și interfață | lățime normală, 400 și 600, 14–17 px | `font-sans` |
-| Cifre aliniate (scoruri, prețuri, ponderi) | `tabular-nums` | — |
+---
 
-Scorurile folosesc virgulă zecimală (`9,1`), ca în română.
+## 3. Componente și motive vizuale (`BrandPrimitives.tsx`)
 
-## Reguli
+- **`CarouStrip`**: bandă de 6 celule flex în degrade carou (`#FAF5F0`, `#E08A84`, `#C94A42`, `#B3261E`) urmată de extensie solidă `#B3261E`, fără gradient CSS brut — semnătura TopFood.
+- **`CarouMark` / `CoasterMark` / `BrandWordmark`**: marcaje vectoriale și wordmark oficial pentru TopFood (carou) și TopDrink (coaster crenelat).
+- **`CoasterScore`**: insignă circulară crenelată (de obicei **56–64px**) pentru afișarea notei oneste (`0.0–10.0`).
+- **`LocalnicBadge` / `InfluencerBadge` / `PartnerBadge` / `TrapBadge`**: badge-uri dedicate pentru localnic verificat (`2.0×`), parteneriat plătit (`0.2×`, transparent), partener oficial și nivel capcană turistică (`possible` / `trap`).
+- **`LocalVsTouristBars`**: grafic comparativ orizontal **Localnici vs. Turiști** pentru explicarea vizuală a decalajului de scor.
+- **`AvertizareaCard`**: card explicativ cu motivele concrete ale indicelui de capcană.
+- **`EmployeeEcusonCard` & `CrowdMeter`**: card tip ecuson pentru angajați/premiul lunii și indicator în 5 trepte pentru `Vibe Check`.
+- **`.doodle-wallpaper`**: fundal subtil mască SVG (`/owner-doodles.svg`) cu fade spre centru, folosit în zona de administrare/owner și detalii de brand.
 
-1. Caroul și suportul apar o singură dată pe ecran (în antet sau sub scor), niciodată ca fundal de pagină.
-2. Albastrul de plăcuță înseamnă doar „localnic”.
-3. Ce e plătit arată mai modest decât restul: fundal gri, text „Sponsorizat. Nu schimbă scorul.”
-4. Capcana se recunoaște după formă (triunghi), nu doar după culoare.
-5. Scorul e cel mai mare număr de pe ecran.
-6. Fără etichete scrise numai cu majuscule, fără fonturi monospace, fără carduri identice cu umbre.
+---
 
-## Accesibilitate
+## 4. Principiu de separare vizuală (Regula 3)
 
-- Contrast WCAG AA (≥ 4,5:1) în ambele moduri, luminos și întunecat (`#22262E` / `#17382C`).
-- Inele `:focus-visible` de 2 px: `#B3261E` pe fond luminos, `#17382C` pe `topdrink` luminos, `#F2A33A` în `html.dark` și pe `#17382C`.
-- Insigna de capcană turistică combină formă (triunghi plin / contur) + text + culoare.
+Cardurile sponsorizate folosesc o suprafață dedicată (`#F2EFE9` pe food luminos, `#1E4335` pe drink) cu etichetă vizibilă `"Sponsorizat"`, separate fizic de lista organică ordonată după `honestScore`.
