@@ -99,7 +99,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   return (
     <div
       className={`min-h-screen pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24 ${
-        isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
+        isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
       }`}
     >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 space-y-6">

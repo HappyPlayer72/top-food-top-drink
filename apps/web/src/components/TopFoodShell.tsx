@@ -250,6 +250,10 @@ export function TopFoodShell({
   }, [savedIds, storageHydrated]);
 
   useEffect(() => {
+    document.documentElement.dataset.vertical = vertical;
+  }, [vertical]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     if (!storageHydrated) return;
     try {
@@ -490,8 +494,9 @@ export function TopFoodShell({
   }, [allVenues, selectedRestaurantId]);
 
   useEffect(() => {
+    const pageVertical = selectedRestaurant?.vertical ?? vertical;
     document.title = selectedRestaurant
-      ? `${selectedRestaurant.name} | ${VERTICAL_TITLES[vertical]}`
+      ? `${selectedRestaurant.name} | ${VERTICAL_TITLES[pageVertical]}`
       : VERTICAL_TITLES[vertical];
     if (!urlReadyRef.current) return;
 
@@ -512,7 +517,7 @@ export function TopFoodShell({
       ? selectedRestaurant.slug || selectedRestaurant.id
       : null;
     const nextUrl = buildUrlForState(
-      vertical,
+      pageVertical,
       navSection,
       venueKey,
       showLoginScreen
@@ -705,7 +710,7 @@ export function TopFoodShell({
   return (
     <div
       id="top"
-      className={`min-h-screen overflow-x-clip flex flex-col ${
+      className={`doodle-wallpaper min-h-screen overflow-x-clip flex flex-col ${
         isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
       }`}
     >
@@ -758,6 +763,7 @@ export function TopFoodShell({
 
         {navSection === 'map' && (
           <MapView
+            darkMode={darkMode}
             vertical={vertical}
             restaurants={activeVerticalVenues}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
@@ -783,6 +789,7 @@ export function TopFoodShell({
           <ScarnaviiView
             vertical={vertical}
             restaurants={activeVerticalVenues}
+            allRestaurants={allVenues}
             onBack={() => navigateToSection('top')}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
           />
