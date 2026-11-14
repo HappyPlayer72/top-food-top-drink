@@ -1,4 +1,10 @@
-import { MenuCategory, Restaurant, WeeklyHoursEntry } from '../types';
+import {
+  MenuCategory,
+  Restaurant,
+  VenueFacilities,
+  VenueWarnings,
+  WeeklyHoursEntry,
+} from '../types';
 
 export interface VenueExtraData {
   lastUpdated: string;
@@ -889,4 +895,212 @@ export function getTodayDayName(): string {
     'Sâmbătă',
   ];
   return days[new Date().getDay()];
+}
+
+interface VenueProfileExtras {
+  warnings?: VenueWarnings;
+  facilities?: VenueFacilities;
+}
+
+const VENUE_WARNINGS_FACILITIES: Record<string, VenueProfileExtras> = {
+  'ciorba-lui-sandu': {
+    facilities: {
+      disabilityFriendly: 'Intrare la nivel cu trotuarul, fără trepte',
+      hasOutlets: false,
+      otherFacilities: ['Plată cu cardul', 'Scaune pentru copii', 'Porții la pachet'],
+    },
+  },
+  'pizzeria-din-fabric': {
+    facilities: {
+      disabilityFriendly: 'Intrare fără trepte',
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi gratuit', 'Pet-friendly pe terasă', 'Plată cu cardul'],
+    },
+  },
+  'placintaria-elisabetin': {
+    warnings: {
+      brightLights: 'Iluminat puternic în zona tejghelei.',
+    },
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: false,
+      otherFacilities: ['La pachet rapid', 'Plată cu cardul'],
+    },
+  },
+  'bistro-bega': {
+    facilities: {
+      disabilityFriendly: 'Rampă de acces și toaletă adaptată',
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi rapid', 'Terasă încălzită', 'Pet-friendly', 'Loc de schimbat bebeluși'],
+    },
+  },
+  'bucataria-mamei-veta': {
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: false,
+      otherFacilities: ['Meniu zilnic rapid', 'Scaune pentru copii'],
+    },
+  },
+  'shaorma-de-la-gara': {
+    warnings: {
+      unsafeFeeling: 'Zonă aglomerată și slab iluminată noaptea în jurul Gării de Nord.',
+      veryNoisy: 'Foarte aglomerat și gălăgios după ora 22:00.',
+      brightLights: 'Lumină rece puternică (neoane de tip fast-food).',
+    },
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: false,
+      otherFacilities: ['Deschis târziu', 'Plată cu cardul'],
+    },
+  },
+  'la-doi-pasi': {
+    facilities: {
+      disabilityFriendly: false,
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi gratuit', 'Parcare biciclete'],
+    },
+  },
+  'langos-and-co': {
+    warnings: {
+      brightLights: 'Iluminat strident la tejghea seara.',
+    },
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: false,
+      otherFacilities: ['Servire la geam', 'Plată cu cardul'],
+    },
+  },
+  'mamaliga-urbana': {
+    facilities: {
+      disabilityFriendly: 'Intrare la nivel cu strada',
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi gratuit', 'Opțiuni vegetariene'],
+    },
+  },
+  'bucataria-elisabetin': {
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: false,
+      otherFacilities: ['Terasă în curte interioară', 'Pet-friendly'],
+    },
+  },
+  'supa-de-la-colt': {
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi gratuit', 'La pachet în recipiente biodegradabile'],
+    },
+  },
+  'terasa-grand-unirii': {
+    warnings: {
+      veryNoisy: 'Zgomot intens de terasă și muzică ambientală tare în weekend.',
+    },
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: false,
+      otherFacilities: ['Terasă mare în piață', 'Plată cu cardul'],
+    },
+  },
+  'cafe-domului': {
+    warnings: {
+      brightLights: 'Spoturi LED foarte puternice în interior.',
+    },
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi rapid', 'Terasă'],
+    },
+  },
+  'trattoria-corso-unirii': {
+    warnings: {
+      veryNoisy: 'Acustică aglomerată la orele de vârf.',
+    },
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: false,
+      otherFacilities: ['Terasă încălzită', 'Plată cu cardul'],
+    },
+  },
+  'pivnita-cu-bolta': {
+    warnings: {
+      veryNoisy: 'Acustică de boltă de cărămidă — devine foarte zgomotos în weekend.',
+    },
+    facilities: {
+      disabilityFriendly: false,
+      hasOutlets: true,
+      otherFacilities: ['Concerte live', 'Garderobă'],
+    },
+  },
+  'bar-elisabetin': {
+    facilities: {
+      disabilityFriendly: false,
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi gratuit', 'Board games', 'Pet-friendly'],
+    },
+  },
+  'depoul-de-tramvaie': {
+    warnings: {
+      unsafeFeeling: 'Alee puțin iluminată la ieșire după ora 02:00.',
+      veryNoisy: 'Volum foarte ridicat la seturile techno (recomandată protecție auditivă).',
+    },
+    facilities: {
+      disabilityFriendly: 'Acces la parter fără trepte',
+      hasOutlets: false,
+      otherFacilities: ['Garderobă', 'Curte exterioară', 'Plată cu cardul'],
+    },
+  },
+  'terasa-de-pe-bega': {
+    facilities: {
+      disabilityFriendly: 'Acces facil de pe faleză, toaletă adaptată',
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi gratuit', 'Parcare biciclete', 'Pet-friendly'],
+    },
+  },
+  'hamei-si-malt-iosefin': {
+    facilities: {
+      disabilityFriendly: true,
+      hasOutlets: true,
+      otherFacilities: ['Wi-Fi gratuit', 'Pet-friendly', 'Degustări bere artizanală'],
+    },
+  },
+};
+
+export function getVenueWarnings(restaurant: Restaurant): VenueWarnings {
+  const staticWarnings =
+    restaurant.warnings ?? VENUE_WARNINGS_FACILITIES[restaurant.id]?.warnings ?? {};
+
+  const safetyRatings = restaurant.reviews
+    .map((r) => r.safetyScore)
+    .filter((s): s is number => typeof s === 'number');
+  const avgSafety =
+    safetyRatings.length > 0
+      ? safetyRatings.reduce((a, b) => a + b, 0) / safetyRatings.length
+      : null;
+
+  const noisyVotes = restaurant.reviews.filter(
+    (r) => r.noiseLevel === 'zgomotos'
+  ).length;
+
+  return {
+    unsafeFeeling:
+      staticWarnings.unsafeFeeling ??
+      (avgSafety !== null && avgSafety <= 2.5
+        ? `Unii vizitatori nu s-au simțit în siguranță (medie ${avgSafety.toFixed(1).replace('.', ',')}/5).`
+        : undefined),
+    veryNoisy:
+      staticWarnings.veryNoisy ??
+      (noisyVotes > 0
+        ? `Semnalat ca foarte zgomotos de ${noisyVotes} ${noisyVotes === 1 ? 'vizitator' : 'vizitatori'}.`
+        : undefined),
+    brightLights: staticWarnings.brightLights,
+  };
+}
+
+export function getVenueFacilities(restaurant: Restaurant): VenueFacilities {
+  return (
+    restaurant.facilities ??
+    VENUE_WARNINGS_FACILITIES[restaurant.id]?.facilities ?? {
+      otherFacilities: ['Plată cu cardul'],
+    }
+  );
 }

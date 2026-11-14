@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Eye,
   Footprints,
+  Lightbulb,
   LocateFixed,
   MapPin,
   Navigation,
@@ -19,6 +20,14 @@ export interface MysteryDirectionsProps {
   restaurants: Restaurant[];
   onSelectRestaurant: (r: Restaurant) => void;
 }
+
+type DistanceFilter = 'any' | 'walk-short' | 'walk-medium';
+
+const DISTANCE_OPTIONS: { id: DistanceFilter; label: string; maxMeters: number | null }[] = [
+  { id: 'any', label: 'Oricât', maxMeters: null },
+  { id: 'walk-short', label: 'Sub 1,2 km', maxMeters: 1200 },
+  { id: 'walk-medium', label: 'Sub 2,5 km', maxMeters: 2500 },
+];
 
 const STARTING_LANDMARKS: { id: string; label: string; coords: Coordinates }[] = [
   {
@@ -114,6 +123,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
   const isDrink = vertical === 'drink';
 
   const [noTrapsOnly, setNoTrapsOnly] = useState(true);
+  const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>('any');
   const [selectedLandmarkId, setSelectedLandmarkId] = useState<string>('unirii');
   const [currentCoords, setCurrentCoords] = useState<Coordinates>(
     STARTING_LANDMARKS[0].coords
@@ -122,16 +132,35 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
 
   const [targetVenue, setTargetVenue] = useState<Restaurant | null>(null);
   const [isArrived, setIsArrived] = useState(false);
+  const [unlockedClues, setUnlockedClues] = useState<number>(0);
 
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
 
+  const originCoords = useMemo(() => {
+    if (gpsActive) return currentCoords;
+    return (
+      STARTING_LANDMARKS.find((l) => l.id === selectedLandmarkId)?.coords ??
+      STARTING_LANDMARKS[0].coords
+    );
+  }, [gpsActive, currentCoords, selectedLandmarkId]);
+
   const pool = useMemo(() => {
-    if (!noTrapsOnly) return restaurants;
-    const clean = restaurants.filter((r) => r.touristTrapIndex <= 25);
-    return clean.length > 0 ? clean : restaurants;
-  }, [restaurants, noTrapsOnly]);
+    const trapFiltered = noTrapsOnly
+      ? restaurants.filter((r) => r.touristTrapIndex <= 25)
+      : restaurants;
+    const basePool = trapFiltered.length > 0 ? trapFiltered : restaurants;
+
+    const maxM =
+      DISTANCE_OPTIONS.find((d) => d.id === distanceFilter)?.maxMeters ?? null;
+    if (maxM === null) return basePool;
+
+    const withinRange = basePool.filter(
+      (r) => haversineMeters(originCoords, r.coordinates) <= maxM
+    );
+    return withinRange.length > 0 ? withinRange : basePool;
+  }, [restaurants, noTrapsOnly, distanceFilter, originCoords]);
 
   const stopGps = () => {
     if (watchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -168,6 +197,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
     }
     setTargetVenue(picked);
     setIsArrived(false);
+    setUnlockedClues(0);
     setInitialDistanceM(
       Math.max(100, haversineMeters(startPos, picked.coordinates))
     );
@@ -344,6 +374,32 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
           <p className="text-[12px] text-[#B3261E] font-medium">{gpsError}</p>
         )}
 
+        <div className="space-y-1.5 pt-1">
+          <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
+            Distanță maximă
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {DISTANCE_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setDistanceFilter(opt.id)}
+                className={`btn-press px-2.5 py-1 rounded-[4px] text-[12px] font-semibold border ${
+                  distanceFilter === opt.id
+                    ? isDrink
+                      ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
+                      : 'bg-[#3A2418] text-white border-[#3A2418]'
+                    : isDrink
+                    ? 'border-[#2D5947] text-[#F4EEE2]/80'
+                    : 'border-[#D6CFC5] text-[#3A2418]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
             <input
@@ -466,6 +522,41 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
             </div>
           </div>
 
+          {/* Progressive Clues */}
+          {unlockedClues > 0 && (
+            <div
+              className={`rounded-[4px] border p-3.5 space-y-1.5 text-[13px] ${
+                isDrink
+                  ? 'bg-[#143025] border-[#285443]'
+                  : 'bg-[#FAF8F5] border-[#E6DFD5]'
+              }`}
+            >
+              <div className="text-[11px] font-bold uppercase tracking-wider opacity-70">
+                Indicii deblocate ({unlockedClues}/3)
+              </div>
+              {unlockedClues >= 1 && (
+                <div>
+                  <strong>1. Zonă & buget:</strong> {targetVenue.neighborhood} ·
+                  ~{targetVenue.avgMealPriceRon} lei ({targetVenue.priceTier})
+                </div>
+              )}
+              {unlockedClues >= 2 && (
+                <div>
+                  <strong>2. Specific & scor:</strong> {targetVenue.cuisine} ·
+                  Scor Onest{' '}
+                  <span className="tabular-nums">
+                    {formatScore(targetVenue.foodQualityScore)}
+                  </span>
+                </div>
+              )}
+              {unlockedClues >= 3 && (
+                <div>
+                  <strong>3. Atmosferă:</strong> {targetVenue.editorialHeadline}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2.5 pt-1">
             <button
@@ -479,6 +570,24 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
             >
               <Eye className="w-4 h-4" />
               <span>Am ajuns! Dezvăluie localul</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={unlockedClues >= 3}
+              onClick={() => setUnlockedClues((c) => Math.min(3, c + 1))}
+              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold disabled:opacity-45 ${
+                isDrink
+                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                  : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+              }`}
+            >
+              <Lightbulb className="w-3.5 h-3.5" />
+              <span>
+                {unlockedClues >= 3
+                  ? 'Toate indiciile deblocate (3/3)'
+                  : `Deblochează un indiciu (${unlockedClues}/3)`}
+              </span>
             </button>
 
             {!gpsActive && (

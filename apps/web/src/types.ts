@@ -224,6 +224,24 @@ export interface TopReviewer {
   helpfulVotes: number;
 }
 
+export interface VenueWarnings {
+  /** Venue or surrounding area can feel unsafe (e.g. poorly lit street at night) */
+  unsafeFeeling?: string;
+  /** Very noisy environment (loud music, echo, crowded room) */
+  veryNoisy?: string;
+  /** Very bright or harsh lighting (important for sensory sensitivity) */
+  brightLights?: string;
+}
+
+export interface VenueFacilities {
+  /** Wheelchair / step-free access & accessible restroom */
+  disabilityFriendly?: boolean | string;
+  /** Power outlets available at tables */
+  hasOutlets?: boolean;
+  /** Other notable facilities (Wi-Fi, pet-friendly, baby changing, bike rack, etc.) */
+  otherFacilities?: string[];
+}
+
 export interface Restaurant {
   id: string;
   slug: string;
@@ -279,6 +297,10 @@ export interface Restaurant {
   crowdSegments?: 1 | 2 | 3 | 4 | 5;
   crowdLabel?: string;
   drinkTags?: DrinkQuickFilter[];
+
+  // --- Warnings & Practical Facilities ---
+  warnings?: VenueWarnings;
+  facilities?: VenueFacilities;
 
   // --- Reviews & Owner Kitchen Story & Team ---
   reviewCounts?: {

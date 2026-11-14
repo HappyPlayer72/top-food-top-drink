@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Accessibility,
   AlertTriangle,
   BookOpen,
   Bookmark,
@@ -10,8 +11,11 @@ import {
   ChevronLeft,
   Clock,
   MapPin,
+  Plug,
   Scale,
+  ShieldAlert,
   ShieldCheck,
+  Sun,
   ThumbsUp,
   Volume2,
   X,
@@ -26,8 +30,10 @@ import {
 } from '../types';
 import {
   getTodayDayName,
+  getVenueFacilities,
   getVenueLastUpdated,
   getVenueMenu,
+  getVenueWarnings,
   getVenueWeeklyHours,
 } from '../data/venueExtras';
 import {
@@ -312,6 +318,26 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   );
   const weeklyHours = getVenueWeeklyHours(restaurant);
   const todayDayName = getTodayDayName();
+  const baseWarnings = getVenueWarnings(restaurant);
+  const venueWarnings = {
+    unsafeFeeling:
+      baseWarnings.unsafeFeeling ??
+      (safetyScore !== null && safetyScore <= 2
+        ? `Ai semnalat că nu te-ai simțit în siguranță (${safetyScore}/5).`
+        : undefined),
+    veryNoisy:
+      baseWarnings.veryNoisy ??
+      (noiseLevel === 'zgomotos'
+        ? 'Ai semnalat că este foarte zgomotos.'
+        : undefined),
+    brightLights: baseWarnings.brightLights,
+  };
+  const hasAnyWarning = Boolean(
+    venueWarnings.unsafeFeeling ||
+      venueWarnings.veryNoisy ||
+      venueWarnings.brightLights
+  );
+  const venueFacilities = getVenueFacilities(restaurant);
   const googleOn10 = Number((restaurant.googleRawRating * 2).toFixed(1));
   const googleVsTopDiff = Number(
     (googleOn10 - restaurant.foodQualityScore).toFixed(1)
@@ -1061,6 +1087,143 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               <span>{submittedNotice}</span>
             </div>
           )}
+
+          {/* AVERTIZĂRI & FACILITĂȚI */}
+          <section
+            aria-label="Avertizări și facilități"
+            className={`p-4 rounded-[4px] border space-y-3 ${
+              isDrink
+                ? 'bg-[#143025] border-[#285443] text-[#F4EEE2]'
+                : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+            }`}
+          >
+            {hasAnyWarning && (
+              <div className="space-y-2">
+                <h3
+                  className={`text-[12px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                    isDrink ? 'text-[#FCA5A5]' : 'text-[#B3261E]'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>Avertizări pentru vizitatori</span>
+                </h3>
+                <ul className="space-y-1.5">
+                  {venueWarnings.unsafeFeeling && (
+                    <li
+                      className={`text-[13px] px-3 py-2 rounded-[4px] border flex items-start gap-2 ${
+                        isDrink
+                          ? 'bg-[#3B1D1D]/70 border-[#FCA5A5]/30 text-[#FEE2E2]'
+                          : 'bg-[#FDECEC] border-[#F5C2C0] text-[#7A1812]'
+                      }`}
+                    >
+                      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Siguranță:</strong> {venueWarnings.unsafeFeeling}
+                      </span>
+                    </li>
+                  )}
+                  {venueWarnings.veryNoisy && (
+                    <li
+                      className={`text-[13px] px-3 py-2 rounded-[4px] border flex items-start gap-2 ${
+                        isDrink
+                          ? 'bg-[#3A2D14]/70 border-[#F2A33A]/35 text-[#FDE68A]'
+                          : 'bg-[#FEF6E4] border-[#E8CF96] text-[#6B4A0B]'
+                      }`}
+                    >
+                      <Volume2 className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Zgomot:</strong> {venueWarnings.veryNoisy}
+                      </span>
+                    </li>
+                  )}
+                  {venueWarnings.brightLights && (
+                    <li
+                      className={`text-[13px] px-3 py-2 rounded-[4px] border flex items-start gap-2 ${
+                        isDrink
+                          ? 'bg-[#3A2D14]/70 border-[#F2A33A]/35 text-[#FDE68A]'
+                          : 'bg-[#FEF6E4] border-[#E8CF96] text-[#6B4A0B]'
+                      }`}
+                    >
+                      <Sun className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Lumină puternică:</strong>{' '}
+                        {venueWarnings.brightLights}
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <h3
+                className={`text-[12px] font-bold uppercase tracking-wider ${
+                  isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
+                }`}
+              >
+                Facilități & accesibilitate
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {venueFacilities.disabilityFriendly !== undefined && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-[4px] border ${
+                      venueFacilities.disabilityFriendly
+                        ? isDrink
+                          ? 'bg-[#1E4335] border-[#2D5947] text-[#A7F3D0]'
+                          : 'bg-[#ECF7F0] border-[#BCE3CB] text-[#1E6B43]'
+                        : isDrink
+                        ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/70'
+                        : 'bg-white border-[#E6DFD5] text-[#6E5649]'
+                    }`}
+                  >
+                    <Accessibility className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {typeof venueFacilities.disabilityFriendly === 'string'
+                        ? venueFacilities.disabilityFriendly
+                        : venueFacilities.disabilityFriendly
+                        ? 'Accesibil persoane cu dizabilități'
+                        : 'Acces limitat (trepte / fără rampă)'}
+                    </span>
+                  </span>
+                )}
+
+                {venueFacilities.hasOutlets !== undefined && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-[4px] border ${
+                      venueFacilities.hasOutlets
+                        ? isDrink
+                          ? 'bg-[#1E4335] border-[#2D5947] text-[#F4EEE2]'
+                          : 'bg-white border-[#D6CFC5] text-[#3A2418]'
+                        : isDrink
+                        ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/65'
+                        : 'bg-white border-[#E6DFD5] text-[#6E5649]'
+                    }`}
+                  >
+                    <Plug className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      {venueFacilities.hasOutlets
+                        ? 'Prize la mese'
+                        : 'Fără prize la mese'}
+                    </span>
+                  </span>
+                )}
+
+                {venueFacilities.otherFacilities?.map((fac) => (
+                  <span
+                    key={fac}
+                    className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-[4px] border ${
+                      isDrink
+                        ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85'
+                        : 'bg-white border-[#E6DFD5] text-[#3A2418]'
+                    }`}
+                  >
+                    <Check className="w-3 h-3 shrink-0 opacity-75" />
+                    <span>{fac}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </section>
 
           {/* LOCALNICI VS TURIȘTI BARS + TOURIST TRAP STATUS */}
           <section className="space-y-4">
