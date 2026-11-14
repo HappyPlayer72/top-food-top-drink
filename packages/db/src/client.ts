@@ -16,6 +16,8 @@ export function createDb(url = process.env.DATABASE_URL) {
     // `|| 10`, nu `?? 10`: în .env.example variabila e goală, iar Number("") = 0 ar bloca toate cererile.
     max: Number(process.env.DATABASE_POOL_MAX) || 10,
     prepare: process.env.DATABASE_PREPARE === "false" ? false : !pooled,
+    // NOTICE-urile Postgres („already exists, skipping” din ensureExtendedSchema) nu sunt erori: nu le mai afișăm
+    onnotice: () => {},
   });
   return drizzle(client, { schema, casing: "snake_case" });
 }
