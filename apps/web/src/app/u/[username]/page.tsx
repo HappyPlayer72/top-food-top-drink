@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CheckCircle2, ChevronLeft, ExternalLink, House, ShieldCheck, Star } from 'lucide-react';
 import { userProfile } from '@tftd/api';
+import { Footer } from '@/components/Footer';
 import { getDb } from '@/lib/server/db';
 import { TOP_LOCAL_REVIEWERS } from '@/data/restaurants';
 
@@ -63,8 +64,9 @@ export default async function UserProfilePage({ params }: Props) {
     .toUpperCase();
 
   return (
-    <main className="doodle-wallpaper min-h-screen px-4 py-8 sm:px-6 text-cafea">
-      <div className="mx-auto max-w-3xl space-y-8">
+    <div className="doodle-wallpaper min-h-screen flex flex-col text-cafea">
+      <main className="flex-1 px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-3xl space-y-8">
         <div className="flex items-center gap-3">
           <Link
             href="/topfood/timisoara"
@@ -166,7 +168,9 @@ export default async function UserProfilePage({ params }: Props) {
             </ul>
           )}
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+      <Footer vertical="food" />
+    </div>
   );
 }

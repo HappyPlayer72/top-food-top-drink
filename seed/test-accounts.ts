@@ -9,6 +9,14 @@ const accounts = [
   { username: "test.admin", displayName: "Administrator Test", password: "TestAdmin2026!", roles: ["user", "admin"] as ("user" | "owner" | "admin")[] },
 ];
 
+function toPascalCase(slug: string): string {
+  return slug
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join("");
+}
+
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL lipsește din .env.");
@@ -18,7 +26,10 @@ async function main() {
   }
 
   const db = createDb(url);
-  const prepared = await Promise.all(accounts.map(async (a) => ({ ...a, passwordHash: await hashPassword(a.password) })));
+  const prepared = [];
+  for (const a of accounts) {
+    prepared.push({ ...a, passwordHash: await hashPassword(a.password) });
+  }
   const results = await db.transaction(async (tx) => {
     const outcomes: string[] = [];
     for (const a of prepared) {
@@ -45,6 +56,47 @@ async function main() {
         outcomes.push(created ? `${a.username}: creat.` : `${a.username}: omis — username-ul sau emailul există deja; contul nu a fost modificat.`);
       }
     }
+
+    const unownedVenues = await tx
+      .select({ id: venues.id, name: venues.name, slug: venues.slug })
+      .from(venues)
+      .where(
+        and(
+          eq(venues.status, "active"),
+          notExists(
+            tx
+              .select({ id: venueManagers.userId })
+              .from(venueManagers)
+              .where(and(eq(venueManagers.venueId, venues.id), eq(venueManagers.role, "owner"))),
+          ),
+        ),
+      )
+      .orderBy(asc(venues.name))
+      .for("update");
+
+    for (const venue of unownedVenues) {
+      const username = `${venue.slug}.owner`;
+      const password = `${toPascalCase(venue.slug)}Owner`;
+      const passwordHash = await hashPassword(password);
+      const [created] = await tx
+        .insert(users)
+        .values({
+          username,
+          displayName: `Proprietar ${venue.name}`,
+          email: `${username}@example.invalid`,
+          passwordHash,
+          roles: ["user", "owner"],
+        })
+        .onConflictDoNothing()
+        .returning({ id: users.id });
+      if (!created) {
+        outcomes.push(`${username}: omis — username-ul sau emailul există deja; contul nu a fost modificat.`);
+        continue;
+      }
+      await tx.insert(venueManagers).values({ venueId: venue.id, userId: created.id, role: "owner" });
+      outcomes.push(`${username}: creat, proprietar pentru ${venue.name} (parolă: ${password}).`);
+    }
+
     return outcomes;
   });
   for (const result of results) console.log(result);

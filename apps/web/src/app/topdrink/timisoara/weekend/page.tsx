@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, MapPin } from 'lucide-react';
 import { weekendEvents } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { toWeekendEvent } from '@/lib/backend/toRestaurant';
+import { Footer } from '@/components/Footer';
 import { DRINK_VENUES, WEEKEND_EVENTS } from '@/data/restaurants';
 import type { WeekendEvent } from '@/types';
 
@@ -35,8 +36,9 @@ export default async function TopDrinkWeekendPage() {
   const venueBySlug = new Map(DRINK_VENUES.map((v) => [v.slug, v]));
 
   return (
-    <main className="min-h-screen bg-[#17382C] text-[#F4EEE2] px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-3xl space-y-8">
+    <div className="min-h-screen flex flex-col bg-[#17382C] text-[#F4EEE2]">
+      <main className="flex-1 px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-3xl space-y-8">
         <div className="flex items-center gap-3">
           <Link
             href="/topdrink/timisoara"
@@ -108,7 +110,9 @@ export default async function TopDrinkWeekendPage() {
             })}
           </div>
         )}
-      </div>
-    </main>
+        </div>
+      </main>
+      <Footer vertical="drink" />
+    </div>
   );
 }
