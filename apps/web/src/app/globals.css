@@ -981,3 +981,28 @@ html[data-vertical="drink"]:not(.dark) :is(input, textarea).bg-\[\#122B22\]::pla
 html[data-vertical="drink"]:not(.dark) :is(.hover\:bg-\[\#1E4335\]:hover, .hover\:bg-\[\#143025\]:hover, .hover\:bg-\[\#1C4234\]:hover, .hover\:bg-\[\#1E4738\]:hover, .hover\:bg-\[\#1A3D30\]:hover, .hover\:bg-\[\#122B22\]:hover) { background-color: #eee6d6; }
 html[data-vertical="drink"]:not(.dark) .bg-\[\#F2A33A\].text-\[\#17382C\] { color: #fff; }
 html[data-vertical="drink"]:not(.dark) :is(.placeholder\:text-\[\#F4EEE2\]\/40, .placeholder\:text-\[\#F4EEE2\]\/50, .placeholder-\[\#F4EEE2\]\/45)::placeholder { color: #6d7463; }
+
+/* Fixed poster colours: global theme overrides must not separate ink from paper. */
+.scarnavii-card-orange {
+  background-color: #F2A33A;
+  border-color: #F2A33A;
+  color: #3A2418;
+}
+
+.scarnavii-card-red {
+  background-color: #B3261E;
+  border-color: #B3261E;
+  color: #FFFFFF;
+}
+
+.scarnavii-card-green {
+  background-color: #285443;
+  border-color: #285443;
+  color: #FFFFFF;
+}
+
+.scarnavii-card-cta {
+  background-color: #F4EEE2;
+  border-color: #3A2418;
+  color: #3A2418;
+}
