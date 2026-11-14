@@ -12,10 +12,9 @@
     "db:generate": "npm run generate -w @tftd/db",
     "db:migrate": "npm run migrate -w @tftd/db",
     "seed": "tsx --env-file-if-exists=.env seed/load.ts",
-    "seed:demo": "tsx --env-file-if-exists=.env seed/demo-features.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "import:google": "npm run job -w @tftd/worker -- descopera-locale && npm run job -w @tftd/worker -- actualizeaza-ratinguri",
+    "import:real": "npm run job -w @tftd/worker -- descopera-locale && npm run job -w @tftd/worker -- actualizeaza-ratinguri",
     "build:web": "npm run build -w @topfood/web"
   },
   "devDependencies": {
