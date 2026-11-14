@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
     '@tftd/scoring',
   ],
   serverExternalPackages: ['postgres'],
+  // Meniul se salvează o dată cu pozele preparatelor (max 200 × 40 KB); implicit Next acceptă doar 1 MB.
+  experimental: { serverActions: { bodySizeLimit: '10mb' } },
   // Monorepo: rădăcina pentru tracing e repo-ul, nu apps/web.
   outputFileTracingRoot: resolve(__dirname, '../..'),
 };

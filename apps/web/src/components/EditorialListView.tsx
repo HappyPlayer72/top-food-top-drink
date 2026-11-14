@@ -2,11 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddVenuePanel } from './AddVenuePanel';
-import { ArrowRight, X } from 'lucide-react';
+import { DrinkFeaturedCard, DrinkRow, FoodFeaturedCard, FoodRow } from './VenueCards';
+import { ThemeTopList, TopTabs } from './ThematicTops';
+import { orderTops, type TopKey } from '@tftd/scoring/features';
+import { X } from 'lucide-react';
 import {
   DrinkQuickFilter,
   FoodQuickFilter,
   Restaurant,
+  ThemeTop,
   Vertical,
   WeekendEvent,
   formatScore,
@@ -14,9 +18,6 @@ import {
 import {
   AvertizareaCard,
   CarouStrip,
-  CoasterScore,
-  CrowdMeter,
-  LocalnicBadge,
   TrapBadge,
 } from './BrandPrimitives';
 import { DRINK_HERO_HEADERS, FOOD_HERO_HEADERS } from '../data/heroHeaders';
@@ -52,6 +53,10 @@ export interface EditorialListViewProps {
   ) => void;
   initialFoodHeroIndex?: number;
   initialDrinkHeroIndex?: number;
+  /** Topurile tematice din backend; lipsă = doar topul general. */
+  themeTops?: { food: ThemeTop[]; drink: ThemeTop[] };
+  /** Preferințele userului: aleg ordinea topurilor, nu ascund nimic. */
+  interests?: readonly string[];
 }
 
 const FOOD_FILTER_PILLS: { id: FoodQuickFilter; label: string }[] = [
@@ -171,8 +176,21 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   onRequireLogin,
   initialFoodHeroIndex = 0,
   initialDrinkHeroIndex = 0,
+  themeTops,
+  interests = [],
 }) => {
   const isDrink = vertical === 'drink';
+  const themes = (isDrink ? themeTops?.drink : themeTops?.food) ?? [];
+  const [chosenTop, setChosenTop] = useState<TopKey | null>(null);
+  // Primul top = prima preferință care are date; userul poate schimba oricând.
+  const firstTop = orderTops(interests).find((k) => k === 'general' || themes.some((t) => t.theme === k)) ?? 'general';
+  const activeTop: TopKey = chosenTop && (chosenTop === 'general' || themes.some((t) => t.theme === chosenTop)) ? chosenTop : firstTop;
+  const activeTheme = themes.find((t) => t.theme === activeTop);
+  const openBySlug = (slug: string) => {
+    const r = (isDrink ? drinkVenues : restaurants).find((x) => x.slug === slug);
+    if (r) onSelectRestaurant(r);
+  };
+  const topTabs = <TopTabs themes={themes} interests={interests} active={activeTop} onChange={setChosenTop} dark={isDrink} />;
   const [showAllTop, setShowAllTop] = useState(false);
   const [expandedTrapPreview, setExpandedTrapPreview] = useState(false);
   const [showScorOnestInfo, setShowScorOnestInfo] = useState(false);
@@ -502,56 +520,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   );
 
   const renderFoodRow = (venue: Restaurant, rank: number, staggerIdx: number) => (
-    <button
-      key={venue.id}
-      type="button"
-      onClick={() => onSelectRestaurant(venue)}
-      style={{ '--stagger-idx': staggerIdx } as React.CSSProperties}
-      className="venue-row-interactive stagger-fade-in w-full py-3.5 flex items-center justify-between gap-2.5 sm:gap-3.5 text-left hover:bg-[#FAF8F5] px-0 sm:px-1.5 sm:-mx-1.5 rounded-[4px]"
-    >
-      <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
-        <span className="font-display text-[22px] sm:text-[26px] leading-none text-[#3A2418] w-4 sm:w-5 pt-0.5 sm:pt-0 shrink-0">
-          {rank}
-        </span>
-        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5]">
-          <img
-            src={venue.photoUrl}
-            alt={venue.name}
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover object-center venue-photo-zoom"
-          />
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="font-bold text-[16px] sm:text-[17px] text-[#3A2418] leading-snug line-clamp-2 sm:truncate">
-            {venue.name}
-          </div>
-          <div className="text-[12px] sm:text-[13px] text-[#6E5649] truncate">
-            {venue.shortCategory ?? venue.cuisine},{' '}
-            {venue.shortNeighborhood ?? venue.neighborhood},{' '}
-            {venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}
-          </div>
-          <p className="text-[12px] text-[#6E5649]/90 line-clamp-1">
-            {venue.editorialHeadline}
-          </p>
-          <div className="flex items-center gap-2 flex-wrap pt-0.5">
-            <LocalnicBadge
-              label={`Localnici ${formatScore(venue.localsScore)}`}
-              size="xs"
-            />
-            {venue.whatToOrder[0] && (
-              <span className="text-[11px] text-[#6E5649] truncate max-w-full">
-                {venue.whatToOrder[0].name}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <span className="font-display text-[28px] sm:text-[38px] leading-none text-[#3A2418] tabular-nums shrink-0">
-        {formatScore(venue.foodQualityScore)}
-      </span>
-    </button>
+    <FoodRow key={venue.id} venue={venue} rank={rank} staggerIdx={staggerIdx} onSelect={() => onSelectRestaurant(venue)} />
   );
 
   // ============================================================================
@@ -559,7 +528,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // ============================================================================
   if (isDrink) {
     return (
-      <div className="min-h-screen bg-[#17382C] text-[#F4EEE2] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
+      <div className="min-h-screen text-[#F4EEE2] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 space-y-6 sm:space-y-8">
           {/* Hero */}
           <section className="space-y-3.5 sm:space-y-4">
@@ -641,14 +610,16 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               <div className="space-y-1 pb-1">
                 <div className="flex items-baseline justify-between gap-2 flex-wrap">
                   <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#F4EEE2]">
-                    {drinkHeading}
+                    {activeTheme ? `Top: ${activeTheme.label}` : drinkHeading}
                   </h2>
-                  <span className="text-[12px] sm:text-[13px] text-[#F4EEE2]/65">
-                    plin acum, din raportări
-                  </span>
+                  {!activeTheme && (
+                    <span className="text-[12px] sm:text-[13px] text-[#F4EEE2]/65">
+                      plin acum, din raportări
+                    </span>
+                  )}
                 </div>
 
-                <div>
+                <div hidden={!!activeTheme}>
                   <button
                     type="button"
                     onClick={() => setShowScorOnestInfo((prev) => !prev)}
@@ -683,7 +654,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 </div>
               </div>
 
-              {filteredDrinkOrganic.length === 0 ? (
+              {topTabs}
+              {activeTheme ? (
+                <ThemeTopList top={activeTheme} venues={drinkVenues} onSelect={openBySlug} dark />
+              ) : filteredDrinkOrganic.length === 0 ? (
                 <div className="py-8 border-t border-[#285443] space-y-3">
                   <p className="text-[14px] text-[#F4EEE2]/75">
                     Niciun bar nu corespunde căutării sau filtrelor selectate.
@@ -703,143 +677,25 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 <div className="space-y-3">
                   {/* Featured #1 Pub Spotlight Card */}
                   {featuredDrink && (
-                    <button
+                    <DrinkFeaturedCard
                       key={featuredDrink.id}
-                      type="button"
-                      onClick={() => onSelectRestaurant(featuredDrink)}
-                      style={{ '--stagger-idx': 0 } as React.CSSProperties}
-                      className="venue-row-interactive stagger-fade-in w-full text-left rounded-[6px] border border-[#2D5947] bg-[#143025] hover:border-[#F2A33A]/70 overflow-hidden group"
-                    >
-                      <div className="relative h-40 sm:h-48 w-full overflow-hidden bg-[#122B22]">
-                        <img
-                          src={featuredDrink.photoUrl}
-                          alt={featuredDrink.name}
-                          className="w-full h-full object-cover object-center venue-photo-zoom"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#143025] via-[#143025]/25 to-transparent" />
-                        <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
-                          {!hasActiveDrinkSearch && drinkFilters.length === 1 && drinkFilters[0] === 'vineri-noaptea' && (
-                            <span className="px-2.5 py-1 rounded-[3px] bg-[#F2A33A] text-[#17382C] font-bold text-[11px] leading-none">
-                              #1 În topul de vineri
-                            </span>
-                          )}
-                          <LocalnicBadge
-                            label={`Localnici ${formatScore(featuredDrink.localsScore)}`}
-                            size="xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 sm:p-4 space-y-2.5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-baseline gap-2">
-                              <span className="font-display text-[28px] sm:text-[30px] leading-none text-[#F2A33A] shrink-0">
-                                1
-                              </span>
-                              <h3 className="font-display text-[22px] sm:text-[26px] leading-[1.05] text-[#F4EEE2] line-clamp-2 sm:truncate">
-                                {featuredDrink.name}
-                              </h3>
-                            </div>
-
-                            <div className="text-[13px] text-[#F4EEE2]/75 leading-snug">
-                              {featuredDrink.shortCategory ?? featuredDrink.cuisine},{' '}
-                              {featuredDrink.shortNeighborhood ?? featuredDrink.neighborhood}.{' '}
-                              {featuredDrink.priceRangeLabel}
-                            </div>
-                          </div>
-
-                          <CoasterScore score={featuredDrink.foodQualityScore} size="lg" />
-                        </div>
-
-                        {featuredDrink.whatToOrder[0] && (
-                          <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-[#1E4335] text-[#F4EEE2]/90">
-                            <span className="text-[#F2A33A] font-semibold shrink-0">
-                              Ce să iei:
-                            </span>
-                            <span className="min-w-0 truncate">
-                              {featuredDrink.whatToOrder[0].name}
-                            </span>
-                            <span className="shrink-0 font-semibold tabular-nums">
-                              · {featuredDrink.whatToOrder[0].priceRon} lei
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
-                          <div className="min-w-0">
-                            {featuredDrink.crowdSegments && featuredDrink.crowdLabel && (
-                              <CrowdMeter
-                                segments={featuredDrink.crowdSegments}
-                                label={featuredDrink.crowdLabel}
-                              />
-                            )}
-                          </div>
-                          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#F2A33A] ml-auto shrink-0 pt-1">
-                            <span>Vezi fișa</span>
-                            <ArrowRight className="w-3.5 h-3.5 venue-cta-arrow opacity-75" />
+                      venue={featuredDrink}
+                      onSelect={() => onSelectRestaurant(featuredDrink)}
+                      badge={
+                        !hasActiveDrinkSearch && drinkFilters.length === 1 && drinkFilters[0] === 'vineri-noaptea' ? (
+                          <span className="px-2.5 py-1 rounded-[3px] bg-[#F2A33A] text-[#17382C] font-bold text-[11px] leading-none">
+                            #1 În topul de vineri
                           </span>
-                        </div>
-                      </div>
-                    </button>
+                        ) : undefined
+                      }
+                    />
                   )}
 
                   {/* Illustrated Rows #2+ */}
                   {compactDrinkSlice.length > 0 && (
                     <div className="divide-y divide-[#285443] border-t border-[#285443]">
                       {compactDrinkSlice.map((venue, idx) => (
-                        <button
-                          key={venue.id}
-                          type="button"
-                          onClick={() => onSelectRestaurant(venue)}
-                          style={{ '--stagger-idx': idx + 1 } as React.CSSProperties}
-                          className="venue-row-interactive stagger-fade-in w-full py-4 flex items-center justify-between gap-2.5 sm:gap-3.5 text-left hover:bg-[#1C4234] px-0 sm:px-1.5 sm:-mx-1.5 rounded-[4px]"
-                        >
-                          <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0 flex-1">
-                            <span className="font-display text-[22px] sm:text-[24px] leading-none text-[#F4EEE2]/70 w-4 pt-1 shrink-0">
-                              {idx + 2}
-                            </span>
-
-                            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 border border-[#285443] bg-[#122B22]">
-                              <img
-                                src={venue.photoUrl}
-                                alt={venue.name}
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-cover object-center venue-photo-zoom"
-                              />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="font-bold text-[16px] sm:text-[17px] leading-snug text-[#F4EEE2] line-clamp-2 sm:truncate">
-                                {venue.name}
-                              </div>
-                              <div className="text-[12px] sm:text-[13px] text-[#F4EEE2]/75 mt-0.5 leading-snug">
-                                {venue.shortCategory ?? venue.cuisine},{' '}
-                                {venue.shortNeighborhood ?? venue.neighborhood}.{' '}
-                                {venue.priceRangeLabel}
-                              </div>
-                              {venue.whatToOrder[0] && (
-                                <div className="flex items-center gap-1 text-[12px] text-[#F2A33A]/90 mt-1 min-w-0">
-                                  <span className="min-w-0 truncate">
-                                    Recomandat: {venue.whatToOrder[0].name}
-                                  </span>
-                                  <span className="shrink-0 tabular-nums">
-                                    ({venue.whatToOrder[0].priceRon} lei)
-                                  </span>
-                                </div>
-                              )}
-                              {venue.crowdSegments && venue.crowdLabel && (
-                                <CrowdMeter
-                                  segments={venue.crowdSegments}
-                                  label={venue.crowdLabel}
-                                />
-                              )}
-                            </div>
-                          </div>
-
-                          <CoasterScore score={venue.foodQualityScore} size="md" />
-                        </button>
+                        <DrinkRow key={venue.id} venue={venue} rank={idx + 2} staggerIdx={idx + 1} onSelect={() => onSelectRestaurant(venue)} />
                       ))}
                     </div>
                   )}
@@ -847,7 +703,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               )}
 
               {/* Modest Sponsored Slot (Rule #3: darker/quieter surface, NO photo, smaller muted score, NO coaster) */}
-              {drinkSponsored && renderSponsoredCard(drinkSponsored)}
+              {!activeTheme && drinkSponsored && renderSponsoredCard(drinkSponsored)}
             </section>
 
             {/* RIGHT 5 COLUMNS: Weekendul ăsta + Bottom CTA */}
@@ -1047,7 +903,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   // TOPFOOD / TIMIȘOARA VIEW (Page 3 — White + Cafea + Carou)
   // ============================================================================
   return (
-    <div className="bg-white text-[#3A2418] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
+    <div className="text-[#3A2418] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
       {/* HERO BLOCK */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 pb-5 sm:pb-6 space-y-3.5 sm:space-y-4">
         <h1 className="font-display text-[32px] min-[375px]:text-[36px] sm:text-[54px] leading-[0.96] text-[#3A2418] max-w-2xl text-balance">
@@ -1116,14 +972,16 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
           <div className="space-y-1 pb-1">
             <div className="flex items-baseline justify-between gap-2 flex-wrap">
               <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#3A2418]">
-                Topul onest
+                {activeTheme ? `Top: ${activeTheme.label}` : 'Topul onest'}
               </h2>
-              <span className="text-[12px] sm:text-[13px] text-[#6E5649]">
-                după {totalFoodReviews.toLocaleString('ro-RO')} de review-uri
-              </span>
+              {!activeTheme && (
+                <span className="text-[12px] sm:text-[13px] text-[#6E5649]">
+                  după {totalFoodReviews.toLocaleString('ro-RO')} de review-uri
+                </span>
+              )}
             </div>
 
-            <div>
+            <div hidden={!!activeTheme}>
               <button
                 type="button"
                 onClick={() => setShowScorOnestInfo((prev) => !prev)}
@@ -1158,7 +1016,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             </div>
           </div>
 
-          {filteredFoodOrganic.length === 0 ? (
+          {topTabs}
+          {activeTheme ? (
+            <ThemeTopList top={activeTheme} venues={restaurants} onSelect={openBySlug} dark={false} />
+          ) : filteredFoodOrganic.length === 0 ? (
             <div className="py-8 border-t border-[#E6DFD5] space-y-3">
               <div className="space-y-1">
                 <p className="text-[15px] text-[#3A2418] font-semibold">
@@ -1183,85 +1044,18 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             <div className="space-y-3">
               {/* Featured Rank #1 Spotlight Card */}
               {featuredFood && (
-                <button
+                <FoodFeaturedCard
                   key={featuredFood.id}
-                  type="button"
-                  onClick={() => onSelectRestaurant(featuredFood)}
-                  style={{ '--stagger-idx': 0 } as React.CSSProperties}
-                  className="venue-row-interactive stagger-fade-in w-full text-left rounded-[6px] border border-[#E6DFD5] bg-[#FAF8F5] hover:border-[#3A2418]/40 overflow-hidden group"
-                >
-                  <div className="relative h-44 sm:h-52 w-full overflow-hidden bg-[#ECE6DD]">
-                    <img
-                      src={featuredFood.photoUrl}
-                      alt={featuredFood.name}
-                      className="w-full h-full object-cover object-center venue-photo-zoom"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-                    <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
-                      {!hasActiveFoodCriteria && (
-                        <span className="px-2.5 py-1 rounded-[3px] bg-[#3A2418] text-white font-bold text-[11px] leading-none">
-                          #1 În topul localnicilor
-                        </span>
-                      )}
-                      <LocalnicBadge
-                        label={`Localnici ${formatScore(featuredFood.localsScore)}`}
-                        size="xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 sm:p-5 space-y-2.5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-display text-[30px] sm:text-[34px] leading-none text-[#B3261E] shrink-0">
-                            1
-                          </span>
-                          <h3 className="font-display text-[24px] sm:text-[30px] leading-[1.05] text-[#3A2418] line-clamp-2 sm:truncate">
-                            {featuredFood.name}
-                          </h3>
-                        </div>
-
-                        <div className="text-[13px] text-[#6E5649]">
-                          {featuredFood.shortCategory ?? featuredFood.cuisine},{' '}
-                          {featuredFood.shortNeighborhood ?? featuredFood.neighborhood},{' '}
-                          {featuredFood.priceRangeLabel ?? `~${featuredFood.avgMealPriceRon} lei`}
-                        </div>
-                      </div>
-
-                      <span className="font-display text-[40px] min-[375px]:text-[44px] sm:text-[52px] leading-[0.88] text-[#3A2418] tabular-nums shrink-0">
-                        {formatScore(featuredFood.foodQualityScore)}
+                  venue={featuredFood}
+                  onSelect={() => onSelectRestaurant(featuredFood)}
+                  badge={
+                    !hasActiveFoodCriteria ? (
+                      <span className="px-2.5 py-1 rounded-[3px] bg-[#3A2418] text-white font-bold text-[11px] leading-none">
+                        #1 În topul localnicilor
                       </span>
-                    </div>
-
-                    <p className="text-[13px] text-[#3A2418]/85 line-clamp-2 leading-snug">
-                      {featuredFood.editorialHeadline}
-                    </p>
-
-                    <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
-                      {featuredFood.whatToOrder[0] ? (
-                        <div className="inline-flex max-w-full overflow-hidden items-center gap-1.5 text-[12px] px-2.5 py-1 rounded-[3px] bg-white border border-[#E6DFD5] text-[#3A2418]">
-                          <span className="text-[#B3261E] font-semibold shrink-0">
-                            Recomandat:
-                          </span>
-                          <span className="min-w-0 truncate">
-                            {featuredFood.whatToOrder[0].name}
-                          </span>
-                          <span className="shrink-0 font-semibold tabular-nums">
-                            · {featuredFood.whatToOrder[0].priceRon} lei
-                          </span>
-                        </div>
-                      ) : (
-                        <span />
-                      )}
-
-                      <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#B3261E] ml-auto shrink-0">
-                        <span>Vezi fișa</span>
-                        <ArrowRight className="w-3.5 h-3.5 venue-cta-arrow opacity-75" />
-                      </span>
-                    </div>
-                  </div>
-                </button>
+                    ) : undefined
+                  }
+                />
               )}
 
               {/* Ranks 2–3 (Illustrated Rows) */}

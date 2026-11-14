@@ -18,6 +18,7 @@ import {
   pgTable,
   primaryKey,
   real,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -55,6 +56,14 @@ export const paymentStatus = pgEnum("payment_status", ["pending", "paid", "faile
 export const reportTarget = pgEnum("report_target", ["review", "venue", "owner_claim", "trap_appeal", "user", "post"]);
 export const reportStatus = pgEnum("report_status", ["open", "resolved", "rejected"]);
 export const matchStatus = pgEnum("match_status", ["pending", "confirmed", "rejected"]);
+/** Ce îl interesează pe user (opțional): alege întrebările din review și ordinea topurilor. Nu e o declarație despre dizabilitate. */
+export const interest = pgEnum("interest", ["accesibilitate", "lucru", "iesiri", "mancare"]);
+/** Răspunsul unui client la o întrebare din review; „nu am observat” nu intră în procente. */
+export const featureAnswer = pgEnum("feature_answer", ["yes", "no", "not_observed"]);
+/** Declarația owner-ului; „nespecificat” = lipsa rândului. */
+export const declarationValue = pgEnum("declaration_value", ["yes", "no"]);
+/** Voturile rapide din bara localului: siguranță 1–5, zgomot 1–4 (liniștit … zgomotos). */
+export const quickVoteKind = pgEnum("quick_vote_kind", ["safety", "noise"]);
 
 // ---------- Oraș ----------
 
@@ -190,6 +199,8 @@ export const users = pgTable("users", {
   localNeighborhood: text(),
   localUntil: timestamp({ withTimezone: true }),
   followers: integer(),
+  /** Preferințele opționale (pot fi sărite și schimbate din profil). */
+  interests: interest().array().notNull().default(sql`'{}'::interest[]`),
   createdAt: createdAt(),
 });
 
@@ -347,6 +358,52 @@ export const reviews = pgTable(
   ],
 );
 
+/**
+ * Răspunsurile structurate dintr-un review („Intrarea e fără trepte?” → Da / Nu / Nu am observat).
+ * Cheile întrebărilor sunt în packages/scoring/src/features.ts. Doar ce a bifat userul — nu deducem din text.
+ */
+export const reviewAnswers = pgTable(
+  "review_answers",
+  {
+    reviewId: uuid().notNull().references(() => reviews.id, { onDelete: "cascade" }),
+    questionKey: text().notNull(),
+    answer: featureAnswer().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.reviewId, t.questionKey] }), index().on(t.questionKey)],
+);
+
+/** Facilitățile declarate de owner/manager, separat de răspunsurile clienților. */
+export const venueFacilityDeclarations = pgTable(
+  "venue_facility_declarations",
+  {
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    questionKey: text().notNull(),
+    value: declarationValue().notNull(),
+    updatedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.venueId, t.questionKey] })],
+);
+
+/**
+ * Vot rapid, fără review: un vot per user, per local, per tip (se poate schimba oricând).
+ * Se afișează (medie / nivel obișnuit, de la prag) și dă avertizări; nu intră în ordinea topurilor.
+ */
+export const venueQuickVotes = pgTable(
+  "venue_quick_votes",
+  {
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: quickVoteKind().notNull(),
+    value: smallint().notNull(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.venueId, t.userId, t.kind] }),
+    check("venue_quick_votes_value", sql`${t.value} between 1 and (case when ${t.kind} = 'noise' then 4 else 5 end)`),
+  ],
+);
+
 export const reviewReplies = pgTable("review_replies", {
   id: uuid().primaryKey().defaultRandom(),
   reviewId: uuid().notNull().references(() => reviews.id, { onDelete: "cascade" }),
@@ -405,13 +462,21 @@ export const menuItems = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    /** Secțiunea din meniu (ex. „Ciorbe”); ordinea secțiunilor = ordinea primului fel din fiecare. */
+    category: text().notNull().default(""),
     name: text().notNull(),
     priceLei: integer(),
     description: text(),
     mustOrder: boolean().notNull().default(false),
     position: integer().notNull().default(0),
+    /** Poză mică (data URL JPEG, micșorată în browser). Publicul o ia prin /api/menu-photo/{id}, nu inline. */
+    photo: text(),
   },
-  (t) => [index().on(t.venueId, t.position)],
+  (t) => [
+    index().on(t.venueId, t.position),
+    // shortcut: pozele stau în Postgres; când avem storage (ex. Supabase Storage), aici rămâne doar URL-ul.
+    check("menu_items_photo_size", sql`length(${t.photo}) <= 40000`),
+  ],
 );
 
 /** Voturi „util” pe review-uri: un vot per user per review. */
@@ -589,3 +654,17 @@ export type LeaderboardAwards = {
   employee?: { employeeId: string; venueId: string; mentions: number };
   local?: { userId: string; reviews: number };
 };
+
+/** Sondaj public de ieșire; opțiunile sunt slug-urile localurilor active la creare. */
+export const outingPolls = pgTable("outing_polls", {
+  token: text().primaryKey(),
+  venueSlugs: text().array().notNull(),
+  createdAt: createdAt(),
+});
+
+export const outingPollVotes = pgTable("outing_poll_votes", {
+  pollToken: text().notNull().references(() => outingPolls.token, { onDelete: "cascade" }),
+  voterHash: text().notNull(),
+  venueSlug: text().notNull(),
+  updatedAt: createdAt(),
+}, (t) => [primaryKey({ columns: [t.pollToken, t.voterHash] })]);

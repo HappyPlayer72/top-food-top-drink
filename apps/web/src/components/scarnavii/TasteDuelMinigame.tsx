@@ -124,7 +124,7 @@ export const TasteDuelMinigame: React.FC<TasteDuelMinigameProps> = ({
             className={`w-4 h-4 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}
           />
           <h2 className="font-display text-[24px] sm:text-[28px] leading-tight">
-            Turneul Poftelor — Duel 1 la 1
+            Duel la masă — 1 la 1
           </h2>
         </div>
         <p

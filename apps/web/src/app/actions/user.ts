@@ -6,7 +6,7 @@
  */
 import { randomInt } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { accounts, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
+import { accounts, submitQuickVote, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { clearSession, errorMessage, getUserId, setSession } from '@/lib/server/session';
 import { toUserAccount } from '@/lib/backend/user';
@@ -44,7 +44,7 @@ export async function loginDemo(email: string): Promise<Result<{ user: UserAccou
   return loginUser({ email, password: process.env.DEMO_PASSWORD ?? 'demo1234' });
 }
 
-export async function registerUser(input: { name: string; email: string; password: string }): Promise<Result<{ user: UserAccount }>> {
+export async function registerUser(input: { name: string; email: string; password: string; interests?: string[] }): Promise<Result<{ user: UserAccount }>> {
   if (!hasDb()) return OFFLINE;
   try {
     const email = input.email.trim().toLowerCase();
@@ -54,6 +54,7 @@ export async function registerUser(input: { name: string; email: string; passwor
       displayName: input.name,
       email,
       password: input.password,
+      interests: input.interests ?? [],
     });
     await setSession(u.id);
     return { ok: true, user: (await toUserAccount(getDb(), u.id))! };
@@ -72,6 +73,8 @@ export async function submitReview(input: {
   rating: number;
   text: string;
   weekendNight?: boolean;
+  /** Întrebările structurate; validate pe server (writeReview). */
+  answers?: Record<string, string>;
 }): Promise<Result<{ message: string }>> {
   if (!hasDb()) return OFFLINE;
   const userId = await getUserId();
@@ -87,6 +90,34 @@ export async function submitReview(input: {
           ? ' Ești localnic verificat, nota ta contează dublu.'
           : '';
     return { ok: true, message: `Review publicat. Pondere ×${weight}.${why} Scorul localului s-a recalculat.` };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** „Preferințele mele”: opționale, se pot schimba oricând; listă goală = fără preferințe. */
+export async function savePreferences(interests: string[]): Promise<Result<{ user: UserAccount }>> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să îți salvezi preferințele.' };
+  try {
+    await accounts.setInterests(getDb(), userId, interests);
+    revalidatePath('/', 'layout');
+    return { ok: true, user: (await toUserAccount(getDb(), userId))! };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** Vot rapid din bara localului (siguranță 1–5, zgomot 1–4): cere cont; validat pe server. */
+export async function castQuickVote(venueId: string, kind: string, value: number): Promise<Result> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să votezi.' };
+  try {
+    await submitQuickVote(getDb(), userId, venueId, kind, value);
+    revalidatePath('/', 'layout');
+    return { ok: true };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
   }

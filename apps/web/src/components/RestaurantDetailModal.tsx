@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { NOISE_LEVELS, quickButtonsFor, quickWarnings, type Answer, type QuickKind } from '@tftd/scoring/features';
+import { ReviewQuestions } from './ReviewQuestions';
+import { VenueFeatures } from './VenueFeatures';
 import {
   Accessibility,
   AlertTriangle,
@@ -25,9 +28,7 @@ import {
   NoiseLevel,
   Restaurant,
   Review,
-  USER_PREFERENCE_OPTIONS,
   UserAccount,
-  UserPreferenceKey,
   formatScore,
 } from '../types';
 import {
@@ -40,8 +41,8 @@ import {
 } from '../data/venueExtras';
 import {
   AvertizareaCard,
-  CarouStrip,
-  CoasterScore,
+  MugScore,
+  PlateScore,
   CrowdMeter,
   EmployeeEcusonCard,
   InfluencerBadge,
@@ -63,12 +64,16 @@ export interface RestaurantDetailModalProps {
   onVoteHelpful?: (
     reviewId: string
   ) => Promise<{ ok: true; voted: boolean; helpfulCount: number } | { ok: false; error: string }>;
-  onRequireLogin?: () => void;
+  onRequireLogin?: (opts?: { openReview?: boolean }) => void;
   onLocateOnMap?: (restaurant: Restaurant) => void;
   isSaved?: boolean;
   onToggleSave?: (restaurantId: string) => void;
   initialReviewOpen?: boolean;
   onConsumeInitialReviewOpen?: () => void;
+  /** Cu backend: votul rapid al userului la acest local (siguranță 1–5, zgomot 1–4) */
+  myQuickVote?: Partial<Record<QuickKind, number>>;
+  /** Cu backend: salvează votul rapid; undefined = fără backend (votul rămâne local) */
+  onQuickVote?: (kind: QuickKind, value: number) => Promise<{ ok: true } | { ok: false; error: string }>;
 }
 
 type ReviewFilterTab = 'verified-local' | 'tourist' | 'influencer' | 'all';
@@ -109,49 +114,6 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 }
 
 const SWIPE_DISMISS_THRESHOLD_PX = 72;
-const PREFERENCE_ANSWERS_STORAGE_KEY = 'topfood-venue-preference-answers';
-
-function loadVenuePreferenceAnswers(
-  venueId: string
-): Partial<Record<UserPreferenceKey, boolean>> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(PREFERENCE_ANSWERS_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<
-      string,
-      Partial<Record<UserPreferenceKey, boolean>>
-    >;
-    return parsed[venueId] ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function saveVenuePreferenceAnswers(
-  venueId: string,
-  answers: Partial<Record<UserPreferenceKey, boolean>>
-): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const raw = window.localStorage.getItem(PREFERENCE_ANSWERS_STORAGE_KEY);
-    const parsed: Record<
-      string,
-      Partial<Record<UserPreferenceKey, boolean>>
-    > = raw ? JSON.parse(raw) : {};
-    if (Object.keys(answers).length === 0) {
-      delete parsed[venueId];
-    } else {
-      parsed[venueId] = answers;
-    }
-    window.localStorage.setItem(
-      PREFERENCE_ANSWERS_STORAGE_KEY,
-      JSON.stringify(parsed)
-    );
-  } catch {
-    // Ignore storage errors in restricted environments
-  }
-}
 
 export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   restaurant,
@@ -165,6 +127,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   onToggleSave,
   initialReviewOpen = false,
   onConsumeInitialReviewOpen,
+  myQuickVote,
+  onQuickVote,
 }) => {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilterTab>('verified-local');
   const [showScoreFormula, setShowScoreFormula] = useState(false);
@@ -189,38 +153,21 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   const [reviewText, setReviewText] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
-  const [localPreferenceAnswers, setLocalPreferenceAnswers] = useState<
-    Partial<Record<UserPreferenceKey, boolean>>
-  >({});
-  const [draftPreferenceAnswers, setDraftPreferenceAnswers] = useState<
-    Partial<Record<UserPreferenceKey, boolean | null>>
-  >({});
-  const [isPreferencePromptOpen, setIsPreferencePromptOpen] = useState(false);
-  const [lastSubmittedReviewId, setLastSubmittedReviewId] = useState<string | null>(null);
+  /** Întrebările structurate din review (Da / Nu / Nu am observat), trimise odată cu review-ul. */
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
   const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
   const [drawerEntered, setDrawerEntered] = useState(false);
 
   const modalOverlayRef = useRef<HTMLDivElement | null>(null);
   const reviewDrawerRef = useRef<HTMLDivElement | null>(null);
-  const preferencePromptRef = useRef<HTMLDivElement | null>(null);
   const previousModalFocusRef = useRef<HTMLElement | null>(null);
   const previousDrawerFocusRef = useRef<HTMLElement | null>(null);
-  const previousPromptFocusRef = useRef<HTMLElement | null>(null);
   const isReviewDrawerOpenRef = useRef(false);
-  const isPreferencePromptOpenRef = useRef(false);
   const drawerDragStartYRef = useRef<number | null>(null);
   const drawerDragCurrentYRef = useRef<number>(0);
 
   isReviewDrawerOpenRef.current = isReviewDrawerOpen;
-  isPreferencePromptOpenRef.current = isPreferencePromptOpen;
-
-  const userPreferenceOptions = useMemo(() => {
-    const keys = currentUser?.preferences ?? [];
-    if (keys.length === 0) return [];
-    const keySet = new Set(keys);
-    return USER_PREFERENCE_OPTIONS.filter((opt) => keySet.has(opt.key));
-  }, [currentUser?.preferences]);
 
   useEffect(() => {
     if (!restaurant) return;
@@ -234,10 +181,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setShowHours(false);
     setShowGoogleCompare(false);
     setIsReviewDrawerOpen(false);
-    setIsPreferencePromptOpen(false);
-    setLastSubmittedReviewId(null);
-    setDraftPreferenceAnswers({});
-    setLocalPreferenceAnswers(loadVenuePreferenceAnswers(restaurant.id));
+    setAnswers({});
     setHelpfulVotedKeys({});
     setPraisedEmployee('');
     setReviewText('');
@@ -248,8 +192,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setScoreInput(initialGrade);
     setGradeText(String(initialGrade));
     setMarkAsTrap(false);
-    setSafetyScore(null);
-    setNoiseLevel(null);
     setFormError(null);
     setSubmittedNotice(null);
     if (modalOverlayRef.current) {
@@ -291,7 +233,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       const prev = previousDrawerFocusRef.current;
       previousDrawerFocusRef.current = null;
       if (
-        !isPreferencePromptOpenRef.current &&
         prev &&
         prev.isConnected &&
         modalOverlayRef.current?.isConnected
@@ -301,30 +242,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     };
   }, [isReviewDrawerOpen]);
 
+  // Butoanele arată votul salvat pe server (și după refresh); fără vot, sunt goale.
   useEffect(() => {
-    if (!isPreferencePromptOpen) return;
-    previousPromptFocusRef.current = document.activeElement as HTMLElement | null;
-    const raf = requestAnimationFrame(() => {
-      const prompt = preferencePromptRef.current;
-      if (!prompt) return;
-      prompt.scrollTop = 0;
-      const focusables = getFocusableElements(prompt);
-      if (focusables.length > 0) {
-        focusables[0].focus();
-      } else {
-        prompt.focus();
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(raf);
-      const prev = previousPromptFocusRef.current;
-      previousPromptFocusRef.current = null;
-      if (prev && prev.isConnected && modalOverlayRef.current?.isConnected) {
-        prev.focus();
-      }
-    };
-  }, [isPreferencePromptOpen]);
+    setSafetyScore(myQuickVote?.safety ?? null);
+    setNoiseLevel(NOISE_LEVELS.find((l) => l.value === myQuickVote?.noise)?.id ?? null);
+  }, [restaurant?.id, myQuickVote?.safety, myQuickVote?.noise]);
 
   const isModalOpen = Boolean(restaurant);
 
@@ -333,7 +255,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     if (!isModalOpen) return;
     previousModalFocusRef.current = document.activeElement as HTMLElement | null;
     const raf = requestAnimationFrame(() => {
-      if (isReviewDrawerOpenRef.current || isPreferencePromptOpenRef.current) return;
+      if (isReviewDrawerOpenRef.current) return;
       const container = modalOverlayRef.current;
       if (!container) return;
       const focusables = getFocusableElements(container);
@@ -359,17 +281,14 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     if (!restaurant) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (isPreferencePromptOpen) setIsPreferencePromptOpen(false);
-        else if (isReviewDrawerOpen) setIsReviewDrawerOpen(false);
+        if (isReviewDrawerOpen) setIsReviewDrawerOpen(false);
         else onClose();
         return;
       }
 
       if (e.key === 'Tab') {
         const activeContainer =
-          isPreferencePromptOpen && preferencePromptRef.current
-            ? preferencePromptRef.current
-            : isReviewDrawerOpen && reviewDrawerRef.current
+          isReviewDrawerOpen && reviewDrawerRef.current
             ? reviewDrawerRef.current
             : modalOverlayRef.current;
         if (!activeContainer) return;
@@ -403,61 +322,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       window.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = prevOverflow;
     };
-  }, [restaurant, isReviewDrawerOpen, isPreferencePromptOpen, onClose]);
+  }, [restaurant, isReviewDrawerOpen, onClose]);
 
-  const hasLocalPreferenceAnswers = Object.keys(localPreferenceAnswers).length > 0;
-
-  const displayReviews = useMemo(() => {
-    if (!restaurant) return [];
-    if (!lastSubmittedReviewId || !hasLocalPreferenceAnswers) {
-      return restaurant.reviews;
-    }
-    return restaurant.reviews.map((rev) =>
-      rev.id === lastSubmittedReviewId
-        ? {
-            ...rev,
-            preferenceAnswers: {
-              ...rev.preferenceAnswers,
-              ...localPreferenceAnswers,
-            },
-          }
-        : rev
-    );
-  }, [restaurant, lastSubmittedReviewId, localPreferenceAnswers, hasLocalPreferenceAnswers]);
-
-  const restaurantForExtras = useMemo(() => {
-    if (!restaurant) return null;
-    if (!hasLocalPreferenceAnswers) return restaurant;
-    const matchedInReviews =
-      Boolean(lastSubmittedReviewId) &&
-      displayReviews.some((rev) => rev.id === lastSubmittedReviewId);
-    if (matchedInReviews) {
-      return { ...restaurant, reviews: displayReviews };
-    }
-    const syntheticPrefReview: Review = {
-      authorName: currentUser?.name ?? 'Vizitator',
-      authorRole: (currentUser?.role as AuthorRole) ?? 'tourist',
-      weightMultiplier: currentUser?.weightMultiplier ?? 1,
-      isVerifiedVisit: currentUser?.role === 'verified-local',
-      foodScore: restaurant.foodQualityScore,
-      trapEstimatePct: restaurant.touristTrapIndex,
-      date: 'Recent',
-      text: '',
-      language: 'RO',
-      preferenceAnswers: localPreferenceAnswers,
-    };
-    return {
-      ...restaurant,
-      reviews: [...restaurant.reviews, syntheticPrefReview],
-    };
-  }, [
-    restaurant,
-    hasLocalPreferenceAnswers,
-    lastSubmittedReviewId,
-    displayReviews,
-    currentUser,
-    localPreferenceAnswers,
-  ]);
+  const displayReviews = useMemo(() => restaurant?.reviews ?? [], [restaurant]);
 
   const filteredReviews = useMemo(() => {
     if (!restaurant) return [];
@@ -483,7 +350,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
   );
   const weeklyHours = getVenueWeeklyHours(restaurant);
   const todayDayName = getTodayDayName();
-  const baseWarnings = getVenueWarnings(restaurantForExtras ?? restaurant);
+  // Ordinea și evidențierea butoanelor rapide urmează preferințele din profil.
+  const quickButtons = quickButtonsFor(currentUser?.interests ?? []);
+  // Cu backend: avertizările vin din voturile reale (de la prag); fără backend, din datele statice.
+  const baseWarnings = restaurant.quick
+    ? { ...quickWarnings(restaurant.quick), brightLights: getVenueWarnings(restaurant).brightLights }
+    : getVenueWarnings(restaurant);
   const venueWarnings = {
     unsafeFeeling:
       baseWarnings.unsafeFeeling ??
@@ -502,7 +374,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       venueWarnings.veryNoisy ||
       venueWarnings.brightLights
   );
-  const venueFacilities = getVenueFacilities(restaurantForExtras ?? restaurant);
+  const venueFacilities = getVenueFacilities(restaurant);
   const googleOn10 = Number((restaurant.googleRawRating * 2).toFixed(1));
   const googleVsTopDiff = Number(
     (googleOn10 - restaurant.foodQualityScore).toFixed(1)
@@ -594,6 +466,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       safetyScore: safetyScore ?? undefined,
       noiseLevel: noiseLevel ?? undefined,
       helpfulCount: 0,
+      answers: Object.keys(answers).length ? answers : undefined,
     };
 
     const result = await onAddReview(restaurant.id, newReview);
@@ -606,8 +479,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewText('');
     setPraisedEmployee('');
     setMarkAsTrap(false);
-    setSafetyScore(null);
-    setNoiseLevel(null);
+    // Butoanele rapide revin la voturile salvate (sau goale, fără backend).
+    setSafetyScore(myQuickVote?.safety ?? null);
+    setNoiseLevel(NOISE_LEVELS.find((l) => l.value === myQuickVote?.noise)?.id ?? null);
+    setAnswers({});
     setSubmittedNotice(
       result?.message ??
       `Review publicat ca ${currentUser.name} (${formatScore(
@@ -616,66 +491,33 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
         markAsTrap ? ' cu semnalare de capcană turistică' : ''
       }. Scorul s-a actualizat.`
     );
-
-    if (userPreferenceOptions.length > 0) {
-      setLastSubmittedReviewId(reviewId);
-      const initialDraft: Partial<Record<UserPreferenceKey, boolean | null>> = {};
-      for (const opt of userPreferenceOptions) {
-        if (localPreferenceAnswers[opt.key] !== undefined) {
-          initialDraft[opt.key] = localPreferenceAnswers[opt.key];
-        }
-      }
-      setDraftPreferenceAnswers(initialDraft);
-      setIsPreferencePromptOpen(true);
-    }
   };
 
-  const handleSelectPreferenceDraft = (
-    key: UserPreferenceKey,
-    value: boolean | null
-  ) => {
-    setDraftPreferenceAnswers((prev) => ({
-      ...prev,
-      [key]: prev[key] === value ? undefined : value,
-    }));
-  };
-
-  const handleSubmitPreferenceAnswers = () => {
-    if (!restaurant) return;
-    const nextAnswers: Partial<Record<UserPreferenceKey, boolean>> = {
-      ...localPreferenceAnswers,
-    };
-    let answeredCount = 0;
-
-    for (const opt of userPreferenceOptions) {
-      const choice = draftPreferenceAnswers[opt.key];
-      if (choice === true || choice === false) {
-        nextAnswers[opt.key] = choice;
-        answeredCount += 1;
-      } else if (choice === null) {
-        delete nextAnswers[opt.key];
-      }
+  /** Vot pe scală: cu backend se salvează (cere cont, un vot per tip, se poate schimba); fără backend rămâne local. */
+  const handleScaleVote = async (kind: QuickKind, value: number) => {
+    setActiveQuickVote(null);
+    const noiseId = NOISE_LEVELS.find((l) => l.value === value)?.id ?? null;
+    if (!currentUser) {
+      onRequireLogin?.({ openReview: false });
+      return;
     }
-
-    setLocalPreferenceAnswers(nextAnswers);
-    saveVenuePreferenceAnswers(restaurant.id, nextAnswers);
-    setIsPreferencePromptOpen(false);
-
-    if (answeredCount > 0 && currentUser) {
-      setSubmittedNotice(
-        `Review publicat ca ${currentUser.name} (${formatScore(
-          currentUser.weightMultiplier
-        )}×) și ${answeredCount} ${
-          answeredCount === 1
-            ? 'detaliu adăugat la Facilități & avertizări'
-            : 'detalii adăugate la Facilități & avertizări'
-        }.`
-      );
+    if (!onQuickVote) {
+      if (kind === 'safety') setSafetyScore((prev) => (prev === value ? null : value));
+      else setNoiseLevel((prev) => (prev === noiseId ? null : noiseId));
+      return;
     }
-  };
-
-  const handleSkipPreferencePrompt = () => {
-    setIsPreferencePromptOpen(false);
+    // Optimist, dar la eroare refacem doar tipul votat acum (alt vot reușit între timp rămâne).
+    const previous = kind === 'safety' ? safetyScore : noiseLevel;
+    if (kind === 'safety') setSafetyScore(value);
+    else setNoiseLevel(noiseId);
+    const res = await onQuickVote(kind, value);
+    if (!res.ok) {
+      if (kind === 'safety') setSafetyScore((cur) => (cur === value ? (previous as number | null) : cur));
+      else setNoiseLevel((cur) => (cur === noiseId ? (previous as NoiseLevel | null) : cur));
+      setSubmittedNotice(res.error);
+    } else {
+      setSubmittedNotice(kind === 'safety' ? `Votul tău de siguranță (${value}/5) a fost salvat.` : `Votul tău pentru zgomot (${NOISE_LABELS[noiseId!]}) a fost salvat.`);
+    }
   };
 
   const handleFilterClick = (tab: 'verified-local' | 'tourist' | 'influencer') => {
@@ -735,8 +577,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
       onClick={(e) => {
         if (
           e.target === e.currentTarget &&
-          !isReviewDrawerOpen &&
-          !isPreferencePromptOpen
+          !isReviewDrawerOpen
         ) {
           onClose();
         }
@@ -748,11 +589,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`modal-panel-enter min-h-full flex flex-col ${
+        className={`doodle-wallpaper modal-panel-enter min-h-full flex flex-col ${
           isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
         }`}
       >
-        {/* TOP BREADCRUMB BAR (No CarouMark here so CarouStrip appears only once under score) */}
+        {/* TOP BREADCRUMB BAR (fără CarouMark aici: scorul e pe farfurie / halbă) */}
         <header
           className={`sticky top-0 z-30 border-b pt-[env(safe-area-inset-top)] ${
             isDrink
@@ -890,46 +731,23 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 )}
               </div>
 
-              {/* Right: Score + Single CarouStrip (food) or CoasterScore (drink) */}
-              <div className="shrink-0 flex flex-col items-end">
-                {isDrink ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <CoasterScore score={restaurant.foodQualityScore} size="lg" />
-                    <span className="text-[11px] text-[#F4EEE2]/70">
-                      Scor onest din 10
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowScoreFormula((prev) => !prev)}
-                      aria-expanded={showScoreFormula}
-                      aria-controls="scor-onest-formula"
-                      className="btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold text-[#F2A33A] underline underline-offset-2 hover:opacity-80"
-                    >
-                      {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="min-w-[92px] min-[375px]:min-w-[108px] sm:min-w-[116px] flex flex-col items-end">
-                    <span className="font-display text-[48px] min-[375px]:text-[58px] sm:text-[68px] leading-[0.88] text-[#3A2418] tabular-nums">
-                      {formatScore(restaurant.foodQualityScore)}
-                    </span>
-                    <div className="w-full mt-2 mb-1">
-                      <CarouStrip height={8} />
-                    </div>
-                    <span className="text-[11px] text-[#6E5649]">
-                      Scor onest din 10
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowScoreFormula((prev) => !prev)}
-                      aria-expanded={showScoreFormula}
-                      aria-controls="scor-onest-formula"
-                      className="btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold text-[#6E5649] hover:text-[#3A2418] underline underline-offset-2"
-                    >
-                      {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
-                    </button>
-                  </div>
-                )}
+              {/* Dreapta: scorul ca în clasament — farfurie (food) / halbă (drink) + „Scor Onest” */}
+              <div className="shrink-0 flex flex-col items-center gap-2">
+                {isDrink ? <MugScore score={restaurant.foodQualityScore} size="lg" /> : <PlateScore score={restaurant.foodQualityScore} size="lg" />}
+                <span aria-hidden="true" className={`text-[13px] font-bold leading-none whitespace-nowrap ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
+                  Scor Onest
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowScoreFormula((prev) => !prev)}
+                  aria-expanded={showScoreFormula}
+                  aria-controls="scor-onest-formula"
+                  className={`btn-press min-h-[44px] inline-flex items-center -my-2 text-[11px] font-semibold underline underline-offset-2 ${
+                    isDrink ? 'text-[#F2A33A] hover:opacity-80' : 'text-[#6E5649] hover:text-[#3A2418]'
+                  }`}
+                >
+                  {showScoreFormula ? 'Ascunde formula' : 'Cum se calculează?'}
+                </button>
               </div>
             </div>
 
@@ -1070,7 +888,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                                 key={item.name}
                                 className="py-2 first:pt-0 last:pb-0 flex items-start justify-between gap-3"
                               >
-                                <div className="min-w-0 space-y-0.5">
+                                {item.photoUrl && (
+                                  // onError: dacă ownerul a resalvat meniul între timp, id-ul vechi dă 404; ascundem poza ruptă.
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={item.photoUrl} alt="" width={56} height={56} loading="lazy" onError={(e) => { e.currentTarget.hidden = true; }} className="size-14 shrink-0 rounded-[3px] object-cover" />
+                                )}
+                                <div className="min-w-0 flex-1 space-y-0.5">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-semibold text-[14px] leading-snug">
                                       {item.name}
@@ -1343,11 +1166,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             {hasAnyWarning && (
               <div className="space-y-2">
                 <h3
-                  className={`text-[12px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                  className={`text-[14px] font-bold flex items-center gap-1.5 ${
                     isDrink ? 'text-[#FCA5A5]' : 'text-[#B3261E]'
                   }`}
                 >
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  {/* Triunghiul e rezervat capcanelor turistice; aici e un semn de avertizare pentru vizitatori. */}
+                  <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>Avertizări pentru vizitatori</span>
                 </h3>
                 <ul className="space-y-1.5">
@@ -1401,22 +1225,16 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <h3
-                  className={`text-[12px] font-bold uppercase tracking-wider ${
-                    isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
+                  className={`text-[14px] font-bold ${
+                    isDrink ? 'text-[#F2A33A]' : 'text-[#3A2418]'
                   }`}
                 >
-                  Facilități & accesibilitate
+                  Facilități și accesibilitate
                 </h3>
-                {hasLocalPreferenceAnswers && (
-                  <span
-                    className={`text-[11px] font-semibold ${
-                      isDrink ? 'text-[#A7F3D0]' : 'text-[#1E6B43]'
-                    }`}
-                  >
-                    Actualizat cu răspunsurile tale
-                  </span>
-                )}
               </div>
+              {restaurant.features ? (
+                <VenueFeatures groups={restaurant.features} quick={restaurant.quick} dark={isDrink} />
+              ) : (
               <div className="flex flex-wrap gap-2">
                 {venueFacilities.disabilityFriendly !== undefined && (
                   <span
@@ -1476,6 +1294,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   </span>
                 ))}
               </div>
+              )}
             </div>
           </section>
 
@@ -1770,9 +1589,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       <p className="text-[15px] leading-[1.55]">{rev.text}</p>
 
                       {(rev.safetyScore !== undefined ||
-                        rev.noiseLevel !== undefined ||
-                        (rev.preferenceAnswers &&
-                          Object.keys(rev.preferenceAnswers).length > 0)) && (
+                        rev.noiseLevel !== undefined) && (
                         <div className="flex flex-wrap items-center gap-2">
                           {rev.safetyScore !== undefined && (
                             <span
@@ -1798,28 +1615,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                               Zgomot: {NOISE_LABELS[rev.noiseLevel]}
                             </span>
                           )}
-                          {rev.preferenceAnswers &&
-                            USER_PREFERENCE_OPTIONS.filter(
-                              (opt) => rev.preferenceAnswers?.[opt.key] !== undefined
-                            ).map((opt) => {
-                              const answer = rev.preferenceAnswers?.[opt.key];
-                              return (
-                                <span
-                                  key={opt.key}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[11px] font-semibold border ${
-                                    answer
-                                      ? isDrink
-                                        ? 'bg-[#1E4335] border-[#2D5947] text-[#A7F3D0]'
-                                        : 'bg-[#ECF7F0] border-[#BCE3CB] text-[#1E6B43]'
-                                      : isDrink
-                                      ? 'bg-[#3B1D1D]/70 border-[#FCA5A5]/30 text-[#FEE2E2]'
-                                      : 'bg-[#FDECEC] border-[#F5C2C0] text-[#7A1812]'
-                                  }`}
-                                >
-                                  {opt.label}: {answer ? 'Da' : 'Nu'}
-                                </span>
-                              );
-                            })}
                         </div>
                       )}
 
@@ -2022,10 +1817,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                           <button
                             key={lvl}
                             type="button"
-                            onClick={() => {
-                              setSafetyScore((prev) => (prev === lvl ? null : lvl));
-                              setActiveQuickVote(null);
-                            }}
+                            onClick={() => handleScaleVote('safety', lvl)}
                             aria-pressed={active}
                             aria-label={`Siguranță ${lvl} din 5`}
                             className={`btn-press min-h-[40px] rounded-[4px] border text-[13px] font-bold ${
@@ -2060,12 +1852,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         <button
                           key={opt.id}
                           type="button"
-                          onClick={() => {
-                            setNoiseLevel((prev) =>
-                              prev === opt.id ? null : opt.id
-                            );
-                            setActiveQuickVote(null);
-                          }}
+                          onClick={() =>
+                            handleScaleVote('noise', NOISE_LEVELS.find((l) => l.id === opt.id)!.value)
+                          }
                           aria-pressed={active}
                           className={`btn-press min-h-[40px] px-2 rounded-[4px] border text-[12px] font-semibold ${
                             active
@@ -2109,55 +1898,68 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 : 'Intră în cont ca să scrii un review'}
             </button>
 
-            <button
-              type="button"
-              onClick={() =>
-                setActiveQuickVote((prev) =>
-                  prev === 'safety' ? null : 'safety'
-                )
-              }
-              aria-pressed={activeQuickVote === 'safety'}
-              className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
-                safetyScore !== null || activeQuickVote === 'safety'
-                  ? isDrink
-                    ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
-                    : 'bg-[#3A2418] border-[#3A2418] text-white'
-                  : isDrink
-                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
-                  : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span>
-                {safetyScore !== null
-                  ? `Siguranță ${safetyScore}/5`
-                  : 'Te-ai simțit în siguranță?'}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                setActiveQuickVote((prev) => (prev === 'noise' ? null : 'noise'))
-              }
-              aria-pressed={activeQuickVote === 'noise'}
-              className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
-                noiseLevel !== null || activeQuickVote === 'noise'
-                  ? isDrink
-                    ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
-                    : 'bg-[#3A2418] border-[#3A2418] text-white'
-                  : isDrink
-                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
-                  : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-              }`}
-            >
-              <Volume2 className="w-4 h-4 shrink-0" />
-              <span>
-                {noiseLevel !== null
-                  ? NOISE_LABELS[noiseLevel]
-                  : 'E gălăgie?'}
-              </span>
-            </button>
+            {/* Ordinea vine din profil și e și ordinea din DOM (tastatură, cititor de ecran). */}
+            {quickButtons.order.map((kind) =>
+              kind === 'safety' ? (
+                <button
+                  key="safety"
+                  type="button"
+                  onClick={() =>
+                    setActiveQuickVote((prev) =>
+                      prev === 'safety' ? null : 'safety'
+                    )
+                  }
+                  aria-pressed={activeQuickVote === 'safety'}
+                  title={quickButtons.highlighted.includes('safety') ? 'Relevant pentru preferințele tale (Ieșiri)' : undefined}
+                  className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
+                    quickButtons.highlighted.includes('safety') && safetyScore === null ? (isDrink ? 'ring-2 ring-[#F2A33A] ' : 'ring-2 ring-[#B3261E] ') : ''
+                  }${
+                    safetyScore !== null || activeQuickVote === 'safety'
+                      ? isDrink
+                        ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
+                        : 'bg-[#3A2418] border-[#3A2418] text-white'
+                      : isDrink
+                      ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                      : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>
+                    {safetyScore !== null
+                      ? `Siguranță ${safetyScore}/5`
+                      : 'Te-ai simțit în siguranță?'}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  key="noise"
+                  type="button"
+                  onClick={() =>
+                    setActiveQuickVote((prev) => (prev === 'noise' ? null : 'noise'))
+                  }
+                  aria-pressed={activeQuickVote === 'noise'}
+                  title={quickButtons.highlighted.includes('noise') ? 'Relevant pentru preferințele tale (Locuri pentru lucru)' : undefined}
+                  className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
+                    quickButtons.highlighted.includes('noise') && noiseLevel === null ? (isDrink ? 'ring-2 ring-[#F2A33A] ' : 'ring-2 ring-[#B3261E] ') : ''
+                  }${
+                    noiseLevel !== null || activeQuickVote === 'noise'
+                      ? isDrink
+                        ? 'bg-[#F2A33A]/15 border-[#F2A33A] text-[#F2A33A]'
+                        : 'bg-[#3A2418] border-[#3A2418] text-white'
+                      : isDrink
+                      ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                      : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+                  }`}
+                >
+                  <Volume2 className="w-4 h-4 shrink-0" />
+                  <span>
+                    {noiseLevel !== null
+                      ? NOISE_LABELS[noiseLevel]
+                      : 'E gălăgie?'}
+                  </span>
+                </button>
+              )
+            )}
 
             <button
               type="button"
@@ -2475,6 +2277,21 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   />
                 </div>
 
+                <ReviewQuestions
+                  interests={currentUser.interests ?? []}
+                  vertical={isDrink ? 'drink' : 'food'}
+                  answers={answers}
+                  onChange={(key, value) =>
+                    setAnswers((prev) => {
+                      const next = { ...prev };
+                      if (value) next[key] = value;
+                      else delete next[key];
+                      return next;
+                    })
+                  }
+                  dark={isDrink}
+                />
+
                 {formError && (
                   <p
                     id="review-form-error"
@@ -2504,190 +2321,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           </div>
         )}
 
-        {/* POST-REVIEW USER PREFERENCES FOLLOW-UP PROMPT */}
-        {isPreferencePromptOpen &&
-          currentUser &&
-          userPreferenceOptions.length > 0 && (
-            <div
-              className="modal-backdrop-enter fixed inset-0 z-50 bg-black/55 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
-              onClick={handleSkipPreferencePrompt}
-            >
-              <div
-                ref={preferencePromptRef}
-                tabIndex={-1}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="preference-followup-title"
-                className={`drawer-sheet-enter w-full max-w-full sm:max-w-lg rounded-t-[12px] sm:rounded-[6px] border px-4 pt-4 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-4 max-h-[92dvh] overflow-y-auto ${
-                  isDrink
-                    ? 'bg-[#17382C] border-[#2D5947] text-[#F4EEE2]'
-                    : 'bg-white border-[#3A2418] text-[#3A2418]'
-                }`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] border ${
-                        isDrink
-                          ? 'bg-[#1E4335] border-[#2D5947] text-[#A7F3D0]'
-                          : 'bg-[#ECF7F0] border-[#BCE3CB] text-[#1E6B43]'
-                      }`}
-                    >
-                      <Check className="w-3 h-3 shrink-0" />
-                      <span>Review publicat · Pas opțional</span>
-                    </span>
-                    <h3
-                      id="preference-followup-title"
-                      className={`font-display text-[22px] sm:text-[25px] leading-tight ${
-                        isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
-                      }`}
-                    >
-                      Cum a fost la {restaurant.name}?
-                    </h3>
-                    <p
-                      className={`text-[13px] leading-snug ${
-                        isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
-                      }`}
-                    >
-                      Te întrebăm doar lucrurile pe care le-ai ales în profilul
-                      tău, ca să actualizăm secțiunea Avertizări & Facilități.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleSkipPreferencePrompt}
-                    aria-label="Sari peste întrebările de preferințe"
-                    className={`btn-press w-11 h-11 rounded-[4px] flex items-center justify-center shrink-0 -mr-2 -mt-1 ${
-                      isDrink
-                        ? 'text-[#F4EEE2] hover:text-[#F2A33A] hover:bg-[#1E4335]'
-                        : 'text-[#3A2418] hover:text-[#B3261E] hover:bg-[#FAF8F5]'
-                    }`}
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-2.5">
-                  {userPreferenceOptions.map((opt) => {
-                    const currentChoice = draftPreferenceAnswers[opt.key];
-                    return (
-                      <div
-                        key={opt.key}
-                        className={`p-3 rounded-[4px] border space-y-2.5 ${
-                          isDrink
-                            ? 'bg-[#143025] border-[#285443]'
-                            : 'bg-[#FAF8F5] border-[#E6DFD5]'
-                        }`}
-                      >
-                        <div className="space-y-0.5">
-                          <span
-                            className={`text-[11px] font-bold uppercase tracking-wider block ${
-                              isDrink ? 'text-[#F2A33A]' : 'text-[#6E5649]'
-                            }`}
-                          >
-                            {opt.label}
-                          </span>
-                          <p className="text-[14px] font-semibold leading-snug">
-                            {opt.question}
-                          </p>
-                        </div>
-
-                        <div
-                          className="grid grid-cols-3 gap-2"
-                          role="group"
-                          aria-label={opt.question}
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleSelectPreferenceDraft(opt.key, true)
-                            }
-                            aria-pressed={currentChoice === true}
-                            className={`btn-press min-h-[44px] px-2.5 py-2 rounded-[4px] border text-[13px] font-bold transition-colors ${
-                              currentChoice === true
-                                ? isDrink
-                                  ? 'bg-[#1E6B43] border-[#6EE7B7] text-white'
-                                  : 'bg-[#1E6B43] border-[#1E6B43] text-white'
-                                : isDrink
-                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-                            }`}
-                          >
-                            Da
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleSelectPreferenceDraft(opt.key, false)
-                            }
-                            aria-pressed={currentChoice === false}
-                            className={`btn-press min-h-[44px] px-2.5 py-2 rounded-[4px] border text-[13px] font-bold transition-colors ${
-                              currentChoice === false
-                                ? isDrink
-                                  ? 'bg-[#7A1812] border-[#FCA5A5]/75 text-[#FEE2E2]'
-                                  : 'bg-[#B3261E] border-[#B3261E] text-white'
-                                : isDrink
-                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                                : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-                            }`}
-                          >
-                            Nu
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleSelectPreferenceDraft(opt.key, null)
-                            }
-                            aria-pressed={currentChoice === null}
-                            className={`btn-press min-h-[44px] px-2.5 py-2 rounded-[4px] border text-[13px] font-semibold transition-colors ${
-                              currentChoice === null
-                                ? isDrink
-                                  ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17382C]'
-                                  : 'bg-[#3A2418] border-[#3A2418] text-white'
-                                : isDrink
-                                ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2]/80 hover:border-[#F2A33A]'
-                                : 'bg-white border-[#D6CFC5] text-[#6E5649] hover:border-[#3A2418] hover:text-[#3A2418]'
-                            }`}
-                          >
-                            Nu știu
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleSkipPreferencePrompt}
-                    className={`btn-press min-h-[48px] px-4 py-3 rounded-[4px] border text-[14px] font-semibold sm:w-auto ${
-                      isDrink
-                        ? 'border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
-                        : 'border-[#D6CFC5] text-[#3A2418] bg-white hover:border-[#3A2418]'
-                    }`}
-                  >
-                    Sari peste
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmitPreferenceAnswers}
-                    className={`btn-press flex-1 min-h-[48px] px-5 py-3 rounded-[4px] font-bold text-[15px] ${
-                      isDrink
-                        ? 'bg-[#F2A33A] text-[#17382C]'
-                        : 'bg-[#B3261E] text-white'
-                    }`}
-                  >
-                    Trimite răspunsurile
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
       </div>
     </div>
   );

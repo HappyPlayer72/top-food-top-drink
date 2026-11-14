@@ -162,6 +162,55 @@ export const CoasterScore: React.FC<{
 };
 
 /**
+ * 4b. PlateScore / MugScore — scorul din clasament: pe o farfurie (TOP FOOD) sau pe o halbă (TOP DRINK).
+ * Culorile sunt fixe (nu clase hex remapate de html.dark), ca cifrele Cafea / Sticlă să rămână pe farfurie / bere.
+ * `lg` = cardul de loc 1, `md` = rândurile; cifrele rămân mai mari decât rangul.
+ */
+export const PlateScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ score, size = 'md' }) => {
+  const box = size === 'lg' ? 'w-[92px] h-[92px] sm:w-[104px] sm:h-[104px]' : 'w-[64px] h-[64px] sm:w-[76px] sm:h-[76px]';
+  const digits = size === 'lg' ? 'text-[36px] sm:text-[42px]' : 'text-[24px] sm:text-[30px]';
+  return (
+    <span role="img" aria-label={`Scor Onest ${formatScore(score)} din 10`} className={`relative inline-flex items-center justify-center shrink-0 select-none ${box}`}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" aria-hidden="true">
+        <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#D6CFC5" strokeWidth="2" />
+        <circle cx="50" cy="50" r="36" fill="#FAF8F5" stroke="#E6DFD5" strokeWidth="1.5" />
+        <path d="M22 34a32 32 0 0 1 12-14" fill="none" stroke="#ECE6DD" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+      <span className={`relative font-display leading-none tabular-nums ${digits}`} style={{ color: '#3A2418' }}>
+        {formatScore(score)}
+      </span>
+    </span>
+  );
+};
+
+export const MugScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ score, size = 'md' }) => {
+  // Cutia e mai lată decât înaltă (116 × 100) și pornește de la x = -16, ca mijlocul corpului halbei (x = 42) să fie
+  // mijlocul cutiei: halba stă centrată sub eticheta „Scor Onest”, iar toarta iese în dreapta.
+  const box = size === 'lg' ? 'w-[107px] h-[92px] sm:w-[121px] sm:h-[104px]' : 'w-[74px] h-[64px] sm:w-[88px] sm:h-[76px]';
+  const digits = size === 'lg' ? 'text-[32px] sm:text-[38px]' : 'text-[22px] sm:text-[27px]';
+  return (
+    <span role="img" aria-label={`Scor Onest ${formatScore(score)} din 10`} className={`relative inline-block shrink-0 select-none ${box}`}>
+      <svg viewBox="-16 0 116 100" className="absolute inset-0 w-full h-full" aria-hidden="true">
+        {/* toartă */}
+        <path d="M74 40h7a11 11 0 0 1 11 11v13a11 11 0 0 1-11 11h-7" fill="none" stroke="#B98A5E" strokeWidth="6" />
+        {/* halba cu bere */}
+        <rect x="8" y="26" width="68" height="70" rx="8" fill="#F2A33A" stroke="#B98A5E" strokeWidth="3" />
+        {/* spuma */}
+        {/* simetrică față de mijlocul halbei (x = 42), cu 2 unități peste margine pe fiecare parte */}
+        <path d="M6 34C6 26 13 20 22 21C25 14 36 11 42 16C48 11 59 14 62 21C71 20 78 26 78 34Z" fill="#F4EEE2" stroke="#B98A5E" strokeWidth="3" strokeLinejoin="round" />
+      </svg>
+      {/* cifrele stau pe corpul halbei: x 8–76 → (8 + 16) / 116 = 20,7%, lățime 68 / 116 = 58,6%; y 36–96 din 100 */}
+      <span
+        className={`absolute flex items-center justify-center font-display leading-none tabular-nums ${digits}`}
+        style={{ color: '#17382C', left: '20.7%', width: '58.6%', top: '36%', height: '58%' }}
+      >
+        {formatScore(score)}
+      </span>
+    </span>
+  );
+};
+
+/**
  * 5. BrandWordmark — topfood/timișoara or topdrink/timișoara
  */
 export const BrandWordmark: React.FC<{

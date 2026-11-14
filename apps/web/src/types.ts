@@ -61,64 +61,33 @@ export type TrapTier = 'local-staple' | 'mixed-fair' | 'tourist-trap';
 
 export type AuthorRole = 'verified-local' | 'tourist' | 'influencer' | 'regular';
 
-export type UserPreferenceKey =
-  | 'accessible'
-  | 'outlets'
-  | 'goodWifi'
-  | 'goodForWork'
-  | 'quiet'
-  | 'petFriendly'
-  | 'softLighting'
-  | 'heatedTerrace';
+/** Preferințele opționale ale userului și răspunsurile structurate (catalogul e în @tftd/scoring/features). */
+export type { Answer, FeatureStatus, Interest, TopKey } from '@tftd/scoring/features';
+import type { Answer, FeatureStatus, Interest, QuickStats, Theme } from '@tftd/scoring/features';
+export type { QuickKind, QuickStats } from '@tftd/scoring/features';
 
-export interface UserPreferenceOption {
-  key: UserPreferenceKey;
+/** Facilitățile unui local, pe teme, cu sursa fiecărei informații (comunitate / declarat de local / nespecificat). */
+export interface VenueFeatureGroup {
+  theme: Theme;
   label: string;
-  question: string;
+  items: FeatureStatus[];
 }
 
-export const USER_PREFERENCE_OPTIONS: UserPreferenceOption[] = [
-  {
-    key: 'accessible',
-    label: 'Accesibil dizabilități',
-    question: 'Este accesibil pentru persoane cu dizabilități?',
-  },
-  {
-    key: 'outlets',
-    label: 'Prize la mese',
-    question: 'Există prize la mese?',
-  },
-  {
-    key: 'goodWifi',
-    label: 'Wi-Fi bun',
-    question: 'Wi-Fi-ul funcționează bine?',
-  },
-  {
-    key: 'goodForWork',
-    label: 'Bun de lucrat',
-    question: 'Este un loc bun pentru lucrat (laptop)?',
-  },
-  {
-    key: 'quiet',
-    label: 'Liniște / fără gălăgie',
-    question: 'Este suficient de liniște?',
-  },
-  {
-    key: 'petFriendly',
-    label: 'Pet-friendly',
-    question: 'Este pet-friendly?',
-  },
-  {
-    key: 'softLighting',
-    label: 'Fără lumină stridentă',
-    question: 'Lumina este plăcută (nu deranjant de puternică)?',
-  },
-  {
-    key: 'heatedTerrace',
-    label: 'Terasă încălzită',
-    question: 'Are terasă încălzită?',
-  },
-];
+/** Un top tematic (Accesibilitate, Locuri pentru lucru…): comunitatea, apoi separat „Declarat de local”. */
+export interface ThemeTopEntry {
+  slug: string;
+  name: string;
+  neighborhood: string | null;
+  facts: FeatureStatus[];
+  /** Voturile rapide (siguranță, zgomot): doar afișate, nu schimbă ordinea. */
+  quick: QuickStats;
+}
+export interface ThemeTop {
+  theme: Theme;
+  label: string;
+  community: (ThemeTopEntry & { rank: number })[];
+  declared: ThemeTopEntry[];
+}
 
 export interface UserAccount {
   id: string;
@@ -128,7 +97,7 @@ export interface UserAccount {
   neighborhood?: string;
   weightMultiplier: number;
   description: string;
-  preferences?: UserPreferenceKey[];
+  interests?: Interest[];
 }
 
 export interface SignatureDish {
@@ -144,6 +113,8 @@ export interface MenuItem {
   description?: string;
   portion?: string;
   isMustOrder?: boolean;
+  /** Poza pusă de owner (servită de /api/menu-photo/{id}). */
+  photoUrl?: string;
 }
 
 export interface MenuCategory {
@@ -226,7 +197,8 @@ export interface Review {
   /** Perceived noise level at the venue */
   noiseLevel?: NoiseLevel;
   /** Optional answers to preference questions after posting a review */
-  preferenceAnswers?: Partial<Record<UserPreferenceKey, boolean>>;
+  /** Răspunsurile la întrebările din review (Da / Nu / Nu am observat). */
+  answers?: Record<string, Answer>;
 }
 
 export interface OwnerPost {
@@ -349,6 +321,10 @@ export interface Restaurant {
   phone: string;
   lastUpdated?: string;
   menuCategories?: MenuCategory[];
+  /** Din backend: facilitățile cu sursa lor. Lipsă = date statice (fără backend). */
+  features?: VenueFeatureGroup[];
+  /** Din backend: media voturilor rapide de siguranță și zgomotul obișnuit (de la prag). */
+  quick?: QuickStats;
 
   // --- Monthly Leaderboard ---
   monthlyRank?: number;

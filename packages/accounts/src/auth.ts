@@ -2,7 +2,7 @@
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { eq, or } from "drizzle-orm";
-import { ServiceError, invalid, users, type Db } from "@tftd/db";
+import { ServiceError, interest, invalid, notFound, users, type Db } from "@tftd/db";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
@@ -24,8 +24,9 @@ const USERNAME = /^[a-z0-9._]{3,30}$/;
 
 export async function register(
   db: Db,
-  input: { username: string; displayName: string; password: string; email?: string; phone?: string },
+  input: { username: string; displayName: string; password: string; email?: string; phone?: string; interests?: string[] },
 ) {
+  const interests = parseInterests(input.interests ?? []);
   const username = input.username.trim().toLowerCase();
   if (!USERNAME.test(username)) throw invalid("Numele de utilizator: 3–30 caractere, doar litere mici, cifre, punct și underscore.");
   if (input.password.length < 8) throw invalid("Parola trebuie să aibă cel puțin 8 caractere.");
@@ -45,9 +46,28 @@ export async function register(
       email: input.email ?? null,
       phone: input.phone ?? null,
       passwordHash: await hashPassword(input.password),
+      interests,
     })
     .returning();
   return publicUser(user!);
+}
+
+export type Interest = (typeof interest.enumValues)[number];
+
+/** Preferințele opționale: doar valorile din enum, fără dubluri (listă goală = a sărit pasul). */
+export function parseInterests(raw: unknown): Interest[] {
+  if (!Array.isArray(raw)) throw invalid("Preferințele trimise nu sunt valide.");
+  const allowed = interest.enumValues as readonly string[];
+  if (raw.some((x) => typeof x !== "string" || !allowed.includes(x))) throw invalid("Preferințele trimise nu sunt valide.");
+  return [...new Set(raw as Interest[])];
+}
+
+/** Schimbarea preferințelor din profil. */
+export async function setInterests(db: Db, userId: string, raw: unknown) {
+  const interests = parseInterests(raw);
+  const [u] = await db.update(users).set({ interests }).where(eq(users.id, userId)).returning({ interests: users.interests });
+  if (!u) throw notFound("Contul");
+  return u.interests;
 }
 
 /** `login` = username, email sau telefon. */

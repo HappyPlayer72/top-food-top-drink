@@ -10,17 +10,17 @@ import { COLORS, SYMBOLS, VenueIcon, type IconColor, type IconSymbol, type Venue
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
-/** Decupează pătrat din centru și micșorează la 96×96 px (JPEG, câțiva KB), ca să încapă în baza de date. */
-async function toSmallDataUrl(file: File): Promise<string> {
+/** Decupează pătrat din centru și micșorează la size×size px (JPEG, câțiva KB), ca să încapă în baza de date. */
+export async function toSmallDataUrl(file: File, size = 96, quality = 0.85): Promise<string> {
   const bmp = await createImageBitmap(file);
   const side = Math.min(bmp.width, bmp.height);
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 96;
+  canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, 96, 96);
-  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 96, 96);
-  return canvas.toDataURL('image/jpeg', 0.85);
+  ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+  return canvas.toDataURL('image/jpeg', quality);
 }
 
 const defaults = (vertical: 'food' | 'drink') => (vertical === 'drink' ? { symbol: 'beer', color: 'sticla' } : { symbol: 'utensils', color: 'carou' });

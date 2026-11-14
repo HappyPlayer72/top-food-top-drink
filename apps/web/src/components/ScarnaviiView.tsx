@@ -7,7 +7,6 @@ import {
   Compass,
   Dices,
   Flame,
-  Radar,
   Receipt,
   Shuffle,
   Sparkles,
@@ -17,23 +16,24 @@ import { Restaurant, Vertical } from '../types';
 import { PreferenceRecommender } from './scarnavii/PreferenceRecommender';
 import { MysteryDirections } from './scarnavii/MysteryDirections';
 import { WhoPaysMinigame } from './scarnavii/WhoPaysMinigame';
-import { TasteDuelMinigame } from './scarnavii/TasteDuelMinigame';
-import { TrapBlitzMinigame } from './scarnavii/TrapBlitzMinigame';
+import { OutingPoll } from './scarnavii/OutingPoll';
 import { TableDaresMinigame } from './scarnavii/TableDaresMinigame';
+import { TasteTour } from './scarnavii/TasteTour';
 
 export interface ScarnaviiViewProps {
   vertical: Vertical;
   restaurants: Restaurant[];
+  allRestaurants: Restaurant[];
   onBack: () => void;
   onSelectRestaurant: (r: Restaurant) => void;
 }
 
 type ScarnaviiModeId =
+  | 'taste-tour'
   | 'preferences'
   | 'mystery'
   | 'who-pays'
   | 'taste-duel'
-  | 'trap-blitz'
   | 'table-dares';
 
 type CategoryFilter = 'all' | 'minigame' | 'explore';
@@ -51,48 +51,25 @@ interface ScarnaviiItem {
 
 const SCARNAVII_LIST: ScarnaviiItem[] = [
   {
-    id: 'who-pays',
-    category: 'minigame',
-    title: 'Cine plătește toată masa?',
-    tag: 'Minigame · 6 moduri',
-    shortTab: 'Cine plătește',
-    description:
-      'Ruletă, Eliminare, Cartea Neagră, Bomba cu Ceas, Barbut cu 2 zaruri sau Împărțire Haotică în procente — alegeți cum decideți nota.',
-    ctaLabel: 'Joacă cu masa',
-    icon: Receipt,
+    id: 'taste-tour',
+    category: 'explore',
+    title: 'Tasting Tour',
+    tag: 'Traseu de gustat',
+    shortTab: 'Tasting Tour',
+    description: 'Spune-ne de ce ți-e poftă și descoperă localuri potrivite într-o plimbare prin oraș.',
+    ctaLabel: 'Creează traseul',
+    icon: Compass,
   },
   {
-    id: 'taste-duel',
-    category: 'minigame',
-    title: 'Turneul Poftelor (Duel 1 la 1)',
-    tag: 'Minigame',
-    shortTab: 'Turneu 1v1',
+    id: 'mystery',
+    category: 'explore',
+    title: 'Destinație secretă (doar indicații)',
+    tag: 'Aventură',
+    shortTab: 'Busolă secretă',
     description:
-      'Votați la masă între 4 sau 8 localuri în dueluri eliminatorii până când rămâne un singur campion (sau dați cu banul 50/50).',
-    ctaLabel: 'Pornește turneul',
-    icon: Swords,
-  },
-  {
-    id: 'trap-blitz',
-    category: 'minigame',
-    title: 'Radar de Capcane (Quiz)',
-    tag: 'Minigame',
-    shortTab: 'Quiz Capcane',
-    description:
-      '5 runde rapide pe date reale din Timișoara: ghiciți care local este comoară de localnic și care e capcană turistică.',
-    ctaLabel: 'Testează-ți instinctul',
-    icon: Radar,
-  },
-  {
-    id: 'table-dares',
-    category: 'minigame',
-    title: 'Roata Provocărilor la Masă',
-    tag: 'Minigame',
-    shortTab: 'Provocări',
-    description:
-      'Provocări spontane pentru gașca de la masă — de la comenzi pe nevăzute și schimburi de farfurii până la turnul telefoanelor.',
-    ctaLabel: 'Învârte roata',
-    icon: Flame,
+      'Te trimitem la un local random din oraș doar pe bază de busolă, direcție, distanță și indicii progresive. Îi afli numele abia la ușă.',
+    ctaLabel: 'Pornește spre necunoscut',
+    icon: Compass,
   },
   {
     id: 'preferences',
@@ -106,21 +83,44 @@ const SCARNAVII_LIST: ScarnaviiItem[] = [
     icon: Sparkles,
   },
   {
-    id: 'mystery',
-    category: 'explore',
-    title: 'Destinație secretă (doar indicații)',
-    tag: 'Aventură',
-    shortTab: 'Busolă secretă',
+    id: 'taste-duel',
+    category: 'minigame',
+    title: 'Unde ieșim?',
+    tag: 'Alegeți împreună',
+    shortTab: 'Unde ieșim?',
     description:
-      'Te trimitem la un local random din oraș doar pe bază de busolă, direcție, distanță și indicii progresive. Îi afli numele abia la ușă.',
-    ctaLabel: 'Pornește spre necunoscut',
-    icon: Compass,
+      'Alege câteva localuri, trimite linkul prietenilor și vedeți împreună unde vreți să mergeți.',
+    ctaLabel: 'Creează un sondaj',
+    icon: Swords,
+  },
+  {
+    id: 'table-dares',
+    category: 'minigame',
+    title: 'Roata Provocărilor la Masă',
+    tag: 'Minigame',
+    shortTab: 'Provocări',
+    description:
+      'Provocări spontane pentru gașca de la masă — de la comenzi pe nevăzute și schimburi de farfurii până la turnul telefoanelor.',
+    ctaLabel: 'Învârte roata',
+    icon: Flame,
+  },
+  {
+    id: 'who-pays',
+    category: 'minigame',
+    title: 'Cine plătește toată masa?',
+    tag: 'Minigame · 6 moduri',
+    shortTab: 'Cine plătește',
+    description:
+      'Ruletă, Eliminare, Cartea Neagră, Bomba cu Ceas, Barbut cu 2 zaruri sau Împărțire Haotică în procente — alegeți cum decideți nota.',
+    ctaLabel: 'Joacă cu masa',
+    icon: Receipt,
   },
 ];
 
 export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
   vertical,
   restaurants,
+  allRestaurants,
   onBack,
   onSelectRestaurant,
 }) => {
@@ -181,7 +181,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
   return (
     <div
       className={`min-h-screen pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24 ${
-        isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
+        isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
       }`}
     >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 space-y-6">
@@ -245,9 +245,8 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
               isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
             }`}
           >
-            Șase moduri spontane și minigames pentru ieșit în oraș: ruletă și
-            barbut pentru notă, duel 1v1 între localuri, quiz de capcane,
-            provocări la masă, recomandări sau aventură pe busolă.
+            Trasee de gustat, jocuri și recomandări pentru ieșit în oraș:
+            descoperă localuri, alege cu gașca sau pornește într-o aventură.
           </p>
         </section>
 
@@ -281,7 +280,9 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
         )}
 
         {/* Active Interactive Mode OR Scârnăvii List */}
-        {activeMode === 'preferences' ? (
+        {activeMode === 'taste-tour' ? (
+          <TasteTour vertical={vertical} restaurants={allRestaurants} onSelectRestaurant={onSelectRestaurant} />
+        ) : activeMode === 'preferences' ? (
           <PreferenceRecommender
             vertical={vertical}
             restaurants={restaurants}
@@ -296,15 +297,9 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
         ) : activeMode === 'who-pays' ? (
           <WhoPaysMinigame vertical={vertical} />
         ) : activeMode === 'taste-duel' ? (
-          <TasteDuelMinigame
+          <OutingPoll
             vertical={vertical}
-            restaurants={restaurants}
-            onSelectRestaurant={onSelectRestaurant}
-          />
-        ) : activeMode === 'trap-blitz' ? (
-          <TrapBlitzMinigame
-            vertical={vertical}
-            restaurants={restaurants}
+            restaurants={allRestaurants}
             onSelectRestaurant={onSelectRestaurant}
           />
         ) : activeMode === 'table-dares' ? (
@@ -318,9 +313,9 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               {(
                 [
-                  { id: 'all', label: 'Toate (6)' },
-                  { id: 'minigame', label: 'Minigames la masă (4)' },
-                  { id: 'explore', label: 'Explorare & Decizie (2)' },
+                  { id: 'all', label: `Toate (${SCARNAVII_LIST.length})` },
+                  { id: 'minigame', label: `Minigames la masă (${SCARNAVII_LIST.filter((item) => item.category === 'minigame').length})` },
+                  { id: 'explore', label: `Explorare & Decizie (${SCARNAVII_LIST.filter((item) => item.category === 'explore').length})` },
                 ] as const
               ).map((tab) => (
                 <button
@@ -362,63 +357,65 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
               </div>
             )}
 
-            <div className="grid gap-3.5">
+            <div className="grid gap-4 sm:grid-cols-2">
               {visibleList.map((item, idx) => {
                 const Icon = item.icon;
                 const isHighlighted = isRolling && rollingIndex === idx;
+                const cardStyles = isDrink
+                  ? [
+                      'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]',
+                      'bg-[#F4EEE2] text-[#17382C] border-[#F4EEE2]',
+                      'bg-[#B3261E] text-white border-[#B3261E]',
+                      'bg-[#1F4E8C] text-white border-[#1F4E8C]',
+                    ]
+                  : [
+                      'bg-[#F2A33A] text-[#3A2418] border-[#F2A33A]',
+                      'bg-[#1F4E8C] text-white border-[#1F4E8C]',
+                      'bg-[#B3261E] text-white border-[#B3261E]',
+                      'bg-[#F4EEE2] text-[#3A2418] border-[#F4EEE2]',
+                    ];
+                const cardStyle = cardStyles[idx % cardStyles.length];
 
                 return (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setActiveMode(item.id)}
-                    className={`btn-press w-full text-left rounded-[6px] border p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                    className={`btn-press group relative w-full min-h-[250px] overflow-hidden text-left rounded-[4px] border-2 p-5 sm:p-6 transition-all duration-200 hover:-rotate-1 hover:scale-[1.015] hover:shadow-[7px_7px_0_rgba(58,36,24,0.2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 ${
                       isHighlighted
-                        ? isDrink
-                          ? 'bg-[#1E4335] border-[#F2A33A]'
-                          : 'bg-[#FAF8F5] border-[#B3261E]'
-                        : isDrink
-                        ? 'bg-[#143025] border-[#285443] hover:border-[#F2A33A]'
-                        : 'bg-[#FAF8F5] border-[#E6DFD5] hover:border-[#3A2418]'
-                    }`}
+                        ? 'ring-4 ring-[#E0A526] ring-offset-2'
+                        : 'shadow-[4px_4px_0_rgba(58,36,24,0.14)]'
+                    } ${cardStyle}`}
                   >
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
+                    <span aria-hidden="true" className="pointer-events-none absolute -right-4 -top-6 rotate-12 opacity-[0.13] transition-transform duration-300 group-hover:rotate-0 group-hover:scale-110">
+                      <Icon className="h-40 w-40" />
+                    </span>
+                    <div className="relative z-10 flex h-full flex-col items-start">
+                      <div className="mb-5 flex w-full items-start justify-between gap-3">
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[11px] font-bold uppercase tracking-wide ${
-                            isDrink
-                              ? 'bg-[#F2A33A]/20 text-[#F2A33A]'
-                              : 'bg-[#B3261E]/10 text-[#B3261E]'
-                          }`}
+                          className="inline-flex rotate-[-2deg] items-center gap-1.5 rounded-[4px] border-2 border-current bg-white/25 px-3 py-1 text-[10px] font-black uppercase tracking-[0.13em] shadow-sm"
                         >
-                          <Icon className="w-3 h-3" />
+                          <Icon className="h-3.5 w-3.5" />
                           <span>{item.tag}</span>
                         </span>
+                        <span aria-hidden="true" className="font-display text-2xl font-black opacity-70">0{idx + 1}</span>
                       </div>
 
-                      <h2 className="font-display text-[24px] sm:text-[26px] leading-tight">
+                      <h2 className="max-w-[18rem] font-display text-[28px] font-black leading-[0.98] tracking-[-0.04em] sm:text-[32px]">
                         {item.title}
                       </h2>
 
                       <p
-                        className={`text-[13px] sm:text-[14px] leading-relaxed ${
-                          isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
-                        }`}
+                        className="mb-6 mt-3 max-w-[25rem] text-[13px] font-medium leading-relaxed opacity-85 sm:text-[14px]"
                       >
                         {item.description}
                       </p>
-                    </div>
 
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold shrink-0 self-start sm:self-center ${
-                        isDrink
-                          ? 'bg-[#F2A33A] text-[#17382C]'
-                          : 'bg-[#3A2418] text-white'
-                      }`}
-                    >
-                      <span>{item.ctaLabel}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
+                      <span className="mt-auto inline-flex -rotate-1 items-center gap-2 rounded-[4px] border-2 border-[#3A2418] bg-[#F4EEE2] px-4 py-2.5 text-[12px] font-black uppercase tracking-wide text-[#3A2418] shadow-[3px_3px_0_#3A2418] transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5 group-hover:shadow-[1px_1px_0_#3A2418]">
+                        <span>{item.ctaLabel}</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </div>
                   </button>
                 );
               })}

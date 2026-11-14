@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { BarChart3, BookOpenText, ChevronLeft, Clapperboard, MessageSquareText, Stamp, UsersRound } from 'lucide-react';
+import { Accessibility, BarChart3, BookOpenText, ChevronLeft, Clapperboard, MessageSquareText, Stamp, UsersRound, UtensilsCrossed } from 'lucide-react';
 import QRCode from 'qrcode';
 import { loyalty, owner, venuePage } from '@tftd/api';
 import { LoyaltyPanel } from '@/components/owner/LoyaltyPanel';
 import { BlogPanel } from '@/components/owner/BlogPanel';
+import { FacilitiesPanel } from '@/components/owner/FacilitiesPanel';
+import { MenuPanel } from '@/components/owner/MenuPanel';
 import { ReviewsPanel } from '@/components/owner/ReviewsPanel';
 import { StandingPanel } from '@/components/owner/Standing';
 import { StatsPanel } from '@/components/owner/StatsPanel';
@@ -18,7 +20,9 @@ import { getUserId } from '@/lib/server/session';
 const SECTIONS = [
   { id: 'statistici', label: 'Statistici', description: 'Scorul și ce spun oamenii despre localul tău.', icon: BarChart3 },
   { id: 'review-uri', label: 'Review-uri', description: 'Citește și răspunde la review-urile primite.', icon: MessageSquareText },
-  { id: 'blog', label: 'Blog', description: 'Noutăți, meniuri și evenimente pentru clienții tăi.', icon: BookOpenText },
+  { id: 'meniu', label: 'Meniu', description: 'Preparatele și prețurile, pe categorii, cum apar pe pagina localului.', icon: UtensilsCrossed },
+  { id: 'facilitati', label: 'Facilități', description: 'Intrare fără trepte, toaletă accesibilă, Wi-Fi, prize: ce declari tu, separat de ce spun clienții.', icon: Accessibility },
+  { id: 'blog', label: 'Blog', description: 'Noutăți, oferte și evenimente pentru clienții tăi.', icon: BookOpenText },
   { id: 'echipa', label: 'Echipa', description: 'Gestionează oamenii care dau viață localului.', icon: UsersRound },
   { id: 'videouri', label: 'Videouri', description: 'Adaugă și urmărește videourile despre localul tău.', icon: Clapperboard },
   { id: 'fidelitate', label: 'Fidelitate', description: 'Card cu ștampile: clienții scanează codul QR de la casă.', icon: Stamp },
@@ -38,8 +42,10 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
   const userId = await getUserId();
   if (!userId) redirect('/owner');
   const db = getDb();
-  const venue = (await owner.managedVenues(db, userId)).find((v) => v.id === venueId);
+  const managed = await owner.managedVenues(db, userId);
+  const venue = managed.find((v) => v.id === venueId);
   if (!venue) notFound();
+  const otherVenues = managed.filter((v) => v.id !== venue.id).map((v) => ({ id: v.id, name: v.name }));
   const isDrink = venue.vertical === 'drink';
   const known = INITIAL_RESTAURANTS.find((r) => r.slug === venue.slug);
   const photo = known?.photoUrl ?? PLACEHOLDER_PHOTO[venue.vertical];
@@ -56,9 +62,19 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
       content = <ReviewsPanel venueId={venue.id} reviews={page.reviews} vertical={venue.vertical} />;
       break;
     }
+    case 'meniu': {
+      const menu = await owner.menuForOwner(db, userId, venue.id);
+      content = <MenuPanel venueId={venue.id} menu={menu} vertical={venue.vertical} otherVenues={otherVenues} />;
+      break;
+    }
+    case 'facilitati': {
+      const declarations = await owner.facilitiesForOwner(db, userId, venue.id);
+      content = <FacilitiesPanel venueId={venue.id} declarations={Object.fromEntries(declarations)} />;
+      break;
+    }
     case 'blog': {
       const posts = await owner.postsForOwner(db, userId, venue.id);
-      content = <BlogPanel venueId={venue.id} posts={posts} />;
+      content = <BlogPanel venueId={venue.id} posts={posts} otherVenues={otherVenues} />;
       break;
     }
     case 'echipa': {

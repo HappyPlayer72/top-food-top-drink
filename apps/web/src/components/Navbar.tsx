@@ -15,10 +15,10 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { NavSection, Restaurant, UserAccount, Vertical, formatScore } from '../types';
+import Link from 'next/link';
+import { NavSection, Restaurant, UserAccount, Vertical } from '../types';
 import { BrandWordmark, CarouMark, CoasterMark, LocalnicBadge } from './BrandPrimitives';
 
-const DEMO_USER_IDS = new Set(['andreea-m', 'luca-t']);
 
 export interface NavbarProps {
   vertical: Vertical;
@@ -29,12 +29,8 @@ export interface NavbarProps {
   onToggleSave?: (id: string) => void;
   onSelectRestaurant: (r: Restaurant) => void;
   currentUser: UserAccount | null;
-  availableUsers: UserAccount[];
-  onSelectUser: (userId: string) => void;
   onOpenLogin: () => void;
   onLogout: () => void;
-  /** Conținut extra în panoul de profil (ex. „Devino localnic verificat”, cu backend pornit) */
-  profileExtra?: React.ReactNode;
   darkMode: boolean;
   onToggleDarkMode: () => void;
 }
@@ -56,11 +52,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleSave,
   onSelectRestaurant,
   currentUser,
-  availableUsers,
-  onSelectUser,
   onOpenLogin,
   onLogout,
-  profileExtra,
   darkMode,
   onToggleDarkMode,
 }) => {
@@ -369,60 +362,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        <p
-          className={`text-[12px] ${
-            isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
+        {/* Profilul, preferințele, voturile și localurile salvate stau pe pagina /cont. */}
+        <Link
+          href="/cont"
+          onClick={() => closePanel(false)}
+          className={`btn-press w-full min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-[4px] text-[13px] font-bold ${
+            isDrink
+              ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
+              : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
           }`}
         >
-          {currentUser.description}
-        </p>
-
-        {profileExtra}
-
-        {/* Switch active demo account only when signed into a demo account */}
-        {DEMO_USER_IDS.has(currentUser.id) && (
-          <div
-            className={`pt-2.5 border-t space-y-1.5 ${
-              isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
-            }`}
-          >
-            <div className="text-[11px] font-semibold opacity-75">
-              Cont activ (demo)
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {availableUsers
-                .filter((acc) => DEMO_USER_IDS.has(acc.id))
-                .map((acc) => {
-                  const active = acc.id === currentUser.id;
-                  return (
-                    <button
-                      key={acc.id}
-                      type="button"
-                      onClick={() => onSelectUser(acc.id)}
-                      className={`btn-press min-h-[44px] sm:min-h-0 px-2.5 py-2 sm:py-1.5 rounded-[3px] border text-left text-[11px] ${
-                        active
-                          ? isDrink
-                            ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A] font-bold'
-                            : 'bg-[#3A2418] text-white border-[#3A2418] font-bold'
-                          : isDrink
-                          ? 'border-[#285443] text-[#F4EEE2]/80 hover:border-[#F2A33A]/60'
-                          : 'border-[#E6DFD5] text-[#6E5649] hover:border-[#3A2418]'
-                      }`}
-                    >
-                      <div className="truncate">{acc.name}</div>
-                      <div className="opacity-80">
-                        {acc.role === 'verified-local'
-                          ? `Localnic (${formatScore(acc.weightMultiplier)}×)`
-                          : `Turist (${formatScore(acc.weightMultiplier)}×)`}
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        {renderSavedVenuesSection()}
+          <User className="w-4 h-4" aria-hidden="true" />
+          <span>Contul meu</span>
+        </Link>
 
         <div
           className={`pt-2.5 border-t ${
@@ -552,7 +504,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }
                 aria-label={
                   currentUser
-                    ? 'Profilul tău și localuri salvate'
+                    ? 'Contul tău'
                     : savedRestaurants.length > 0
                     ? `Localuri salvate (${savedRestaurants.length})`
                     : 'Localuri salvate'

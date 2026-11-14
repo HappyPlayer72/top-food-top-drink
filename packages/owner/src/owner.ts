@@ -2,11 +2,12 @@
  * Modulul G: ce poate face proprietarul/managerul unui local.
  * Regula 2: owner-ul NU poate șterge sau ascunde review-uri — doar răspunde sau raportează (decide un admin).
  */
-import { and, avg, count, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import {
-  employeeRatings, employees, forbidden, invalid, leaderboardSnapshots, menuItems, notFound, ownerClaims, posts, reports, reviewReplies, reviews, ServiceError, socialSubmissions, users, venueManagers, venues, type Db,
+  employeeRatings, employees, forbidden, invalid, leaderboardSnapshots, menuItems, notFound, ownerClaims, posts, reports, reviewReplies, reviews, ServiceError, socialSubmissions, users, venueFacilityDeclarations, venueManagers, venues, type Db,
   type OpeningHours,
 } from "@tftd/db";
+import { QUESTION_BY_KEY, QUESTIONS, type Declaration } from "@tftd/scoring/features";
 
 export async function assertManager(db: Db, userId: string, venueId: string) {
   const [m] = await db
@@ -59,24 +60,93 @@ export async function appealTrapLabel(db: Db, userId: string, venueId: string, r
 
 // ---------- Prezentarea localului: meniu, poze, text, program ----------
 
-export type MenuItemInput = { name: string; priceLei?: number | null; description?: string | null; mustOrder?: boolean };
+export type MenuItemInput = { category?: string; name: string; priceLei?: number | null; description?: string | null; mustOrder?: boolean; photo?: string | null };
 
-/** Înlocuiește lista „Ce să comanzi” (max 12 feluri, în ordinea dată). */
-export async function setMenu(db: Db, userId: string, venueId: string, items: MenuItemInput[]) {
-  await assertManager(db, userId, venueId);
-  if (items.length > 12) throw invalid("Maxim 12 feluri recomandate.");
-  for (const i of items) {
-    if (!i.name.trim() || i.name.length > 80) throw invalid("Numele unui fel are 1–80 de caractere.");
-    if (i.priceLei != null && (!Number.isInteger(i.priceLei) || i.priceLei < 0 || i.priceLei > 5000)) throw invalid("Preț invalid.");
+export const MAX_MENU_ITEMS = 200;
+/** Poza unui fel: data URL JPEG/PNG/WebP de maxim 40 000 de caractere (≈ 240×240 px, micșorată în browser). */
+export const MAX_MENU_PHOTO_CHARS = 40_000;
+
+/** JSON-ul trimis de formularul de meniu → MenuItemInput[]; rândurile fără nume sunt ignorate. */
+export function parseMenuInput(raw: string): MenuItemInput[] {
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw invalid("Meniul trimis nu e valid.");
   }
+  if (!Array.isArray(data)) throw invalid("Meniul trimis nu e valid.");
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  // Un rând stricat respinge tot: altfel `[null]` ar trece drept meniu gol și ar șterge meniul existent.
+  if (!data.every((d) => typeof d === "object" && d !== null && !Array.isArray(d))) throw invalid("Meniul trimis nu e valid.");
+  const items = (data as Record<string, unknown>[])
+    .map((d) => {
+      const price = str(d.priceLei);
+      return {
+        category: str(d.category),
+        name: str(d.name),
+        priceLei: price ? Number(price) : null,
+        description: str(d.description) || null,
+        mustOrder: d.mustOrder === true,
+        photo: str(d.photo) || null,
+      };
+    })
+    .filter((i) => i.name);
+  // Pagina publică arată prețul lângă fiecare fel (fără preț ar apărea „Gratuit”).
+  const unpriced = items.find((i) => i.priceLei == null);
+  if (unpriced) throw invalid(`Pune prețul la „${unpriced.name}”.`);
+  validateMenu(items);
+  return items;
+}
+
+export function validateMenu(items: MenuItemInput[]) {
+  if (items.length > MAX_MENU_ITEMS) throw invalid(`Maxim ${MAX_MENU_ITEMS} de preparate în meniu.`);
+  for (const i of items) {
+    if ((i.category ?? "").length > 60) throw invalid("Numele unei categorii are maxim 60 de caractere.");
+    if (!i.name.trim() || i.name.length > 80) throw invalid("Numele unui fel are 1–80 de caractere.");
+    if ((i.description ?? "").length > 300) throw invalid("Descrierea unui fel are maxim 300 de caractere.");
+    if (i.photo && (i.photo.length > MAX_MENU_PHOTO_CHARS || !IMAGE_DATA_URL.test(i.photo))) throw invalid(`Poza de la „${i.name.trim()}” trebuie să fie JPG, PNG sau WebP, mică.`);
+    if (i.priceLei != null && (!Number.isInteger(i.priceLei) || i.priceLei < 0 || i.priceLei > 5000)) throw invalid(`Prețul la „${i.name.trim()}” trebuie să fie un număr întreg de lei, între 0 și 5000.`);
+  }
+}
+
+/**
+ * Înlocuiește meniul localului, în ordinea dată. `alsoVenueIds` = alte localuri ale aceluiași manager
+ * care primesc o copie identică (după salvare, fiecare se poate modifica separat).
+ */
+export async function setMenu(db: Db, userId: string, venueId: string, items: MenuItemInput[], alsoVenueIds: string[] = []) {
+  const ids = [...new Set([venueId, ...alsoVenueIds])];
+  for (const id of ids) await assertManager(db, userId, id);
+  validateMenu(items);
   await db.transaction(async (tx) => {
-    await tx.delete(menuItems).where(eq(menuItems.venueId, venueId));
+    // Lock per local, în ordine fixă (fără deadlock): două salvări simultane nu pot amesteca meniurile.
+    for (const id of [...ids].sort()) await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`menu:${id}`}))`);
+    await tx.delete(menuItems).where(inArray(menuItems.venueId, ids));
     if (items.length) {
       await tx.insert(menuItems).values(
-        items.map((i, position) => ({ venueId, name: i.name.trim(), priceLei: i.priceLei ?? null, description: i.description ?? null, mustOrder: !!i.mustOrder, position })),
+        ids.flatMap((venueId) =>
+          items.map((i, position) => ({
+            venueId,
+            category: i.category?.trim() ?? "",
+            name: i.name.trim(),
+            priceLei: i.priceLei ?? null,
+            description: i.description?.trim() || null,
+            mustOrder: !!i.mustOrder,
+            photo: i.photo ?? null,
+            position,
+          })),
+        ),
       );
     }
   });
+}
+
+export async function menuForOwner(db: Db, userId: string, venueId: string) {
+  await assertManager(db, userId, venueId);
+  return db
+    .select({ category: menuItems.category, name: menuItems.name, priceLei: menuItems.priceLei, description: menuItems.description, mustOrder: menuItems.mustOrder, photo: menuItems.photo })
+    .from(menuItems)
+    .where(eq(menuItems.venueId, venueId))
+    .orderBy(asc(menuItems.position));
 }
 
 /** Titlu, text de prezentare, ocazii, poze și program. Poze = URL-uri deja încărcate de aplicație. */
@@ -114,18 +184,62 @@ function validateHours(h: OpeningHours) {
   }
 }
 
+// ---------- Facilități declarate de owner ----------
+
+/** Ce poate declara owner-ul: doar fapte verificabile (rampă, Wi-Fi), nu cum se simt clienții. */
+export const DECLARABLE_QUESTIONS = QUESTIONS.filter((q) => q.ownerDeclarable);
+
+/** Validare: cheie declarabilă → "yes" | "no" | "unspecified" (= șterge declarația). */
+export function parseFacilities(raw: Record<string, string>): { key: string; value: Declaration | null }[] {
+  return Object.entries(raw).map(([key, value]) => {
+    if (!QUESTION_BY_KEY.get(key)?.ownerDeclarable) throw invalid("Poți declara doar facilitățile din listă.");
+    if (value !== "yes" && value !== "no" && value !== "unspecified") throw invalid("Alege Da, Nu sau Nespecificat.");
+    return { key, value: value === "unspecified" ? null : value };
+  });
+}
+
+export async function facilitiesForOwner(db: Db, userId: string, venueId: string) {
+  await assertManager(db, userId, venueId);
+  const rows = await db
+    .select({ key: venueFacilityDeclarations.questionKey, value: venueFacilityDeclarations.value })
+    .from(venueFacilityDeclarations)
+    .where(eq(venueFacilityDeclarations.venueId, venueId));
+  return new Map(rows.map((r) => [r.key, r.value]));
+}
+
+/** Doar managerii localului; declarațiile stau separat de răspunsurile clienților și nu le modifică. */
+export async function setFacilities(db: Db, userId: string, venueId: string, raw: Record<string, string>, now = new Date()) {
+  await assertManager(db, userId, venueId);
+  const changes = parseFacilities(raw);
+  await db.transaction(async (tx) => {
+    for (const { key, value } of changes) {
+      const where = and(eq(venueFacilityDeclarations.venueId, venueId), eq(venueFacilityDeclarations.questionKey, key));
+      if (value === null) await tx.delete(venueFacilityDeclarations).where(where);
+      else
+        await tx
+          .insert(venueFacilityDeclarations)
+          .values({ venueId, questionKey: key, value, updatedBy: userId, updatedAt: now })
+          .onConflictDoUpdate({ target: [venueFacilityDeclarations.venueId, venueFacilityDeclarations.questionKey], set: { value, updatedBy: userId, updatedAt: now } });
+    }
+  });
+}
+
 // ---------- Mini-blog ----------
 
-export type PostInput = { type: "menu" | "event" | "offer" | "news"; title: string; body: string; photos?: string[]; eventAt?: Date | null; publishAt?: Date };
+// Meniul are secțiunea lui (setMenu); „menu” rămâne în enum-ul din DB doar pentru compatibilitate.
+export const POST_TYPES = ["event", "offer", "news"] as const;
+export type PostInput = { type: (typeof POST_TYPES)[number]; title: string; body: string; photos?: string[]; eventAt?: Date | null; publishAt?: Date };
 
-export async function createPost(db: Db, userId: string, venueId: string, input: PostInput) {
-  await assertManager(db, userId, venueId);
+/** `alsoVenueIds` = alte localuri ale aceluiași manager unde apare aceeași postare. */
+export async function createPost(db: Db, userId: string, venueId: string, input: PostInput, alsoVenueIds: string[] = []) {
+  const ids = [...new Set([venueId, ...alsoVenueIds])];
+  for (const id of ids) await assertManager(db, userId, id);
   validatePost(input);
-  const [post] = await db
+  const created = await db
     .insert(posts)
-    .values({ venueId, authorId: userId, ...input, photos: input.photos ?? [], publishAt: input.publishAt ?? new Date() })
+    .values(ids.map((id) => ({ venueId: id, authorId: userId, ...input, photos: input.photos ?? [], publishAt: input.publishAt ?? new Date() })))
     .returning();
-  return post!;
+  return created[0]!;
 }
 
 export async function updatePost(db: Db, userId: string, postId: string, input: Partial<PostInput>) {
@@ -145,6 +259,7 @@ export async function deletePost(db: Db, userId: string, postId: string) {
 }
 
 function validatePost(i: PostInput) {
+  if (!POST_TYPES.includes(i.type)) throw invalid("Tip de postare necunoscut.");
   if (!i.title.trim() || i.title.length > 140) throw invalid("Titlul trebuie să aibă între 1 și 140 de caractere.");
   if (!i.body.trim() || i.body.length > 5000) throw invalid("Textul trebuie să aibă între 1 și 5000 de caractere.");
   if (i.type === "event" && !i.eventAt) throw invalid("Un eveniment are nevoie de dată și oră.");
@@ -389,13 +504,13 @@ export async function displayName(db: Db, userId: string) {
 
 // ---------- Profil complet, contestații deschise, locul în clasament ----------
 
-export type ChecklistInput = { hasMenu: boolean; recentPost: boolean; hasTeam: boolean; hasVideo: boolean; unanswered: number };
+export type ChecklistInput = { hasMenu: boolean; hasPost: boolean; hasTeam: boolean; hasVideo: boolean; unanswered: number };
 
 /** Ce ține ownerul în mână ca profilul localului să fie complet; fiecare punct duce la secțiunea unde se rezolvă. */
 export function profileChecklist(i: ChecklistInput) {
   const items = [
-    { key: "meniu", label: "Meniul publicat", section: "blog", done: i.hasMenu },
-    { key: "postare", label: "O postare din ultimele 30 de zile", section: "blog", done: i.recentPost },
+    { key: "meniu", label: "Meniul publicat", section: "meniu", done: i.hasMenu },
+    { key: "postare", label: "O postare pe blog", section: "blog", done: i.hasPost },
     { key: "echipa", label: "Cel puțin un om din echipă, cu invitația acceptată", section: "echipa", done: i.hasTeam },
     { key: "video", label: "Un video sau un link social", section: "videouri", done: i.hasVideo },
     { key: "review-uri", label: "Toate review-urile au un răspuns", section: "review-uri", done: i.unanswered === 0 },
@@ -408,9 +523,9 @@ export async function profileChecklists(db: Db, userId: string, now = new Date()
   const mine = await db.select({ id: venueManagers.venueId }).from(venueManagers).where(eq(venueManagers.userId, userId));
   const ids = mine.map((m) => m.id);
   if (!ids.length) return new Map<string, ReturnType<typeof profileChecklist>>();
-  const monthAgo = now.getTime() - 30 * 86_400_000;
-  const [postRows, teamRows, videoRows, unanswered] = await Promise.all([
-    db.select({ venueId: posts.venueId, type: posts.type, publishAt: posts.publishAt }).from(posts).where(inArray(posts.venueId, ids)),
+  const [postRows, menuRows, teamRows, videoRows, unanswered] = await Promise.all([
+    db.select({ venueId: posts.venueId, publishAt: posts.publishAt }).from(posts).where(inArray(posts.venueId, ids)),
+    db.selectDistinct({ venueId: menuItems.venueId }).from(menuItems).where(inArray(menuItems.venueId, ids)),
     db
       .select({ venueId: employees.venueId })
       .from(employees)
@@ -424,8 +539,8 @@ export async function profileChecklists(db: Db, userId: string, now = new Date()
       return [
         id,
         profileChecklist({
-          hasMenu: published.some((p) => p.type === "menu"),
-          recentPost: published.some((p) => p.publishAt.getTime() >= monthAgo),
+          hasMenu: menuRows.some((m) => m.venueId === id),
+          hasPost: published.length > 0,
           hasTeam: teamRows.some((t) => t.venueId === id),
           hasVideo: videoRows.some((v) => v.venueId === id),
           unanswered: unanswered.get(id) ?? 0,

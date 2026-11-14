@@ -21,6 +21,7 @@ import { recalculateCity } from "@tftd/scoring";
 import { freezeMonth, lastMonth } from "@tftd/leaderboard";
 import { generate } from "./generate.ts";
 import { SEED_VENUES } from "./venues.ts";
+import { seedFeatureDemo } from "./demo-features.ts";
 
 const CITY = "timisoara";
 const DAY = 86_400_000;
@@ -215,6 +216,9 @@ async function main() {
       expiresAt: new Date(now.getTime() - minAgo * 60_000 + 2 * 3_600_000),
     })),
   );
+
+  // ---------- DATE DEMO: răspunsuri, facilități declarate, voturi rapide (seed/demo-features.ts) ----------
+  await seedFeatureDemo(db);
 
   // ---------- Analiză, scoruri, topul lunii trecute ----------
   const client = process.env.SEED_USE_CLAUDE === "1" ? undefined : null;

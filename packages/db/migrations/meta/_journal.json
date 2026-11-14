@@ -29,6 +29,41 @@
       "when": 1794657249207,
       "tag": "0003_venue_owner_icon",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794657738656,
+      "tag": "0004_menu_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794659516865,
+      "tag": "0005_menu_photo",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794661804254,
+      "tag": "0006_preferences_features",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794663783757,
+      "tag": "0007_quick_votes",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794670823191,
+      "tag": "0008_flawless_aqueduct",
+      "breakpoints": true
     }
   ]
 }

@@ -2,14 +2,16 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, voteHelpful } from '@/app/actions/user';
+import { castQuickVote, loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, voteHelpful } from '@/app/actions/user';
 import { X } from 'lucide-react';
 import {
   DrinkQuickFilter,
   FoodQuickFilter,
   NavSection,
   Restaurant,
+  QuickKind,
   Review,
+  ThemeTop,
   TopReviewer,
   WeekendEvent,
   UserAccount,
@@ -23,7 +25,6 @@ import {
   recalculateRestaurantWithReview,
 } from '../data/restaurants';
 import { LoginScreen } from './LoginScreen';
-import { LocalVerificationPanel } from './LocalVerificationPanel';
 import { Navbar } from './Navbar';
 import { EditorialListView } from './EditorialListView';
 import { MapView } from './MapView';
@@ -93,6 +94,10 @@ export interface TopFoodShellProps {
   backendOnline?: boolean;
   /** Userul din sesiune (cookie), când backend-ul e pornit */
   initialUser?: UserAccount | null;
+  /** Topurile tematice din backend (Accesibilitate, Locuri pentru lucru…) */
+  themeTops?: { food: ThemeTop[]; drink: ThemeTop[] };
+  /** Voturile rapide ale userului din sesiune (venueId → siguranță / zgomot) */
+  myQuickVotes?: Record<string, Partial<Record<QuickKind, number>>>;
 }
 
 export function TopFoodShell({
@@ -106,7 +111,14 @@ export function TopFoodShell({
   topReviewers,
   backendOnline = false,
   initialUser = null,
+  themeTops,
+  myQuickVotes: initialQuickVotes,
 }: TopFoodShellProps) {
+  const [myQuickVotes, setMyQuickVotes] = useState(initialQuickVotes ?? {});
+  // După router.refresh() vin voturile de pe server (referință nouă doar când se schimbă datele).
+  useEffect(() => {
+    if (initialQuickVotes) setMyQuickVotes(initialQuickVotes);
+  }, [initialQuickVotes]);
   const router = useRouter();
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
   const [navSection, setNavSection] = useState<NavSection>(initialSection);
@@ -130,6 +142,7 @@ export function TopFoodShell({
   const [accounts, setAccounts] = useState<UserAccount[]>(USER_ACCOUNTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLoginScreen, setShowLoginScreen] = useState<boolean>(false);
+  const [pendingOpenReview, setPendingOpenReview] = useState(true);
   const [pendingReviewVenueId, setPendingReviewVenueId] = useState<
     string | null
   >(null);
@@ -235,6 +248,10 @@ export function TopFoodShell({
       // ignore storage errors
     }
   }, [savedIds, storageHydrated]);
+
+  useEffect(() => {
+    document.documentElement.dataset.vertical = vertical;
+  }, [vertical]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -392,7 +409,7 @@ export function TopFoodShell({
     setShowLoginScreen(false);
     if (pendingReviewVenueId) {
       setSelectedRestaurantId(pendingReviewVenueId);
-      setOpenReviewOnMount(true);
+      if (pendingOpenReview) setOpenReviewOnMount(true);
       setPendingReviewVenueId(null);
     }
     setStatusMessage(`Autentificat ca ${user.name}`);
@@ -405,10 +422,12 @@ export function TopFoodShell({
     setShowLoginScreen(false);
   };
 
-  const handleOpenLogin = () => {
+  /** `openReview: false` = după login revii la local fără să se deschidă review-ul (ex. vot rapid). */
+  const handleOpenLogin = (opts?: { openReview?: boolean }) => {
     preLoginScrollYRef.current = window.scrollY;
     scrollPositionsRef.current[navSection] = window.scrollY;
     setPendingReviewVenueId(selectedRestaurantId);
+    setPendingOpenReview(opts?.openReview !== false);
     setSelectedRestaurantId(null);
     pendingScrollYRef.current = 0;
     setShowLoginScreen(true);
@@ -424,13 +443,6 @@ export function TopFoodShell({
     setStatusMessage('Te-ai deconectat. Navighezi ca vizitator.');
   };
 
-  const handleSelectUser = (userId: string) => {
-    setCurrentUserId(userId);
-    const matched = accounts.find((u) => u.id === userId);
-    if (matched) {
-      setStatusMessage(`Cont activ schimbat: ${matched.name}`);
-    }
-  };
 
   const handleToggleFoodFilter = (f: FoodQuickFilter) => {
     setFoodFilters((prev) =>
@@ -482,8 +494,9 @@ export function TopFoodShell({
   }, [allVenues, selectedRestaurantId]);
 
   useEffect(() => {
+    const pageVertical = selectedRestaurant?.vertical ?? vertical;
     document.title = selectedRestaurant
-      ? `${selectedRestaurant.name} | ${VERTICAL_TITLES[vertical]}`
+      ? `${selectedRestaurant.name} | ${VERTICAL_TITLES[pageVertical]}`
       : VERTICAL_TITLES[vertical];
     if (!urlReadyRef.current) return;
 
@@ -504,7 +517,7 @@ export function TopFoodShell({
       ? selectedRestaurant.slug || selectedRestaurant.id
       : null;
     const nextUrl = buildUrlForState(
-      vertical,
+      pageVertical,
       navSection,
       venueKey,
       showLoginScreen
@@ -530,6 +543,7 @@ export function TopFoodShell({
         venueId: venue.venueId,
         rating: newReview.foodScore,
         text: newReview.text,
+        answers: newReview.answers,
         weekendNight:
           venue.vertical === 'drink' ? drinkFilters.includes('vineri-noaptea') : undefined,
       });
@@ -552,6 +566,18 @@ export function TopFoodShell({
     return { ok: true };
   };
 
+  /** Vot rapid (siguranță / zgomot) pe backend; undefined = fără backend (modalul ține votul local) */
+  const handleQuickVote = backendOnline
+    ? async (venueId: string, kind: QuickKind, value: number) => {
+        const res = await castQuickVote(venueId, kind, value);
+        if (res.ok) {
+          setMyQuickVotes((prev) => ({ ...prev, [venueId]: { ...prev[venueId], [kind]: value } }));
+          router.refresh();
+        } else if (/Intră în cont/.test(res.error)) handleOpenLogin();
+        return res;
+      }
+    : undefined;
+
   /** „Util” pe backend; undefined = fără backend (modalul numără local) */
   const handleVoteHelpful = backendOnline
     ? async (reviewId: string) => {
@@ -563,12 +589,12 @@ export function TopFoodShell({
 
   /** Login / cont nou / cont demo pe backend */
   const handleAuthenticate = backendOnline
-    ? async (req: { mode: 'login' | 'register' | 'demo'; email: string; password?: string; name?: string }) => {
+    ? async (req: { mode: 'login' | 'register' | 'demo'; email: string; password?: string; name?: string; interests?: string[] }) => {
         const res =
           req.mode === 'demo'
             ? await loginDemo(req.email)
             : req.mode === 'register'
-              ? await registerUser({ name: req.name ?? '', email: req.email, password: req.password ?? '' })
+              ? await registerUser({ name: req.name ?? '', email: req.email, password: req.password ?? '', interests: req.interests })
               : await loginUser({ email: req.email, password: req.password ?? '' });
         if (res.ok) router.refresh();
         return res;
@@ -684,7 +710,7 @@ export function TopFoodShell({
   return (
     <div
       id="top"
-      className={`min-h-screen overflow-x-clip flex flex-col ${
+      className={`doodle-wallpaper min-h-screen overflow-x-clip flex flex-col ${
         isDrink ? 'bg-[#17382C] text-[#F4EEE2]' : 'bg-white text-[#3A2418]'
       }`}
     >
@@ -703,15 +729,8 @@ export function TopFoodShell({
         onToggleSave={handleToggleSave}
         onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
         currentUser={currentUser}
-        availableUsers={accounts}
-        onSelectUser={handleSelectUser}
         onOpenLogin={handleOpenLogin}
         onLogout={handleLogout}
-        profileExtra={
-          backendOnline && currentUser && currentUser.role !== 'verified-local' ? (
-            <LocalVerificationPanel vertical={vertical} onVerified={setStatusMessage} />
-          ) : null
-        }
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode((prev) => !prev)}
       />
@@ -735,6 +754,8 @@ export function TopFoodShell({
             onOpenMonthlyTop={() => navigateToSection('monthly')}
             onUpdateCrowdReport={handleUpdateCrowdReport}
             onResetFilters={handleResetFilters}
+            themeTops={themeTops}
+            interests={currentUser?.interests}
             initialFoodHeroIndex={initialFoodHeroIndex}
             initialDrinkHeroIndex={initialDrinkHeroIndex}
           />
@@ -742,6 +763,7 @@ export function TopFoodShell({
 
         {navSection === 'map' && (
           <MapView
+            darkMode={darkMode}
             vertical={vertical}
             restaurants={activeVerticalVenues}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
@@ -767,6 +789,7 @@ export function TopFoodShell({
           <ScarnaviiView
             vertical={vertical}
             restaurants={activeVerticalVenues}
+            allRestaurants={allVenues}
             onBack={() => navigateToSection('top')}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
           />
@@ -791,6 +814,12 @@ export function TopFoodShell({
         onClose={() => setSelectedRestaurantId(null)}
         onAddReview={handleAddReview}
         onVoteHelpful={handleVoteHelpful}
+        myQuickVote={selectedRestaurant?.venueId ? myQuickVotes[selectedRestaurant.venueId] : undefined}
+        onQuickVote={
+          handleQuickVote && selectedRestaurant?.venueId
+            ? (kind, value) => handleQuickVote(selectedRestaurant.venueId!, kind, value)
+            : undefined
+        }
         onRequireLogin={handleOpenLogin}
         onLocateOnMap={handleSwitchToMap}
         isSaved={

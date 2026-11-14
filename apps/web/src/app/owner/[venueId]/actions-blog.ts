@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { owner, ServiceError } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { errorMessage, getUserId } from '@/lib/server/session';
-import { field, keep, type FormState } from '@/lib/form';
+import { alsoVenueIds, field, keep, type FormState } from '@/lib/form';
 import { parseBucharest } from '@/lib/time';
 
 async function requireUser(): Promise<string> {
@@ -13,7 +13,7 @@ async function requireUser(): Promise<string> {
   return userId;
 }
 
-const TYPES = ['menu', 'event', 'offer', 'news'];
+const TYPES: readonly string[] = owner.POST_TYPES;
 // Ora din formular e ora României; serverul poate rula în UTC. Gol → null, invalid → Invalid Date.
 const toDate = (v: string) => (v ? (parseBucharest(v) ?? new Date(NaN)) : null);
 
@@ -44,11 +44,12 @@ export async function createPostAction(venueId: string, _: FormState, fd: FormDa
   const parsed = parsePost(fd);
   if ('error' in parsed) return keep(fd, parsed);
   try {
-    await owner.createPost(getDb(), await requireUser(), venueId, parsed.input);
+    // createPost verifică că userul administrează fiecare local bifat.
+    await owner.createPost(getDb(), await requireUser(), venueId, parsed.input, alsoVenueIds(fd));
   } catch (e) {
     return keep(fd, { error: errorMessage(e) });
   }
-  revalidatePath(`/owner/${venueId}`);
+  revalidatePath('/owner', 'layout');
   return { ok: true, message: 'Postarea a fost salvată.' };
 }
 

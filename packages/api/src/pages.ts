@@ -10,6 +10,8 @@ import {
 import { venueProgram } from "@tftd/loyalty";
 import { activePartnership, sponsoredSlots } from "@tftd/monetization";
 import { formatHours, openStatus } from "./hours.ts";
+import { venueFeatureData, venueFeatures, venueQuickData } from "./features.ts";
+import { activeThemes, featureStatus, rankTheme, themeQuestions, type Theme, type ThemeCandidate } from "@tftd/scoring/features";
 import { PRIOR_WEIGHT, POSSIBLE_TRAP, TRAP } from "@tftd/scoring";
 
 export type Vertical = "food" | "drink";
@@ -78,8 +80,46 @@ export async function cityPage(
       return { rank: i + 1, ...rest, trapLevel: trapLevel(v.touristTrapIndex), openNow: open.openNow, openLabel: open.label };
     }),
     sponsored: await sponsoredSlots(db, q.citySlug, q.vertical, now, q.category),
+    // Topurile tematice se calculează separat de sponsorizări: thematicTops nu le citește.
+    themes: await thematicTops(db, { citySlug: q.citySlug, vertical: q.vertical }, now),
     traps: traps.map((t) => ({ ...t, level: trapLevel(t.index), reasons: t.explanation?.trapReasons ?? [] })),
   };
+}
+
+/**
+ * Topurile tematice (Accesibilitate, Locuri pentru lucru…). Două grupe separate: „Evaluat de comunitate”
+ * (ordonat după limita Wilson ponderată) și „Declarat de local”. Nu citește parteneriatele (regula 1).
+ */
+export async function thematicTops(db: Db, q: { citySlug: string; vertical: Vertical }, now = new Date(), limit = 10) {
+  const rows = await db
+    .select(card)
+    .from(venues)
+    // Aceleași localuri ca topul general (cu Scor Onest), ca pagina să le poată deschide.
+    // shortcut: web-ul încarcă primele 100 din topul general; la orașe cu > 100 localuri, încarcă și localurile din topurile tematice.
+    .where(and(eq(venues.citySlug, q.citySlug), eq(venues.vertical, q.vertical), eq(venues.status, "active"), isNotNull(venues.honestScore)));
+  const [data, quick] = await Promise.all([venueFeatureData(db, rows.map((r) => r.id)), venueQuickData(db, rows.map((r) => r.id))]);
+  const candidates = rows.map((r) => ({ ...r, ...data.get(r.id)! }));
+  const entry = (theme: Theme, v: (typeof candidates)[number] & ThemeCandidate) => {
+    const { stats: _s, declarations: _d, openingHours, ...rest } = v;
+    const open = openStatus(openingHours, now);
+    return {
+      ...rest,
+      openNow: open.openNow,
+      trapLevel: trapLevel(v.touristTrapIndex),
+      // Doar afișat (siguranță la Ieșiri, zgomot la Lucru); ordinea vine din rankTheme.
+      quick: quick.get(v.id)!,
+      facts: themeQuestions(theme).map((qq) => featureStatus(qq, v.stats.get(qq.key), v.declarations.get(qq.key))),
+    };
+  };
+  return activeThemes().map((t) => {
+    const { community, declared } = rankTheme(t.key, candidates);
+    return {
+      theme: t.key,
+      label: t.label,
+      community: community.slice(0, limit).map((c, i) => ({ rank: i + 1, ...entry(t.key, c.venue) })),
+      declared: declared.slice(0, limit).map((d) => entry(t.key, d.venue)),
+    };
+  });
 }
 
 export type ReviewFilter = "local" | "tourist" | "influencer" | "all";
@@ -175,7 +215,8 @@ export async function venuePage(
     .from(venueSources)
     .where(eq(venueSources.venueId, venue.id));
   const menu = await db
-    .select({ name: menuItems.name, priceLei: menuItems.priceLei, description: menuItems.description, mustOrder: menuItems.mustOrder })
+    // Poza nu intră în pagină (data URL mare); doar dacă există, iar browserul o cere de la /api/menu-photo/{id}.
+    .select({ id: menuItems.id, category: menuItems.category, name: menuItems.name, priceLei: menuItems.priceLei, description: menuItems.description, mustOrder: menuItems.mustOrder, hasPhoto: isNotNull(menuItems.photo) })
     .from(menuItems)
     .where(eq(menuItems.venueId, venue.id))
     .orderBy(asc(menuItems.position));
@@ -208,6 +249,8 @@ export async function venuePage(
       status: venue.status,
     },
     menu,
+    features: venueFeatures((await venueFeatureData(db, [venue.id])).get(venue.id)),
+    quick: (await venueQuickData(db, [venue.id])).get(venue.id)!,
     aspectScores: venue.aspectScores ?? {},
     loyalty: await venueProgram(db, venue.id),
     scores: {
@@ -344,4 +387,11 @@ export async function userProfile(db: Db, username: string) {
     socialLinks: links,
     reviews: recent,
   };
+}
+
+/** Poza unui fel din meniu (data URL), pentru /api/menu-photo/{id}. null dacă nu există. */
+export async function menuPhoto(db: Db, id: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const [row] = await db.select({ photo: menuItems.photo }).from(menuItems).where(eq(menuItems.id, id));
+  return row?.photo ?? null;
 }

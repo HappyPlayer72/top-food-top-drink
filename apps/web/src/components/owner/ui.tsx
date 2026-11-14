@@ -215,3 +215,21 @@ export function Disclosure({ summary, icon, children, variant = 'quiet' }: {
     </details>
   );
 }
+
+/** Bife „aplică și la”: celelalte localuri ale aceluiași owner primesc o copie (câmpul `alsoVenueIds`). */
+export function AlsoVenues({ venues, legend, selected = '' }: { venues: { id: string; name: string }[]; legend: string; selected?: string }) {
+  if (!venues.length) return null;
+  // `selected` = valorile trimise înainte (din state.values), ca bifele să rămână după o eroare.
+  const checked = new Set(selected.split(','));
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-[14px] font-semibold text-o-fg">{legend}</legend>
+      {venues.map((v) => (
+        <label key={v.id} className="flex min-h-11 items-center gap-3 text-[15px]">
+          <input type="checkbox" name="alsoVenueIds" value={v.id} defaultChecked={checked.has(v.id)} className="size-5 accent-o-accent" />
+          {v.name}
+        </label>
+      ))}
+    </fieldset>
+  );
+}

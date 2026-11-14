@@ -7,10 +7,12 @@ import type { cityPage, leaderboardPage, topReviewers, venuePage, weekendEvents 
 import type {
   AspectScores,
   AuthorRole,
+  MenuCategory,
   Neighborhood,
   PriceTier,
   Restaurant,
   Review,
+  ThemeTop,
   TopReviewer,
   TrapTier,
   WeekendEvent,
@@ -128,6 +130,34 @@ function aspects(scores: Record<string, number>, fallback?: AspectScores): Aspec
 export type MonthlyInfo = { rank: number; score: number; movement: number | null };
 
 /** O pagină de local din backend → `Restaurant` pentru componente. */
+/** Felurile din DB (în ordinea pusă de owner) → categorii, în ordinea primei apariții. */
+export function groupMenu(menu: VenuePage['menu'], vertical: 'food' | 'drink'): MenuCategory[] {
+  const byTitle = new Map<string, MenuCategory>();
+  for (const m of menu) {
+    const title = m.category || (vertical === 'drink' ? 'Băuturi' : 'Preparate');
+    if (!byTitle.has(title)) byTitle.set(title, { title, items: [] });
+    byTitle.get(title)!.items.push({
+      name: m.name,
+      priceRon: m.priceLei ?? 0,
+      description: m.description ?? undefined,
+      isMustOrder: m.mustOrder,
+      photoUrl: m.hasPhoto ? `/api/menu-photo/${m.id}` : undefined,
+    });
+  }
+  return [...byTitle.values()];
+}
+
+/** Topurile tematice din cityPage → doar ce afișează pagina (fără scoruri interne). */
+export function toThemeTops(themes: CityPage['themes']): ThemeTop[] {
+  const entry = (v: CityPage['themes'][number]['declared'][number]) => ({ slug: v.slug, name: v.name, neighborhood: v.neighborhood, facts: v.facts, quick: v.quick });
+  return themes.map((t) => ({
+    theme: t.theme,
+    label: t.label,
+    community: t.community.map((c) => ({ rank: c.rank, ...entry(c) })),
+    declared: t.declared.map(entry),
+  }));
+}
+
 export function toRestaurant(
   p: VenuePage,
   ctx: {
@@ -177,9 +207,13 @@ export function toRestaurant(
     photoUrl: v.photos[0] ?? fb?.photoUrl ?? PLACEHOLDER_PHOTO[v.vertical],
     editorialHeadline: v.headline ?? fb?.editorialHeadline ?? '',
     editorialWriteup: v.writeup.length ? v.writeup : (fb?.editorialWriteup ?? []),
+    // „Ce să comanzi” = doar felurile marcate recomandat, nu tot meniul.
     whatToOrder: p.menu.length
-      ? p.menu.map((m) => ({ name: m.name, priceRon: m.priceLei ?? 0, description: m.description ?? undefined, isMustOrder: m.mustOrder }))
+      ? p.menu.filter((m) => m.mustOrder).map((m) => ({ name: m.name, priceRon: m.priceLei ?? 0, description: m.description ?? undefined, isMustOrder: true }))
       : (fb?.whatToOrder ?? []),
+    menuCategories: p.menu.length ? groupMenu(p.menu, v.vertical) : fb?.menuCategories,
+    features: p.features,
+    quick: p.quick,
     occasionTags: v.occasionTags.length ? v.occasionTags : (fb?.occasionTags ?? []),
 
     foodQualityScore: s.honest ?? 0,
