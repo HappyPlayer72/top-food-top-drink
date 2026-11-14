@@ -51,6 +51,18 @@ export async function ensureExtendedSchema(db: Db): Promise<void> {
         decided_at timestamptz NOT NULL DEFAULT now()
       )
     `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS monthly_category_votes (
+        month text NOT NULL,
+        vertical vertical NOT NULL,
+        category_id text NOT NULL,
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        venue_slug text NOT NULL,
+        venue_name text NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (month, vertical, category_id, user_id)
+      )
+    `);
   })().catch((err) => {
     ensuredDbs.delete(db as unknown as object);
     throw err;
