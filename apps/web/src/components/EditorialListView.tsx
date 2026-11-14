@@ -2,11 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddVenuePanel } from './AddVenuePanel';
+import { ThemeTopList, TopTabs } from './ThematicTops';
+import { orderTops, type TopKey } from '@tftd/scoring/features';
 import { ArrowRight, X } from 'lucide-react';
 import {
   DrinkQuickFilter,
   FoodQuickFilter,
   Restaurant,
+  ThemeTop,
   Vertical,
   WeekendEvent,
   formatScore,
@@ -52,6 +55,10 @@ export interface EditorialListViewProps {
   ) => void;
   initialFoodHeroIndex?: number;
   initialDrinkHeroIndex?: number;
+  /** Topurile tematice din backend; lipsă = doar topul general. */
+  themeTops?: { food: ThemeTop[]; drink: ThemeTop[] };
+  /** Preferințele userului: aleg ordinea topurilor, nu ascund nimic. */
+  interests?: readonly string[];
 }
 
 const FOOD_FILTER_PILLS: { id: FoodQuickFilter; label: string }[] = [
@@ -171,8 +178,21 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   onRequireLogin,
   initialFoodHeroIndex = 0,
   initialDrinkHeroIndex = 0,
+  themeTops,
+  interests = [],
 }) => {
   const isDrink = vertical === 'drink';
+  const themes = (isDrink ? themeTops?.drink : themeTops?.food) ?? [];
+  const [chosenTop, setChosenTop] = useState<TopKey | null>(null);
+  // Primul top = prima preferință care are date; userul poate schimba oricând.
+  const firstTop = orderTops(interests).find((k) => k === 'general' || themes.some((t) => t.theme === k)) ?? 'general';
+  const activeTop: TopKey = chosenTop && (chosenTop === 'general' || themes.some((t) => t.theme === chosenTop)) ? chosenTop : firstTop;
+  const activeTheme = themes.find((t) => t.theme === activeTop);
+  const openBySlug = (slug: string) => {
+    const r = (isDrink ? drinkVenues : restaurants).find((x) => x.slug === slug);
+    if (r) onSelectRestaurant(r);
+  };
+  const topTabs = <TopTabs themes={themes} interests={interests} active={activeTop} onChange={setChosenTop} dark={isDrink} />;
   const [showAllTop, setShowAllTop] = useState(false);
   const [expandedTrapPreview, setExpandedTrapPreview] = useState(false);
   const [showScorOnestInfo, setShowScorOnestInfo] = useState(false);
@@ -641,14 +661,16 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               <div className="space-y-1 pb-1">
                 <div className="flex items-baseline justify-between gap-2 flex-wrap">
                   <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#F4EEE2]">
-                    {drinkHeading}
+                    {activeTheme ? `Top: ${activeTheme.label}` : drinkHeading}
                   </h2>
-                  <span className="text-[12px] sm:text-[13px] text-[#F4EEE2]/65">
-                    plin acum, din raportări
-                  </span>
+                  {!activeTheme && (
+                    <span className="text-[12px] sm:text-[13px] text-[#F4EEE2]/65">
+                      plin acum, din raportări
+                    </span>
+                  )}
                 </div>
 
-                <div>
+                <div hidden={!!activeTheme}>
                   <button
                     type="button"
                     onClick={() => setShowScorOnestInfo((prev) => !prev)}
@@ -683,7 +705,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 </div>
               </div>
 
-              {filteredDrinkOrganic.length === 0 ? (
+              {topTabs}
+              {activeTheme ? (
+                <ThemeTopList top={activeTheme} onSelect={openBySlug} dark />
+              ) : filteredDrinkOrganic.length === 0 ? (
                 <div className="py-8 border-t border-[#285443] space-y-3">
                   <p className="text-[14px] text-[#F4EEE2]/75">
                     Niciun bar nu corespunde căutării sau filtrelor selectate.
@@ -847,7 +872,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               )}
 
               {/* Modest Sponsored Slot (Rule #3: darker/quieter surface, NO photo, smaller muted score, NO coaster) */}
-              {drinkSponsored && renderSponsoredCard(drinkSponsored)}
+              {!activeTheme && drinkSponsored && renderSponsoredCard(drinkSponsored)}
             </section>
 
             {/* RIGHT 5 COLUMNS: Weekendul ăsta + Bottom CTA */}
@@ -1116,14 +1141,16 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
           <div className="space-y-1 pb-1">
             <div className="flex items-baseline justify-between gap-2 flex-wrap">
               <h2 className="font-display text-[26px] sm:text-[32px] leading-none text-[#3A2418]">
-                Topul onest
+                {activeTheme ? `Top: ${activeTheme.label}` : 'Topul onest'}
               </h2>
-              <span className="text-[12px] sm:text-[13px] text-[#6E5649]">
-                după {totalFoodReviews.toLocaleString('ro-RO')} de review-uri
-              </span>
+              {!activeTheme && (
+                <span className="text-[12px] sm:text-[13px] text-[#6E5649]">
+                  după {totalFoodReviews.toLocaleString('ro-RO')} de review-uri
+                </span>
+              )}
             </div>
 
-            <div>
+            <div hidden={!!activeTheme}>
               <button
                 type="button"
                 onClick={() => setShowScorOnestInfo((prev) => !prev)}
@@ -1158,7 +1185,10 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             </div>
           </div>
 
-          {filteredFoodOrganic.length === 0 ? (
+          {topTabs}
+          {activeTheme ? (
+            <ThemeTopList top={activeTheme} onSelect={openBySlug} dark={false} />
+          ) : filteredFoodOrganic.length === 0 ? (
             <div className="py-8 border-t border-[#E6DFD5] space-y-3">
               <div className="space-y-1">
                 <p className="text-[15px] text-[#3A2418] font-semibold">

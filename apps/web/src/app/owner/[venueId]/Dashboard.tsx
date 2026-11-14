@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { BarChart3, BookOpenText, ChevronLeft, Clapperboard, MessageSquareText, Stamp, UsersRound, UtensilsCrossed } from 'lucide-react';
+import { Accessibility, BarChart3, BookOpenText, ChevronLeft, Clapperboard, MessageSquareText, Stamp, UsersRound, UtensilsCrossed } from 'lucide-react';
 import QRCode from 'qrcode';
 import { loyalty, owner, venuePage } from '@tftd/api';
 import { LoyaltyPanel } from '@/components/owner/LoyaltyPanel';
 import { BlogPanel } from '@/components/owner/BlogPanel';
+import { FacilitiesPanel } from '@/components/owner/FacilitiesPanel';
 import { MenuPanel } from '@/components/owner/MenuPanel';
 import { ReviewsPanel } from '@/components/owner/ReviewsPanel';
 import { StandingPanel } from '@/components/owner/Standing';
@@ -20,6 +21,7 @@ const SECTIONS = [
   { id: 'statistici', label: 'Statistici', description: 'Scorul și ce spun oamenii despre localul tău.', icon: BarChart3 },
   { id: 'review-uri', label: 'Review-uri', description: 'Citește și răspunde la review-urile primite.', icon: MessageSquareText },
   { id: 'meniu', label: 'Meniu', description: 'Preparatele și prețurile, pe categorii, cum apar pe pagina localului.', icon: UtensilsCrossed },
+  { id: 'facilitati', label: 'Facilități', description: 'Intrare fără trepte, toaletă accesibilă, Wi-Fi, prize: ce declari tu, separat de ce spun clienții.', icon: Accessibility },
   { id: 'blog', label: 'Blog', description: 'Noutăți, oferte și evenimente pentru clienții tăi.', icon: BookOpenText },
   { id: 'echipa', label: 'Echipa', description: 'Gestionează oamenii care dau viață localului.', icon: UsersRound },
   { id: 'videouri', label: 'Videouri', description: 'Adaugă și urmărește videourile despre localul tău.', icon: Clapperboard },
@@ -63,6 +65,11 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
     case 'meniu': {
       const menu = await owner.menuForOwner(db, userId, venue.id);
       content = <MenuPanel venueId={venue.id} menu={menu} vertical={venue.vertical} otherVenues={otherVenues} />;
+      break;
+    }
+    case 'facilitati': {
+      const declarations = await owner.facilitiesForOwner(db, userId, venue.id);
+      content = <FacilitiesPanel venueId={venue.id} declarations={Object.fromEntries(declarations)} />;
       break;
     }
     case 'blog': {

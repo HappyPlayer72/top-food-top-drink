@@ -12,6 +12,7 @@ import type {
   PriceTier,
   Restaurant,
   Review,
+  ThemeTop,
   TopReviewer,
   TrapTier,
   WeekendEvent,
@@ -146,6 +147,17 @@ export function groupMenu(menu: VenuePage['menu'], vertical: 'food' | 'drink'): 
   return [...byTitle.values()];
 }
 
+/** Topurile tematice din cityPage → doar ce afișează pagina (fără scoruri interne). */
+export function toThemeTops(themes: CityPage['themes']): ThemeTop[] {
+  const entry = (v: CityPage['themes'][number]['declared'][number]) => ({ slug: v.slug, name: v.name, neighborhood: v.neighborhood, facts: v.facts });
+  return themes.map((t) => ({
+    theme: t.theme,
+    label: t.label,
+    community: t.community.map((c) => ({ rank: c.rank, ...entry(c) })),
+    declared: t.declared.map(entry),
+  }));
+}
+
 export function toRestaurant(
   p: VenuePage,
   ctx: {
@@ -200,6 +212,7 @@ export function toRestaurant(
       ? p.menu.filter((m) => m.mustOrder).map((m) => ({ name: m.name, priceRon: m.priceLei ?? 0, description: m.description ?? undefined, isMustOrder: true }))
       : (fb?.whatToOrder ?? []),
     menuCategories: p.menu.length ? groupMenu(p.menu, v.vertical) : fb?.menuCategories,
+    features: p.features,
     occasionTags: v.occasionTags.length ? v.occasionTags : (fb?.occasionTags ?? []),
 
     foodQualityScore: s.honest ?? 0,

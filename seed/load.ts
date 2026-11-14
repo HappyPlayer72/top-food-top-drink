@@ -9,11 +9,11 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import {
-  checkins, cities, createDb, employees, localVerifications, loyaltyPrograms, menuItems, partnerships, posts, reviewVotes, reviews, touristZones,
-  userSocialLinks, users, venueManagers, venues, vibeChecks, type OpeningHours,
+  checkins, cities, createDb, employees, localVerifications, loyaltyPrograms, menuItems, partnerships, posts, reviewAnswers, reviewVotes, reviews, touristZones,
+  userSocialLinks, users, venueFacilityDeclarations, venueManagers, venues, vibeChecks, type OpeningHours,
 } from "@tftd/db";
 import { hashPassword } from "@tftd/accounts";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
@@ -214,6 +214,51 @@ async function main() {
       createdAt: new Date(now.getTime() - minAgo * 60_000),
       expiresAt: new Date(now.getTime() - minAgo * 60_000 + 2 * 3_600_000),
     })),
+  );
+
+  // ---------- DATE DEMO: răspunsuri la întrebările din review + facilități declarate ----------
+  // Inventate pentru demonstrație (prezentare / teste), nu vin de la clienți reali.
+  // Răspunsurile se atașează review-urilor native deja generate: [Da, Nu, Nu am observat].
+  const DEMO_ANSWERS: Record<string, Record<string, [number, number, number?]>> = {
+    "ciorba-lui-sandu": { intrare_fara_trepte: [7, 1, 2], toaleta_accesibila: [2, 4], spatiu_intre_mese: [5, 1] },
+    "cafe-domului": { wifi: [9, 1], prize: [6, 1], liniste: [6, 2], intrare_fara_trepte: [5, 0] },
+    "verde-pe-farfurie": { intrare_fara_trepte: [6, 0], toaleta_accesibila: [5, 1], spatiu_intre_mese: [4, 1], wifi: [3, 0] },
+    "bistro-bega": { intrare_fara_trepte: [3, 0] }, // sub prag: rămâne „Declarat de local” (și e sponsorizat — nu urcă)
+    "pizzeria-din-fabric": { wifi: [1, 5, 1] }, // contrazice declarația owner-ului
+    "cafeneaua-de-noapte": { wifi: [6, 1], prize: [5, 2], intrare_fara_trepte: [2, 3] },
+    "terasa-de-pe-bega": { intrare_fara_trepte: [6, 0], spatiu_intre_mese: [5, 0], atmosfera: [5, 3], siguranta: [6, 1] },
+    // Ieșiri (etapa 2): experiența personală raportată de clienți; owner-ii nu o pot declara.
+    "pivnita-cu-bolta": { intrare_fara_trepte: [0, 6], toaleta_accesibila: [0, 5], atmosfera: [9, 1], siguranta: [8, 1], revin_cu_prietenii: [7, 2] },
+    "depoul-de-tramvaie": { atmosfera: [6, 2], siguranta: [3, 4, 1], revin_cu_prietenii: [5, 2] },
+    "studio-19": { siguranta: [2, 1] }, // sub prag: „Nespecificat”
+  };
+  const DEMO_DECLARATIONS: Record<string, Record<string, "yes" | "no">> = {
+    "ciorba-lui-sandu": { intrare_fara_trepte: "yes", toaleta_accesibila: "yes", wifi: "no" },
+    "bistro-bega": { intrare_fara_trepte: "yes", toaleta_accesibila: "yes", wifi: "yes", prize: "yes" },
+    "placintaria-elisabetin": { wifi: "yes" },
+    "pizzeria-din-fabric": { wifi: "yes" },
+    "jazz-in-pivnita": { intrare_fara_trepte: "yes" },
+  };
+  for (const [slug, questions] of Object.entries(DEMO_ANSWERS)) {
+    const native = await db
+      .select({ id: reviews.id })
+      .from(reviews)
+      .where(sql`${reviews.venueId} = ${venueIds.get(slug)!} and ${reviews.authorId} is not null`)
+      .orderBy(desc(reviews.postedAt));
+    const rows = Object.entries(questions).flatMap(([questionKey, [yes, no, notObserved = 0]]) =>
+      [...Array(yes).fill("yes"), ...Array(no).fill("no"), ...Array(notObserved).fill("not_observed")].map((answer, i) => ({
+        reviewId: native[i]!.id,
+        questionKey,
+        answer: answer as "yes" | "no" | "not_observed",
+      })),
+    );
+    await db.insert(reviewAnswers).values(rows);
+  }
+  await db.insert(venueFacilityDeclarations).values(
+    Object.entries(DEMO_DECLARATIONS).flatMap(([slug, decl]) =>
+      // Doar Sandu are owner în seed; la celelalte declarația demo nu are autor.
+      Object.entries(decl).map(([questionKey, value]) => ({ venueId: venueIds.get(slug)!, questionKey, value, updatedBy: slug === "ciorba-lui-sandu" ? ownerId : null })),
+    ),
   );
 
   // ---------- Analiză, scoruri, topul lunii trecute ----------

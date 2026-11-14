@@ -10,6 +10,7 @@ import {
   NavSection,
   Restaurant,
   Review,
+  ThemeTop,
   TopReviewer,
   WeekendEvent,
   UserAccount,
@@ -24,6 +25,7 @@ import {
 } from '../data/restaurants';
 import { LoginScreen } from './LoginScreen';
 import { LocalVerificationPanel } from './LocalVerificationPanel';
+import { PreferencesPanel } from './PreferencesPanel';
 import { Navbar } from './Navbar';
 import { EditorialListView } from './EditorialListView';
 import { MapView } from './MapView';
@@ -93,6 +95,8 @@ export interface TopFoodShellProps {
   backendOnline?: boolean;
   /** Userul din sesiune (cookie), când backend-ul e pornit */
   initialUser?: UserAccount | null;
+  /** Topurile tematice din backend (Accesibilitate, Locuri pentru lucru…) */
+  themeTops?: { food: ThemeTop[]; drink: ThemeTop[] };
 }
 
 export function TopFoodShell({
@@ -106,6 +110,7 @@ export function TopFoodShell({
   topReviewers,
   backendOnline = false,
   initialUser = null,
+  themeTops,
 }: TopFoodShellProps) {
   const router = useRouter();
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
@@ -530,6 +535,7 @@ export function TopFoodShell({
         venueId: venue.venueId,
         rating: newReview.foodScore,
         text: newReview.text,
+        answers: newReview.answers,
         weekendNight:
           venue.vertical === 'drink' ? drinkFilters.includes('vineri-noaptea') : undefined,
       });
@@ -563,12 +569,12 @@ export function TopFoodShell({
 
   /** Login / cont nou / cont demo pe backend */
   const handleAuthenticate = backendOnline
-    ? async (req: { mode: 'login' | 'register' | 'demo'; email: string; password?: string; name?: string }) => {
+    ? async (req: { mode: 'login' | 'register' | 'demo'; email: string; password?: string; name?: string; interests?: string[] }) => {
         const res =
           req.mode === 'demo'
             ? await loginDemo(req.email)
             : req.mode === 'register'
-              ? await registerUser({ name: req.name ?? '', email: req.email, password: req.password ?? '' })
+              ? await registerUser({ name: req.name ?? '', email: req.email, password: req.password ?? '', interests: req.interests })
               : await loginUser({ email: req.email, password: req.password ?? '' });
         if (res.ok) router.refresh();
         return res;
@@ -708,8 +714,22 @@ export function TopFoodShell({
         onOpenLogin={handleOpenLogin}
         onLogout={handleLogout}
         profileExtra={
-          backendOnline && currentUser && currentUser.role !== 'verified-local' ? (
-            <LocalVerificationPanel vertical={vertical} onVerified={setStatusMessage} />
+          currentUser ? (
+            <>
+              {backendOnline && currentUser.role !== 'verified-local' && (
+                <LocalVerificationPanel vertical={vertical} onVerified={setStatusMessage} />
+              )}
+              <PreferencesPanel
+                key={currentUser.id}
+                user={currentUser}
+                dark={vertical === 'drink'}
+                backendOnline={backendOnline}
+                onSaved={(u) => {
+                  setAccounts((prev) => prev.map((acc) => (acc.id === u.id ? u : acc)));
+                  if (backendOnline) router.refresh();
+                }}
+              />
+            </>
           ) : null
         }
         darkMode={darkMode}
@@ -735,6 +755,8 @@ export function TopFoodShell({
             onOpenMonthlyTop={() => navigateToSection('monthly')}
             onUpdateCrowdReport={handleUpdateCrowdReport}
             onResetFilters={handleResetFilters}
+            themeTops={themeTops}
+            interests={currentUser?.interests}
             initialFoodHeroIndex={initialFoodHeroIndex}
             initialDrinkHeroIndex={initialDrinkHeroIndex}
           />

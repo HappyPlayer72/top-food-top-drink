@@ -43,6 +43,13 @@
       "when": 1794659516865,
       "tag": "0005_menu_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794661804254,
+      "tag": "0006_preferences_features",
+      "breakpoints": true
     }
   ]
 }

@@ -18,5 +18,6 @@ export async function toUserAccount(db: Db, userId: string, now = new Date()): P
     description: isLocal
       ? `Localnic verificat${u.localNeighborhood ? ` din ${u.localNeighborhood}` : ''} · review-urile tale au pondere 2,0×.`
       : 'Cont obișnuit (1,0×). Devii localnic verificat după check-in în Timișoara în 5 zile diferite sau cu emailul universitar.',
+    interests: u.interests,
   };
 }

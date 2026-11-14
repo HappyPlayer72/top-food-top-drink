@@ -55,6 +55,12 @@ export const paymentStatus = pgEnum("payment_status", ["pending", "paid", "faile
 export const reportTarget = pgEnum("report_target", ["review", "venue", "owner_claim", "trap_appeal", "user", "post"]);
 export const reportStatus = pgEnum("report_status", ["open", "resolved", "rejected"]);
 export const matchStatus = pgEnum("match_status", ["pending", "confirmed", "rejected"]);
+/** Ce îl interesează pe user (opțional): alege întrebările din review și ordinea topurilor. Nu e o declarație despre dizabilitate. */
+export const interest = pgEnum("interest", ["accesibilitate", "lucru", "iesiri", "mancare"]);
+/** Răspunsul unui client la o întrebare din review; „nu am observat” nu intră în procente. */
+export const featureAnswer = pgEnum("feature_answer", ["yes", "no", "not_observed"]);
+/** Declarația owner-ului; „nespecificat” = lipsa rândului. */
+export const declarationValue = pgEnum("declaration_value", ["yes", "no"]);
 
 // ---------- Oraș ----------
 
@@ -190,6 +196,8 @@ export const users = pgTable("users", {
   localNeighborhood: text(),
   localUntil: timestamp({ withTimezone: true }),
   followers: integer(),
+  /** Preferințele opționale (pot fi sărite și schimbate din profil). */
+  interests: interest().array().notNull().default(sql`'{}'::interest[]`),
   createdAt: createdAt(),
 });
 
@@ -345,6 +353,33 @@ export const reviews = pgTable(
     index().on(t.venueId, t.postedAt),
     index().on(t.authorId),
   ],
+);
+
+/**
+ * Răspunsurile structurate dintr-un review („Intrarea e fără trepte?” → Da / Nu / Nu am observat).
+ * Cheile întrebărilor sunt în packages/scoring/src/features.ts. Doar ce a bifat userul — nu deducem din text.
+ */
+export const reviewAnswers = pgTable(
+  "review_answers",
+  {
+    reviewId: uuid().notNull().references(() => reviews.id, { onDelete: "cascade" }),
+    questionKey: text().notNull(),
+    answer: featureAnswer().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.reviewId, t.questionKey] }), index().on(t.questionKey)],
+);
+
+/** Facilitățile declarate de owner/manager, separat de răspunsurile clienților. */
+export const venueFacilityDeclarations = pgTable(
+  "venue_facility_declarations",
+  {
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    questionKey: text().notNull(),
+    value: declarationValue().notNull(),
+    updatedBy: uuid().references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.venueId, t.questionKey] })],
 );
 
 export const reviewReplies = pgTable("review_replies", {

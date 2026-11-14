@@ -8,10 +8,10 @@ import { getDb } from '../server/db';
 import { cities } from '@tftd/db';
 import { eq } from 'drizzle-orm';
 import { DRINK_VENUES, INITIAL_RESTAURANTS } from '../../data/restaurants';
-import type { Restaurant, TopReviewer, UserAccount, WeekendEvent } from '../../types';
+import type { Restaurant, ThemeTop, TopReviewer, UserAccount, WeekendEvent } from '../../types';
 import { getUserId } from '../server/session';
 import { toUserAccount } from './user';
-import { monthlyBySlug, toRestaurant, toTopReviewer, toWeekendEvent } from './toRestaurant';
+import { monthlyBySlug, toRestaurant, toThemeTops, toTopReviewer, toWeekendEvent } from './toRestaurant';
 
 const CITY = 'timisoara';
 
@@ -22,7 +22,7 @@ function db(): Db | null {
 
 const STATIC = new Map(INITIAL_RESTAURANTS.concat(DRINK_VENUES).map((r) => [r.slug, r]));
 
-async function loadVertical(d: Db, vertical: 'food' | 'drink', now: Date): Promise<Restaurant[]> {
+async function loadVertical(d: Db, vertical: 'food' | 'drink', now: Date): Promise<{ venues: Restaurant[]; themes: ThemeTop[] }> {
   const city = await cityPage(d, { citySlug: CITY, vertical, limit: 100 }, now);
   const lb = await leaderboardPage(d, { citySlug: CITY, vertical });
   const monthly = monthlyBySlug(lb, city);
@@ -30,7 +30,7 @@ async function loadVertical(d: Db, vertical: 'food' | 'drink', now: Date): Promi
   const [c] = await d.select({ prices: cities.localAveragePrices }).from(cities).where(eq(cities.slug, CITY));
 
   const pages = await Promise.all(city.top.map((v) => venuePage(d, { citySlug: CITY, vertical, slug: v.slug, reviews: 'all', limit: 20 }, now)));
-  return pages.map((p) =>
+  const venues = pages.map((p) =>
     toRestaurant(p, {
       now,
       categoryAvgPriceRon:
@@ -40,11 +40,14 @@ async function loadVertical(d: Db, vertical: 'food' | 'drink', now: Date): Promi
       fallback: STATIC.get(p.venue.slug),
     }),
   );
+  return { venues, themes: toThemeTops(city.themes) };
 }
 
 export type ShellData = {
   foodRestaurants: Restaurant[];
   drinkVenues: Restaurant[];
+  /** Topurile tematice (Accesibilitate, Locuri pentru lucru…), separat de topul onest. */
+  themeTops: { food: ThemeTop[]; drink: ThemeTop[] };
   weekendEvents: WeekendEvent[];
   topReviewers: TopReviewer[];
   /** true = datele vin din DB; acțiunile userilor merg pe backend */
@@ -58,7 +61,7 @@ export async function loadShellData(now = new Date()): Promise<ShellData | null>
   if (!d) return null;
   try {
     const userId = await getUserId();
-    const [foodRestaurants, drinkVenues, events, reviewers, initialUser] = await Promise.all([
+    const [food, drink, events, reviewers, initialUser] = await Promise.all([
       loadVertical(d, 'food', now),
       loadVertical(d, 'drink', now),
       weekendEvents(d, CITY, now),
@@ -66,8 +69,9 @@ export async function loadShellData(now = new Date()): Promise<ShellData | null>
       userId ? toUserAccount(d, userId, now) : Promise.resolve(null),
     ]);
     return {
-      foodRestaurants,
-      drinkVenues,
+      foodRestaurants: food.venues,
+      drinkVenues: drink.venues,
+      themeTops: { food: food.themes, drink: drink.themes },
       weekendEvents: events.map(toWeekendEvent),
       topReviewers: reviewers.map(toTopReviewer),
       backendOnline: true,

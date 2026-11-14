@@ -1,10 +1,11 @@
 /** Acțiunile userilor din pagini: scrie review, raportează cât e de plin. */
 import { and, eq, gte } from "drizzle-orm";
-import { checkins, employees, invalid, notFound, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
+import { checkins, employees, invalid, notFound, reviewAnswers, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
 import { rateEmployee } from "@tftd/owner";
 import { detectPlatform, processSubmission, submitSocialLink, type SocialAnalysis } from "@tftd/ingestion";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
+import { QUESTION_BY_KEY, type Answer } from "@tftd/scoring/features";
 
 export const REVIEW_COOLDOWN_DAYS = 30;
 const DAY = 86_400_000;
@@ -19,7 +20,23 @@ export type ReviewInput = {
   weekendNight?: boolean;
   servedByEmployeeId?: string;
   employeeRating?: { friendliness: number; speed: number; comment?: string };
+  /** Întrebările structurate: cheie → "yes" | "no" | "not_observed". Ce nu e bifat lipsește. */
+  answers?: Record<string, string>;
 };
+
+const ANSWERS: readonly string[] = ["yes", "no", "not_observed"] satisfies Answer[];
+
+/** Validarea de pe server: doar întrebări din catalog și doar Da / Nu / Nu am observat. */
+export function parseReviewAnswers(raw: unknown): { questionKey: string; answer: Answer }[] {
+  if (raw == null) return [];
+  if (typeof raw !== "object" || Array.isArray(raw)) throw invalid("Răspunsurile trimise nu sunt valide.");
+  return Object.entries(raw).map(([questionKey, answer]) => {
+    if (!QUESTION_BY_KEY.has(questionKey) || typeof answer !== "string" || !ANSWERS.includes(answer)) {
+      throw invalid("Răspunsurile trimise nu sunt valide.");
+    }
+    return { questionKey, answer: answer as Answer };
+  });
+}
 
 /**
  * Review nativ. Vizita e „verificată” dacă userul are check-in la local în ziua vizitei.
@@ -28,6 +45,7 @@ export type ReviewInput = {
 export async function writeReview(db: Db, userId: string, input: ReviewInput, now = new Date()) {
   if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 10) throw invalid("Nota e de la 1 la 10.");
   if (input.text.trim().length < 20) throw invalid("Scrie cel puțin 20 de caractere: ce ai mâncat sau băut, cum a fost.");
+  const answers = parseReviewAnswers(input.answers);
   const [venue] = await db.select().from(venues).where(eq(venues.id, input.venueId));
   if (!venue) throw notFound("Localul");
 
@@ -48,23 +66,28 @@ export async function writeReview(db: Db, userId: string, input: ReviewInput, no
     .from(checkins)
     .where(and(eq(checkins.userId, userId), eq(checkins.venueId, venue.id), eq(checkins.day, visitDay)));
 
-  const [review] = await db
-    .insert(reviews)
-    .values({
-      venueId: venue.id,
-      source: "native",
-      authorId: userId,
-      rating: input.rating,
-      originalRating: input.rating,
-      originalScale: 10,
-      text: input.text.trim(),
-      visitedAt: visitDay,
-      visitWeekendNight: venue.vertical === "drink" ? (input.weekendNight ?? null) : null,
-      postedAt: now,
-      verifiedVisit: !!checkin,
-      servedByEmployeeId: input.servedByEmployeeId ?? null,
-    })
-    .returning();
+  // Review-ul și răspunsurile lui se salvează împreună (sau deloc).
+  const review = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(reviews)
+      .values({
+        venueId: venue.id,
+        source: "native",
+        authorId: userId,
+        rating: input.rating,
+        originalRating: input.rating,
+        originalScale: 10,
+        text: input.text.trim(),
+        visitedAt: visitDay,
+        visitWeekendNight: venue.vertical === "drink" ? (input.weekendNight ?? null) : null,
+        postedAt: now,
+        verifiedVisit: !!checkin,
+        servedByEmployeeId: input.servedByEmployeeId ?? null,
+      })
+      .returning();
+    if (answers.length) await tx.insert(reviewAnswers).values(answers.map((a) => ({ reviewId: row!.id, ...a })));
+    return row;
+  });
 
   if (input.servedByEmployeeId && input.employeeRating) {
     await rateEmployee(db, userId, { employeeId: input.servedByEmployeeId, reviewId: review!.id, ...input.employeeRating }, now).catch(() => undefined);

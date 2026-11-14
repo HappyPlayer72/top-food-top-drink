@@ -10,6 +10,8 @@ import {
 import { venueProgram } from "@tftd/loyalty";
 import { activePartnership, sponsoredSlots } from "@tftd/monetization";
 import { formatHours, openStatus } from "./hours.ts";
+import { venueFeatureData, venueFeatures } from "./features.ts";
+import { activeThemes, featureStatus, rankTheme, themeQuestions, type Theme, type ThemeCandidate } from "@tftd/scoring/features";
 import { PRIOR_WEIGHT, POSSIBLE_TRAP, TRAP } from "@tftd/scoring";
 
 export type Vertical = "food" | "drink";
@@ -78,8 +80,44 @@ export async function cityPage(
       return { rank: i + 1, ...rest, trapLevel: trapLevel(v.touristTrapIndex), openNow: open.openNow, openLabel: open.label };
     }),
     sponsored: await sponsoredSlots(db, q.citySlug, q.vertical, now, q.category),
+    // Topurile tematice se calculează separat de sponsorizări: thematicTops nu le citește.
+    themes: await thematicTops(db, { citySlug: q.citySlug, vertical: q.vertical }, now),
     traps: traps.map((t) => ({ ...t, level: trapLevel(t.index), reasons: t.explanation?.trapReasons ?? [] })),
   };
+}
+
+/**
+ * Topurile tematice (Accesibilitate, Locuri pentru lucru…). Două grupe separate: „Evaluat de comunitate”
+ * (ordonat după limita Wilson ponderată) și „Declarat de local”. Nu citește parteneriatele (regula 1).
+ */
+export async function thematicTops(db: Db, q: { citySlug: string; vertical: Vertical }, now = new Date(), limit = 10) {
+  const rows = await db
+    .select(card)
+    .from(venues)
+    // Aceleași localuri ca topul general (cu Scor Onest), ca pagina să le poată deschide.
+    // shortcut: web-ul încarcă primele 100 din topul general; la orașe cu > 100 localuri, încarcă și localurile din topurile tematice.
+    .where(and(eq(venues.citySlug, q.citySlug), eq(venues.vertical, q.vertical), eq(venues.status, "active"), isNotNull(venues.honestScore)));
+  const data = await venueFeatureData(db, rows.map((r) => r.id));
+  const candidates = rows.map((r) => ({ ...r, ...data.get(r.id)! }));
+  const entry = (theme: Theme, v: (typeof candidates)[number] & ThemeCandidate) => {
+    const { stats: _s, declarations: _d, openingHours, ...rest } = v;
+    const open = openStatus(openingHours, now);
+    return {
+      ...rest,
+      openNow: open.openNow,
+      trapLevel: trapLevel(v.touristTrapIndex),
+      facts: themeQuestions(theme).map((qq) => featureStatus(qq, v.stats.get(qq.key), v.declarations.get(qq.key))),
+    };
+  };
+  return activeThemes().map((t) => {
+    const { community, declared } = rankTheme(t.key, candidates);
+    return {
+      theme: t.key,
+      label: t.label,
+      community: community.slice(0, limit).map((c, i) => ({ rank: i + 1, ...entry(t.key, c.venue) })),
+      declared: declared.slice(0, limit).map((d) => entry(t.key, d.venue)),
+    };
+  });
 }
 
 export type ReviewFilter = "local" | "tourist" | "influencer" | "all";
@@ -209,6 +247,7 @@ export async function venuePage(
       status: venue.status,
     },
     menu,
+    features: venueFeatures((await venueFeatureData(db, [venue.id])).get(venue.id)),
     aspectScores: venue.aspectScores ?? {},
     loyalty: await venueProgram(db, venue.id),
     scores: {

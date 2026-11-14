@@ -4,14 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, Check, ChevronDown, Eye, EyeOff, Lock, Mail, MapPin, Moon, Sun, User } from 'lucide-react';
 import {
   Neighborhood,
-  USER_PREFERENCE_OPTIONS,
   UserAccount,
-  UserPreferenceKey,
   Vertical,
   formatScore,
 } from '../types';
 import { NEIGHBORHOODS } from '../data/restaurants';
 import { BrandWordmark, CarouStrip, LocalnicBadge } from './BrandPrimitives';
+import { InterestPicker } from './PreferencesPanel';
+import type { Interest } from '@tftd/scoring/features';
 
 export interface LoginScreenProps {
   vertical: Vertical;
@@ -27,6 +27,7 @@ export interface LoginScreenProps {
     email: string;
     password?: string;
     name?: string;
+    interests?: string[];
   }) => Promise<{ ok: true; user: UserAccount } | { ok: false; error: string; offline?: boolean }>;
 }
 
@@ -70,12 +71,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [neighborhood, setNeighborhood] = useState<Neighborhood>('Iosefin');
   const [confirmLocalCheckin, setConfirmLocalCheckin] = useState(false);
   const [gpsVerified, setGpsVerified] = useState(false);
-  const [selectedPreferences, setSelectedPreferences] = useState<UserPreferenceKey[]>([]);
+  const [selectedPreferences, setSelectedPreferences] = useState<Interest[]>([]);
   const [preferencesSkipped, setPreferencesSkipped] = useState(false);
   const [showWeightsInfo, setShowWeightsInfo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const togglePreference = (key: UserPreferenceKey) => {
+  const togglePreference = (key: Interest) => {
     setSelectedPreferences((prev) =>
       prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
     );
@@ -142,7 +143,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         return;
       }
 
-      if (await tryBackend({ mode: 'register', email: trimmedEmail, password, name: trimmedName })) {
+      if (await tryBackend({ mode: 'register', email: trimmedEmail, password, name: trimmedName, interests: selectedPreferences })) {
         return;
       }
 
@@ -175,7 +176,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           : isDeclaredLocal
           ? `Localnic neverificat (${neighborhood}) · pondere 1,0× până la confirmarea prezenței în Timișoara.`
           : 'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
-        preferences: selectedPreferences,
+        interests: selectedPreferences,
       };
       onLoginSuccess(newUser);
       return;
@@ -806,7 +807,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                             id="auth-preferences-label"
                             className="text-[13px] font-semibold"
                           >
-                            Ce contează pentru tine la un local?
+                            Ce te interesează?
                           </span>
                           <div className="flex items-center gap-2 shrink-0">
                             {selectedPreferences.length > 0 && (
@@ -841,53 +842,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                             isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'
                           }`}
                         >
-                          Opțional — după review-uri te vom întreba rapid doar despre criteriile alese.
+                          Opțional. Alegem după ele întrebările din review și ordinea topurilor; le poți schimba oricând din profil. Nu te întrebăm nimic despre sănătate.
                         </p>
-                        <div
-                          role="group"
-                          aria-labelledby="auth-preferences-label"
-                          className="grid grid-cols-1 sm:grid-cols-2 gap-2"
-                        >
-                          {USER_PREFERENCE_OPTIONS.map((opt) => {
-                            const isSelected = selectedPreferences.includes(opt.key);
-                            return (
-                              <button
-                                key={opt.key}
-                                type="button"
-                                aria-pressed={isSelected}
-                                onClick={() => togglePreference(opt.key)}
-                                className={`btn-press min-h-[44px] px-3 py-2 rounded-[4px] border text-[13px] text-left flex items-center justify-between gap-2 ${
-                                  isSelected
-                                    ? isDrink
-                                      ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17382C] font-bold'
-                                      : 'bg-[#3A2418] border-[#3A2418] text-white font-semibold'
-                                    : isDrink
-                                    ? 'bg-[#122B22] border-[#285443] text-[#F4EEE2]/85 hover:border-[#F2A33A] font-medium'
-                                    : 'bg-white border-[#E6DFD5] text-[#3A2418] hover:border-[#3A2418] font-medium'
-                                }`}
-                              >
-                                <span className="leading-snug">{opt.label}</span>
-                                {isSelected ? (
-                                  <span
-                                    aria-hidden="true"
-                                    className="w-4 h-4 rounded-[3px] border border-current flex items-center justify-center shrink-0"
-                                  >
-                                    <Check className="w-3 h-3 stroke-[2.75]" />
-                                  </span>
-                                ) : (
-                                  <span
-                                    aria-hidden="true"
-                                    className={`w-4 h-4 rounded-[3px] border shrink-0 ${
-                                      isDrink
-                                        ? 'border-[#2D5947]'
-                                        : 'border-[#D6CFC5]'
-                                    }`}
-                                  />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <InterestPicker
+                          selected={selectedPreferences}
+                          onToggle={togglePreference}
+                          dark={isDrink}
+                          labelledBy="auth-preferences-label"
+                          twoColumns
+                        />
                       </div>
                     )}
 

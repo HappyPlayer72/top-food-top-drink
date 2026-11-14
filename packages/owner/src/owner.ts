@@ -4,9 +4,10 @@
  */
 import { and, asc, avg, count, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import {
-  employeeRatings, employees, forbidden, invalid, leaderboardSnapshots, menuItems, notFound, ownerClaims, posts, reports, reviewReplies, reviews, ServiceError, socialSubmissions, users, venueManagers, venues, type Db,
+  employeeRatings, employees, forbidden, invalid, leaderboardSnapshots, menuItems, notFound, ownerClaims, posts, reports, reviewReplies, reviews, ServiceError, socialSubmissions, users, venueFacilityDeclarations, venueManagers, venues, type Db,
   type OpeningHours,
 } from "@tftd/db";
+import { QUESTION_BY_KEY, QUESTIONS, type Declaration } from "@tftd/scoring/features";
 
 export async function assertManager(db: Db, userId: string, venueId: string) {
   const [m] = await db
@@ -181,6 +182,46 @@ function validateHours(h: OpeningHours) {
       if (!/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b)) throw invalid("Ora se scrie HH:MM (ex. 11:00).");
     }
   }
+}
+
+// ---------- Facilități declarate de owner ----------
+
+/** Ce poate declara owner-ul: doar fapte verificabile (rampă, Wi-Fi), nu cum se simt clienții. */
+export const DECLARABLE_QUESTIONS = QUESTIONS.filter((q) => q.ownerDeclarable);
+
+/** Validare: cheie declarabilă → "yes" | "no" | "unspecified" (= șterge declarația). */
+export function parseFacilities(raw: Record<string, string>): { key: string; value: Declaration | null }[] {
+  return Object.entries(raw).map(([key, value]) => {
+    if (!QUESTION_BY_KEY.get(key)?.ownerDeclarable) throw invalid("Poți declara doar facilitățile din listă.");
+    if (value !== "yes" && value !== "no" && value !== "unspecified") throw invalid("Alege Da, Nu sau Nespecificat.");
+    return { key, value: value === "unspecified" ? null : value };
+  });
+}
+
+export async function facilitiesForOwner(db: Db, userId: string, venueId: string) {
+  await assertManager(db, userId, venueId);
+  const rows = await db
+    .select({ key: venueFacilityDeclarations.questionKey, value: venueFacilityDeclarations.value })
+    .from(venueFacilityDeclarations)
+    .where(eq(venueFacilityDeclarations.venueId, venueId));
+  return new Map(rows.map((r) => [r.key, r.value]));
+}
+
+/** Doar managerii localului; declarațiile stau separat de răspunsurile clienților și nu le modifică. */
+export async function setFacilities(db: Db, userId: string, venueId: string, raw: Record<string, string>, now = new Date()) {
+  await assertManager(db, userId, venueId);
+  const changes = parseFacilities(raw);
+  await db.transaction(async (tx) => {
+    for (const { key, value } of changes) {
+      const where = and(eq(venueFacilityDeclarations.venueId, venueId), eq(venueFacilityDeclarations.questionKey, key));
+      if (value === null) await tx.delete(venueFacilityDeclarations).where(where);
+      else
+        await tx
+          .insert(venueFacilityDeclarations)
+          .values({ venueId, questionKey: key, value, updatedBy: userId, updatedAt: now })
+          .onConflictDoUpdate({ target: [venueFacilityDeclarations.venueId, venueFacilityDeclarations.questionKey], set: { value, updatedBy: userId, updatedAt: now } });
+    }
+  });
 }
 
 // ---------- Mini-blog ----------
