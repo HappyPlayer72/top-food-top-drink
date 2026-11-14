@@ -736,6 +736,8 @@ export type ScoreExplanation = {
   /** Câte review-uri au vizita dovedită (GPS sau bon), cu pondere ×1,3. */
   verifiedVisitCount?: number;
   trapReasons: { signal: string; value: number; points: number; text: string }[];
+  /** De unde pornește Scorul Onest: media orașului sau nota Google trasă spre ea. */
+  prior?: { cityMean: number; mean: number; external: { source: "google"; rating5: number; count: number } | null };
   trapInputs?: {
     localsScore: number | null;
     touristsScore: number | null;

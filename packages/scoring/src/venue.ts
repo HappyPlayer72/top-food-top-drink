@@ -1,4 +1,4 @@
-import { splitScores, type SplitScores } from "./honest.ts";
+import { honestScore, priorMean, splitScores, type SplitScores } from "./honest.ts";
 import { touristTrapIndex, type TrapInput, type TrapResult } from "./trap.ts";
 import type { ScoringReview } from "./weights.ts";
 
@@ -10,6 +10,8 @@ export type VenueReview = ScoringReview & {
 
 export type VenueContext = {
   cityMean: number;
+  /** Nota agregată de pe Google (pe 5) și câte note are; punctul de pornire al scorului (vezi priorMean). */
+  external?: { source: "google"; rating5: number; count: number } | null;
   distanceToTouristZoneM: number | null;
   priceRatio: number | null;
 };
@@ -26,12 +28,16 @@ export type VenueScores = SplitScores & {
     verifiedVisitCount: number;
     trapReasons: TrapResult["reasons"];
     trapInputs: TrapInput;
+    /** De unde pornește scorul: media orașului sau nota Google trasă spre ea. */
+    prior: { cityMean: number; mean: number; external: { source: "google"; rating5: number; count: number } | null };
   };
 };
 
 /** Toate scorurile unui local + explicația afișată la „De ce?” (regula 3). */
 export function scoreVenue(reviews: VenueReview[], ctx: VenueContext, now: Date = new Date()): VenueScores {
-  const split = splitScores(reviews, ctx.cityMean, now);
+  // Localnicii și turiștii pornesc de la media orașului; scorul general pornește de la nota Google, dacă există
+  const prior = priorMean(ctx.cityMean, ctx.external);
+  const split = { ...splitScores(reviews, ctx.cityMean, now), overall: honestScore(reviews, prior, now) };
 
   const withLanguage = reviews.filter((r) => r.language);
   const foreign = withLanguage.filter((r) => r.language !== "ro").length;
@@ -61,6 +67,7 @@ export function scoreVenue(reviews: VenueReview[], ctx: VenueContext, now: Date 
       trapReasons: trap.reasons,
       /** Valorile brute ale semnalelor, și când nu dau puncte (pentru „De ce?” detaliat). */
       trapInputs,
+      prior: { cityMean: ctx.cityMean, mean: prior, external: ctx.external ?? null },
     },
   };
 }
