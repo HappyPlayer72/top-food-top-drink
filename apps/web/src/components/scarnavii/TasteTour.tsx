@@ -1,5 +1,6 @@
 'use client';
 
+import { HonestValue } from '../BrandPrimitives';
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, MapPin, Navigation, Sparkles } from 'lucide-react';
 import { Coordinates, Restaurant, Vertical, formatScore } from '../../types';
@@ -151,13 +152,13 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
               <span className={`flex shrink-0 items-center justify-center w-8 h-8 rounded-full text-[13px] font-bold ${primary}`}>{index + 1}</span>
               <div className="min-w-0 space-y-1">
                 <h4 className="font-display text-[22px] leading-tight">{restaurant.name}</h4>
-                <p className={`text-[12px] ${muted}`}><MapPin className="inline w-3 h-3 mr-1" />{restaurant.shortNeighborhood ?? restaurant.neighborhood} · Scor Onest {formatScore(restaurant.foodQualityScore)}</p>
+                <p className={`text-[12px] ${muted}`}><MapPin className="inline w-3 h-3 mr-1" />{restaurant.shortNeighborhood ?? restaurant.neighborhood} · Scor Onest <HonestValue score={restaurant.foodQualityScore} /></p>
               </div>
             </div>
             <p className="text-[14px]"><strong>{item.name}</strong> · {item.priceRon} lei</p>
             {googleData?.prices[index] && <div className="border rounded-[4px] px-3 py-2 text-[12px] bg-white text-[#1F1F1F]">
               <span>Interval indicativ per persoană: {googleData.prices[index]!.start ?? '—'}–{googleData.prices[index]!.end ?? '…'} {googleData.prices[index]!.currency}</span>
-              <span className="block text-[12px] font-normal text-[#5E5E5E] whitespace-nowrap" translate="no">Google Maps</span>
+              <span className="block text-[12px] font-normal text-[#5E5E5E] whitespace-nowrap">{googleData.prices[index]!.attribution}</span>
             </div>}
             <p className={`text-[12px] ${muted}`}>Potrivire pentru {TASTE_CATEGORIES.find((entry) => entry.id === category)?.label.toLowerCase() ?? category}.</p>
             <button type="button" onClick={() => onSelectRestaurant(restaurant)} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Vezi localul <ArrowRight className="w-3.5 h-3.5" /></button>
@@ -165,11 +166,11 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
         </div>
         <div className={`rounded-[6px] border p-4 space-y-3 ${panel}`}>
           <p className="text-[14px] font-bold">Total estimat: {tour.totalRon} lei / persoană</p>
-          {loadingGoogle && <p className={`text-[12px] ${muted}`}>Verificăm distanța pe jos și intervalele de preț disponibile…</p>}
+          {loadingGoogle && <p className={`text-[12px] ${muted}`}>Calculăm distanța pe jos și intervalele de preț…</p>}
           {googleData?.route && <div className="border rounded-[4px] px-3 py-2 text-[12px] bg-white text-[#1F1F1F] space-y-1">
             <p>Traseu pe jos: {(googleData.route.distanceMeters / 1000).toFixed(1).replace('.', ',')} km · aproximativ {Math.ceil(googleData.route.durationSeconds / 60)} min de mers</p>
             {googleData.route.warnings.map((warning) => <p key={warning}>{warning}</p>)}
-            <span className="block text-[12px] font-normal text-[#5E5E5E] whitespace-nowrap" translate="no">Google Maps</span>
+            <span className="block text-[12px] font-normal text-[#5E5E5E] whitespace-nowrap">{googleData.route.attribution}</span>
           </div>}
           <p className={`text-[12px] ${muted}`}>Prețurile sunt orientative și se pot schimba. Ordinea traseului este estimată; verifică ruta și programul localurilor înainte de plecare.</p>
           {mapsLink && <a href={mapsLink} target="_blank" rel="noreferrer" className={`btn-press inline-flex items-center gap-2 rounded-[4px] px-4 py-2.5 text-[13px] font-bold ${primary}`}><Navigation className="w-4 h-4" />Deschide traseul în Google Maps</a>}
