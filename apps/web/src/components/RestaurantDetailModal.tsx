@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { HonestValue } from './BrandPrimitives';
 import { NOISE_LEVELS, quickButtonsFor, quickWarnings, type Answer, type QuickKind } from '@tftd/scoring/features';
 import { ReviewQuestions } from './ReviewQuestions';
 import { VenueFeatures } from './VenueFeatures';
@@ -36,7 +37,7 @@ import {
   Restaurant,
   Review,
   UserAccount,
-  formatScore,
+  formatHonest, formatScore,
 } from '../types';
 import {
   getTodayDayName,
@@ -235,10 +236,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
     setReviewText('');
     setVideoUrlInput('');
     setVideoStatus(null);
-    const initialGrade = Math.min(
-      10,
-      Math.max(1, Math.round(restaurant.foodQualityScore))
-    );
+    // Fără review-uri, formularul pornește de la 7 (nu de la 1, cât ar da un scor gol)
+    const initialGrade = restaurant.foodQualityScore > 0
+      ? Math.min(10, Math.max(1, Math.round(restaurant.foodQualityScore)))
+      : 7;
     setScoreInput(initialGrade);
     setGradeText(String(initialGrade));
     setMarkAsTrap(false);
@@ -897,6 +898,11 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 <span aria-hidden="true" className={`text-[13px] font-bold leading-none whitespace-nowrap ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
                   Scor Onest
                 </span>
+                {restaurant.foodQualityScore > 0 ? null : (
+                  <span aria-hidden="true" className="text-[12px] font-semibold leading-tight text-center max-w-[120px]">
+                    Încă nu are review-uri
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowScoreFormula((prev) => !prev)}
@@ -981,6 +987,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   <span>{showHours ? 'Ascunde programul' : 'Program de funcționare'}</span>
                 </button>
 
+                {/* Comparația are sens doar când avem și nota Google, și Scorul Onest */}
+                {restaurant.googleRawRating > 0 && restaurant.foodQualityScore > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowGoogleCompare((prev) => !prev)}
@@ -1003,6 +1011,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       : `Vs. Google Maps (${formatScore(restaurant.googleRawRating)}★)`}
                   </span>
                 </button>
+                )}
               </div>
 
               {/* Panel 1: Meniu complet */}
@@ -1249,6 +1258,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               </div>
 
               {/* Panel 3: Comparație TOP FOOD / TOP DRINK vs. Google Maps */}
+              {restaurant.googleRawRating > 0 && restaurant.foodQualityScore > 0 && (
               <div
                 id="locale-google-compare-panel"
                 className="collapse-grid"
@@ -1306,7 +1316,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                           />
                         </div>
                         <span className="font-display text-[20px] leading-none tabular-nums w-14 text-right">
-                          {formatScore(restaurant.foodQualityScore)}
+                          <HonestValue score={restaurant.foodQualityScore} />
                           <span className="text-[12px] font-sans opacity-70">/10</span>
                         </span>
                       </div>
@@ -1358,6 +1368,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </section>
 
@@ -1995,6 +2006,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                           }`}
                         >
                           {rev.date}
+                          {rev.sourceLabel ? `, ${rev.sourceLabel}` : ''}
                           {rev.praisedEmployee
                             ? `. Servită de ${rev.praisedEmployee}`
                             : ''}

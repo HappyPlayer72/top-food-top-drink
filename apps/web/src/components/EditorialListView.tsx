@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { HonestValue } from './BrandPrimitives';
 import Link from 'next/link';
 import { AddVenuePanel } from './AddVenuePanel';
 import { DrinkFeaturedCard, DrinkRow, FoodFeaturedCard, FoodRow } from './VenueCards';
@@ -16,7 +17,7 @@ import {
   ThemeTop,
   Vertical,
   WeekendEvent,
-  formatScore,
+  formatHonest, formatScore,
 } from '../types';
 import {
   AvertizareaCard,
@@ -556,7 +557,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             : 'text-[24px] leading-none text-[#6E5649]'
         }`}
       >
-        {formatScore(venue.foodQualityScore)}
+        <HonestValue score={venue.foodQualityScore} />
       </span>
     </button>
   );
@@ -1285,7 +1286,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                           </span>
                         </span>
                         <span className="font-display text-[20px] leading-none text-[#3A2418] tabular-nums ml-auto">
-                          {formatScore(trap.foodQualityScore)}
+                          <HonestValue score={trap.foodQualityScore} />
                         </span>
                       </div>
                     </div>

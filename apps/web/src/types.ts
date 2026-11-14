@@ -113,6 +113,8 @@ export interface UserAccount {
   name: string;
   email?: string;
   role: 'verified-local' | 'tourist';
+  /** Eticheta insignei din „Acces rapid” (ex. „Proprietar”); implicit „Turist”. */
+  badgeLabel?: string;
   isInfluencer?: boolean;
   followers?: number | null;
   neighborhood?: string;
@@ -211,6 +213,8 @@ export type NoiseLevel = 'linistit' | 'moderat' | 'animat' | 'zgomotos';
 export interface Review {
   id?: string;
   authorName: string;
+  /** Atribuirea cerută de Google / Tripadvisor la review-urile importate, ex. „de pe Google” */
+  sourceLabel?: string;
   authorRole: AuthorRole;
   /** Neighborhood displayed inside the Plăcuță badge, e.g. 'Iosefin', 'Fabric' */
   authorNeighborhood?: string;
@@ -448,4 +452,14 @@ export function getTrapTier(touristTrapIndex: number): TrapTier {
  */
 export function formatScore(score: number): string {
   return score.toFixed(1).replace('.', ',');
+}
+
+/** Scorul Onest afișat: „—” cât timp localul nu are review-uri (în formulă scorul nu ajunge niciodată la 0). */
+export function formatHonest(score: number): string {
+  return score > 0 ? formatScore(score) : '—';
+}
+
+/** Pentru aria-label: cititoarele de ecran nu rostesc „—”, deci spunem explicit „fără Scor Onest încă”. */
+export function honestSpoken(score: number): string {
+  return score > 0 ? `scor ${formatScore(score)} din 10` : 'fără Scor Onest încă';
 }

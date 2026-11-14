@@ -1,7 +1,8 @@
 /**
  * Transformă datele din backend (@tftd/api) în tipurile folosite de componente (src/types.ts).
  * Funcții pure, fără acces la DB, ca să poată fi testate și înțelese ușor.
- * Ce nu există încă în DB (poze, texte editoriale) se ia din `fallback` (datele statice), după slug.
+ * Din `fallback` (datele statice, după slug) se iau doar informații reale despre local: poze, texte, meniu, livrare, facilități.
+ * Scorurile, nota Google, aspectele, review-urile și poveștile owner-ului vin numai din DB: fără date, rămân goale.
  */
 import type { cityPage, leaderboardPage, SocialAnalysis, topReviewers, venuePage, weekendEvents } from '@tftd/api';
 import type {
@@ -103,6 +104,7 @@ export function toReview(r: ApiReview, now: Date): Review {
     authorId: r.authorId ?? undefined,
     authorUsername: a.username,
     authorName: a.name,
+    sourceLabel: r.source === 'google' ? 'de pe Google' : r.source === 'tripadvisor' ? 'de pe Tripadvisor' : undefined,
     authorRole: a.role,
     authorNeighborhood: a.neighborhood,
     followerCountText: a.followers,
@@ -123,13 +125,14 @@ export function toReview(r: ApiReview, now: Date): Review {
   };
 }
 
-function aspects(scores: Record<string, number>, fallback?: AspectScores): AspectScores {
-  const pick = (k: string, fb?: number) => scores[k] ?? fb ?? 7;
+/** Aspectele din review-urile analizate; 0 = încă nu avem date (UI-ul afișează „—”). */
+function aspects(scores: Record<string, number>): AspectScores {
+  const pick = (k: string) => scores[k] ?? 0;
   return {
-    food: pick('mancare', fallback?.food ?? scores['muzica']),
-    service: pick('servire', fallback?.service),
-    value: pick('pret', fallback?.value),
-    atmosphere: pick('atmosfera', fallback?.atmosphere),
+    food: scores['mancare'] ?? pick('muzica'),
+    service: pick('servire'),
+    value: pick('pret'),
+    atmosphere: pick('atmosfera'),
   };
 }
 
@@ -226,7 +229,7 @@ export function toRestaurant(
     foodQualityScore: s.honest ?? 0,
     localsScore: s.locals ?? s.honest ?? 0,
     touristsScore: s.tourists ?? s.honest ?? 0,
-    googleRawRating: google?.rating ?? fb?.googleRawRating ?? 0,
+    googleRawRating: google?.rating ?? 0,
     touristTrapIndex: s.touristTrapIndex ?? 0,
     trapTier: trapTier(s.touristTrapIndex),
     trapReasons: (s.explanation?.trapReasons ?? []).map((r) => r.text),
@@ -238,7 +241,7 @@ export function toRestaurant(
       foreignLangReviewsPct: Math.round((inputs?.foreignLanguageShare ?? 0) * 100),
       singleVisitPct: Math.round((inputs?.oneTimeVisitorShare ?? 0) * 100),
     },
-    aspectScores: aspects(p.aspectScores, fb?.aspectScores),
+    aspectScores: aspects(p.aspectScores),
 
     isSponsored: ctx.isSponsored,
     sponsoredNote: ctx.isSponsored ? 'Sponsorizat. Nu schimbă scorul.' : undefined,
@@ -266,7 +269,6 @@ export function toRestaurant(
     crowdLabel: p.vibe ? `${p.vibe.label}, acum ${p.vibe.minutesAgo} min` : undefined,
     drinkTags: v.drinkTags.length ? (v.drinkTags as Restaurant['drinkTags']) : fb?.drinkTags,
 
-    warnings: fb?.warnings,
     facilities: fb?.facilities,
     delivery: fb?.delivery,
 
@@ -274,13 +276,13 @@ export function toRestaurant(
     reviews: p.reviews.map((r) => toReview(r, ctx.now)),
     kitchenStory: kitchen
       ? {
-          author: fb?.kitchenStory?.author ?? 'Proprietarul',
+          author: 'Proprietarul',
           date: new Date(kitchen.publishAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }),
           title: kitchen.title,
           body: kitchen.body,
           photoUrl: kitchen.photos[0] ?? fb?.kitchenStory?.photoUrl,
         }
-      : fb?.kitchenStory,
+      : undefined,
     ownerPosts: p.blog
       .filter((b) => b.type !== 'news')
       .map((b) => ({ id: b.id, type: b.type, title: b.title, content: b.body, date: new Date(b.publishAt).toLocaleDateString('ro-RO') })),

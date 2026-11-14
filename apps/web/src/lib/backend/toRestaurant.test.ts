@@ -75,9 +75,9 @@ describe('toRestaurant', () => {
     expect(r.trapReasons).toEqual(['Prețuri cu 10% peste media locală pe aceeași categorie.']);
   });
 
-  it('aspectele au numele din componente, cu rezervă pentru cele lipsă', () => {
+  it('aspectele au numele din componente; cele fără date rămân 0, nu o notă inventată', () => {
     const r = toRestaurant(page(), { now, categoryAvgPriceRon: 45, isSponsored: false });
-    expect(r.aspectScores).toEqual({ food: 9.4, service: 8.8, value: 9.1, atmosphere: 7 });
+    expect(r.aspectScores).toEqual({ food: 9.4, service: 8.8, value: 9.1, atmosphere: 0 });
   });
 
   it('ce lipsește din DB se ia din datele statice (poză, text, meniu)', () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { HonestValue } from '../BrandPrimitives';
 import {
   ArrowRight,
   Check,
@@ -10,7 +11,7 @@ import {
   Sparkles,
   Utensils,
 } from 'lucide-react';
-import { Restaurant, Vertical, formatScore } from '../../types';
+import { Restaurant, Vertical, formatHonest, formatScore } from '../../types';
 
 export interface PreferenceRecommenderProps {
   vertical: Vertical;
@@ -583,7 +584,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
             </span>
 
             <span className="text-[12px] font-semibold opacity-75">
-              Scor Onest: {formatScore(currentPick.restaurant.foodQualityScore)} /
+              Scor Onest: <HonestValue score={currentPick.restaurant.foodQualityScore} /> /
               10
             </span>
           </div>
@@ -713,7 +714,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
                           isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                         }`}
                       >
-                        {formatScore(alt.restaurant.foodQualityScore)}
+                        <HonestValue score={alt.restaurant.foodQualityScore} />
                       </span>
                     </div>
                     <div className="text-[12px] opacity-75 truncate">

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { HonestValue } from '../BrandPrimitives';
 import {
   ArrowRight,
   Crown,
@@ -10,7 +11,7 @@ import {
   Swords,
   Trophy,
 } from 'lucide-react';
-import { Restaurant, Vertical, formatScore } from '../../types';
+import { Restaurant, Vertical, formatHonest, formatScore } from '../../types';
 
 export interface TasteDuelMinigameProps {
   vertical: Vertical;
@@ -270,7 +271,7 @@ export const TasteDuelMinigame: React.FC<TasteDuelMinigameProps> = ({
                         isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                       }`}
                     >
-                      {formatScore(venue.foodQualityScore)}
+                      <HonestValue score={venue.foodQualityScore} />
                     </span>
                   </div>
 
@@ -342,7 +343,7 @@ export const TasteDuelMinigame: React.FC<TasteDuelMinigameProps> = ({
               <span>{champion.neighborhood}</span>
               <span>· {champion.cuisine}</span>
               <span className="tabular-nums">
-                · Scor Onest {formatScore(champion.foodQualityScore)}
+                · Scor Onest <HonestValue score={champion.foodQualityScore} />
               </span>
             </div>
           </div>

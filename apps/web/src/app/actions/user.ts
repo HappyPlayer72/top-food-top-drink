@@ -19,8 +19,16 @@ export type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string
 const OFFLINE = { ok: false as const, offline: true, error: 'Baza de date nu e disponibilă.' };
 const hasDb = () => !!process.env.DATABASE_URL;
 
-/** Conturile demo de pe ecranul de login (există în seed, cu parola DEMO_PASSWORD). */
-const DEMO_EMAILS = new Set(['andreea@e-uvt.ro', 'luca@visit.ro']);
+/**
+ * „Acces rapid” = conturile de test din seed/test-accounts.ts (create doar pe baza locală).
+ * În producție e oprit, dacă nu pui DEMO_LOGIN=on.
+ */
+const TEST_ACCOUNTS: Record<string, string> = {
+  'test.user@example.invalid': 'TestUser2026!',
+  'test.owner@example.invalid': 'TestOwner2026!',
+  'test.admin@example.invalid': 'TestAdmin2026!',
+};
+const quickLoginOn = () => process.env.NODE_ENV !== 'production' || process.env.DEMO_LOGIN === 'on';
 
 export async function currentUser(): Promise<UserAccount | null> {
   if (!hasDb()) return null;
@@ -39,11 +47,12 @@ export async function loginUser(input: { email: string; password: string }): Pro
   }
 }
 
-/** Butoanele „Acces rapid cu un cont demo”: loghează contul real din seed. */
+/** Butoanele „Acces rapid cu un cont de test”: loghează contul de test din seed. */
 export async function loginDemo(email: string): Promise<Result<{ user: UserAccount }>> {
   if (!hasDb()) return OFFLINE;
-  if (!DEMO_EMAILS.has(email)) return { ok: false, error: 'Contul demo nu există.' };
-  return loginUser({ email, password: process.env.DEMO_PASSWORD ?? 'demo1234' });
+  const password = TEST_ACCOUNTS[email];
+  if (!quickLoginOn() || !password) return { ok: false, error: 'Contul de test nu există.' };
+  return loginUser({ email, password });
 }
 
 export async function registerUser(input: { name: string; email: string; password: string; interests?: string[] }): Promise<Result<{ user: UserAccount }>> {

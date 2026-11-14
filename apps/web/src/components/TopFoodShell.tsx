@@ -52,24 +52,34 @@ import { FidelityView } from './FidelityView';
 import { Footer } from './Footer';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
 
+/** Conturile de test din seed (doar pe baza locală; în producție „Acces rapid” e ascuns). */
 const USER_ACCOUNTS: UserAccount[] = [
   {
-    id: 'andreea-m',
-    name: 'Andreea M.',
-    email: 'andreea@e-uvt.ro',
-    role: 'verified-local',
-    neighborhood: 'Iosefin',
-    weightMultiplier: 2.0,
-    description: 'Cont verificat Timișoara · review-urile tale au pondere 2,0×.',
+    id: 'test-user',
+    name: 'Utilizator Test',
+    email: 'test.user@example.invalid',
+    role: 'tourist',
+    badgeLabel: 'Neverificat',
+    weightMultiplier: 1.0,
+    description: 'Cont de test, încă neverificat ca localnic · review-urile au pondere 1,0×.',
   },
   {
-    id: 'luca-t',
-    name: 'Luca T.',
-    email: 'luca@visit.ro',
+    id: 'test-owner',
+    name: 'Proprietar Test',
+    email: 'test.owner@example.invalid',
     role: 'tourist',
+    badgeLabel: 'Proprietar',
     weightMultiplier: 1.0,
-    description:
-      'Cont de vizitator · review-urile tale contribuie la Scorul Turiștilor (1,0×).',
+    description: 'Cont de test cu un local revendicat · panoul e la /owner.',
+  },
+  {
+    id: 'test-admin',
+    name: 'Administrator Test',
+    email: 'test.admin@example.invalid',
+    role: 'tourist',
+    badgeLabel: 'Admin',
+    weightMultiplier: 1.0,
+    description: 'Cont de test cu drept de moderare · panoul e la /admin.',
   },
 ];
 
@@ -851,7 +861,7 @@ export function TopFoodShell({
         onVerticalChange={setVertical}
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode((prev) => !prev)}
-        demoUsers={USER_ACCOUNTS}
+        demoUsers={process.env.NODE_ENV !== 'production' ? USER_ACCOUNTS : []}
         onLoginSuccess={handleLoginSuccess}
         onContinueAsGuest={handleContinueAsGuest}
         authenticate={handleAuthenticate}

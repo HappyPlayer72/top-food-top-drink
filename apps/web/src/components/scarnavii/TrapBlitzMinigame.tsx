@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { HonestValue } from '../BrandPrimitives';
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,7 +13,7 @@ import {
   ShieldCheck,
   XCircle,
 } from 'lucide-react';
-import { Restaurant, Vertical, formatScore } from '../../types';
+import { Restaurant, Vertical, formatHonest, formatScore } from '../../types';
 
 export interface TrapBlitzMinigameProps {
   vertical: Vertical;
@@ -403,7 +404,7 @@ export const TrapBlitzMinigame: React.FC<TrapBlitzMinigameProps> = ({
                     <span>
                       Scor Onest:{' '}
                       <strong>
-                        {formatScore(currentQuestion.venue.foodQualityScore)}
+                        <HonestValue score={currentQuestion.venue.foodQualityScore} />
                       </strong>
                     </span>
                     <span>
@@ -500,7 +501,7 @@ export const TrapBlitzMinigame: React.FC<TrapBlitzMinigameProps> = ({
                       </div>
                       {hasAnswered && (
                         <div className="pt-1 text-[13px] font-bold tabular-nums">
-                          Scor Onest: {formatScore(venue.foodQualityScore)} ·
+                          Scor Onest: <HonestValue score={venue.foodQualityScore} /> ·
                           Localnici: {formatScore(venue.localsScore)} · Turiști:{' '}
                           {formatScore(venue.touristsScore)}
                         </div>
