@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AddVenuePanel } from './AddVenuePanel';
 import { ArrowRight, X } from 'lucide-react';
 import {
   DrinkQuickFilter,
@@ -28,6 +29,9 @@ function normalizeRo(s: string): string {
 }
 
 export interface EditorialListViewProps {
+  /** Cu backend: sub „niciun rezultat” apar „caută pe internet” și „adaugă localul” */
+  canAddVenues?: boolean;
+  onRequireLogin?: () => void;
   vertical: Vertical;
   restaurants: Restaurant[];
   drinkVenues: Restaurant[];
@@ -163,6 +167,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   onSelectRestaurant,
   onOpenMonthlyTop,
   onUpdateCrowdReport,
+  canAddVenues = false,
+  onRequireLogin,
   initialFoodHeroIndex = 0,
   initialDrinkHeroIndex = 0,
 }) => {
@@ -689,6 +695,9 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   >
                     Resetează filtrele
                   </button>
+                  {canAddVenues && searchQuery.trim().length >= 2 && (
+                    <AddVenuePanel vertical="drink" query={searchQuery} onRequireLogin={onRequireLogin} />
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1166,6 +1175,9 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               >
                 Resetează filtrele
               </button>
+              {canAddVenues && searchQuery.trim().length >= 2 && (
+                <AddVenuePanel vertical="food" query={searchQuery} onRequireLogin={onRequireLogin} />
+              )}
             </div>
           ) : (
             <div className="space-y-3">

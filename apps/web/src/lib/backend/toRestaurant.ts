@@ -154,6 +154,7 @@ export function toRestaurant(
 
   return {
     id: v.slug,
+    venueId: v.id,
     slug: v.slug,
     name: v.name,
     vertical: v.vertical,
