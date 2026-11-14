@@ -6,6 +6,7 @@ import { loyalty, owner, venuePage } from '@tftd/api';
 import { LoyaltyPanel } from '@/components/owner/LoyaltyPanel';
 import { BlogPanel } from '@/components/owner/BlogPanel';
 import { ReviewsPanel } from '@/components/owner/ReviewsPanel';
+import { StandingPanel } from '@/components/owner/Standing';
 import { StatsPanel } from '@/components/owner/StatsPanel';
 import { TeamPanel } from '@/components/owner/TeamPanel';
 import { SocialLinks } from '@/components/SocialLinks';
@@ -46,8 +47,8 @@ export async function Dashboard({ venueId, section }: { venueId: string; section
   let content: React.ReactNode;
   switch (selected.id as Section) {
     case 'statistici': {
-      const stats = await owner.venueStats(db, userId, venue.id);
-      content = <StatsPanel venueId={venue.id} venueName={venue.name} stats={stats} vertical={venue.vertical} />;
+      const [stats, standing] = await Promise.all([owner.venueStats(db, userId, venue.id), owner.standing(db, userId, venue.id)]);
+      content = <StatsPanel venueId={venue.id} venueName={venue.name} stats={stats} vertical={venue.vertical} afterScore={<StandingPanel standing={standing} vertical={venue.vertical} />} />;
       break;
     }
     case 'review-uri': {

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CarouMark, CoasterMark } from '@/components/BrandPrimitives';
+import { ThemeToggle } from '@/components/owner/ThemeToggle';
 import { buttonClass } from '@/components/owner/ui-classes';
 import { getUserId } from '@/lib/server/session';
 import { logoutAction } from './auth-actions';
@@ -20,7 +21,7 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
       <a href="#continut" className={`${buttonClass()} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50`}>
         Sari la conținut
       </a>
-      <header className="border-b border-o-line">
+      <header className="border-b border-o-line bg-o-bg">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
           <Link href="/owner" aria-label="Pentru proprietari, înapoi la localele tale" className="inline-flex min-h-11 items-center rounded-[4px]">
             <span className="owner-food-only inline-flex items-center gap-2.5">
@@ -45,6 +46,7 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
             <Link href="/topdrink/timisoara" className={`owner-drink-only ${linkClass}`}>
               Vezi topul
             </Link>
+            <ThemeToggle />
             {userId ? (
               <form action={logoutAction}>
                 <button type="submit" aria-label="Ieși din cont" className={`${buttonClass('quiet')} px-3 text-[14px]`}>
