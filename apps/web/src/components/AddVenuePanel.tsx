@@ -51,13 +51,14 @@ export function AddVenuePanel({ vertical, query, onRequireLogin }: { vertical: V
     if (!res.ok) return setMessage({ text: res.error, error: true });
     if (!res.internetSearched) {
       setResults([]);
-      return setMessage({ text: 'Căutarea pe internet nu e activă încă (lipsește cheia Google). Poți adăuga localul mai jos.', error: false });
+      return setMessage({ text: res.blockedMessage ?? 'Căutarea pe internet nu e activă încă. Poți adăuga localul mai jos.', error: false });
     }
     setResults(res.fromInternet);
     setMessage({
-      text: res.fromInternet.length
+      text: (res.fromInternet.length
         ? `Am găsit ${res.fromInternet.length} ${res.fromInternet.length === 1 ? 'loc' : 'locuri'} pe internet.`
-        : 'Nici pe internet n-am găsit. Adaugă-l tu mai jos.',
+        : 'Nici pe internet n-am găsit. Adaugă-l tu mai jos.') +
+        (res.remaining != null ? ` ${res.remaining === 0 ? 'Asta a fost ultima căutare pe internet pentru următoarele 2 zile.' : `Mai ai ${res.remaining} ${res.remaining === 1 ? 'căutare' : 'căutări'} pe internet în următoarele 2 zile.`}` : ''),
       error: false,
     });
   };

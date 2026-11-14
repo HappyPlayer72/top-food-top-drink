@@ -22,13 +22,17 @@ export type InternetResult = { placeId: string; name: string; address: string | 
 export async function searchVenues(
   vertical: 'food' | 'drink',
   query: string,
-): Promise<Result<{ internetSearched: boolean; fromInternet: InternetResult[] }>> {
+): Promise<Result<{ internetSearched: boolean; fromInternet: InternetResult[]; blockedMessage: string | null; remaining: number | null }>> {
   if (!hasDb()) return OFFLINE;
   try {
-    const r = await searchPlaces(getDb(), { citySlug: CITY, vertical, query, center: CENTER });
+    // Google se cheamă doar pentru un cont logat, în limita de 3 căutări la 2 zile (packages/ingestion/src/google-limits.ts)
+    const userId = await getUserId();
+    const r = await searchPlaces(getDb(), { citySlug: CITY, vertical, query, center: CENTER, userId });
     return {
       ok: true,
       internetSearched: r.internetSearched,
+      blockedMessage: r.internetBlocked,
+      remaining: r.remaining,
       fromInternet: r.fromInternet.map((p) => ({ placeId: p.placeId, name: p.name, address: p.address, googleRating: p.googleRating })),
     };
   } catch (e) {
