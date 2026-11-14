@@ -638,6 +638,25 @@ export const leaderboardSnapshots = pgTable(
   (t) => [uniqueIndex().on(t.citySlug, t.vertical, t.category, t.month)],
 );
 
+// ---------- Cereri Google din site (limită per cont și pe zi) ----------
+
+/**
+ * Fiecare căutare „Caută și pe internet” sau „Adaugă de pe Google” făcută de un user.
+ * Limita: 3 căutări per cont în 48 de ore și un plafon pe tot site-ul pe zi (packages/ingestion/src/google-limits.ts).
+ * `placeIds` = ce a întors căutarea; „Adaugă” merge doar pentru un loc găsit de același user.
+ */
+export const googleApiCalls = pgTable(
+  "google_api_calls",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: text().notNull().$type<"search" | "add">(),
+    placeIds: text().array().notNull().default(sql`'{}'::text[]`),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.userId, t.createdAt), index().on(t.createdAt)],
+);
+
 // ---------- Moderare ----------
 
 export const reports = pgTable(
@@ -736,6 +755,8 @@ export type ScoreExplanation = {
   /** Câte review-uri au vizita dovedită (GPS sau bon), cu pondere ×1,3. */
   verifiedVisitCount?: number;
   trapReasons: { signal: string; value: number; points: number; text: string }[];
+  /** De unde pornește Scorul Onest: media orașului sau nota Google trasă spre ea. */
+  prior?: { cityMean: number; mean: number; external: { source: "google"; rating5: number; count: number } | null };
   trapInputs?: {
     localsScore: number | null;
     touristsScore: number | null;

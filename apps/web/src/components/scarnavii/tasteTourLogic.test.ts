@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Restaurant } from '../../types';
-import { generateTasteTour, parseTasteRequest } from './tasteTour';
+import { generateTasteTour, parseTasteRequest } from './tasteTourLogic';
 import { INITIAL_RESTAURANTS, DRINK_VENUES } from '../../data/restaurants';
 
 const venue = (id: string, name: string, item: string, priceRon: number, lng: number): Restaurant => ({

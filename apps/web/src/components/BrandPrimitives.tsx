@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Camera, Globe, House } from 'lucide-react';
-import { TrapBreakdown, Vertical, formatScore } from '../types';
+import { TrapBreakdown, Vertical, formatHonest, formatScore } from '../types';
 
 /**
  * 1. CarouMark — Fața de masă în carouri (square gingham icon for topfood)
@@ -151,11 +151,12 @@ export const CoasterScore: React.FC<{
       : 'w-12 h-12 text-[22px] sm:w-14 sm:h-14 sm:text-[26px]';
   return (
     <div
+      role="img"
       className={`coaster-badge inline-flex items-center justify-center shrink-0 select-none ${dims} ${className}`}
-      aria-label={`Scor onest ${formatScore(score)} din 10`}
+      aria-label={score > 0 ? `Scor onest ${formatScore(score)} din 10` : "Fără Scor Onest încă: localul nu are review-uri"}
     >
-      <span className="font-display leading-none text-[#17382C] tabular-nums">
-        {formatScore(score)}
+      <span aria-hidden="true" className="font-display leading-none text-[#17382C] tabular-nums">
+        {formatHonest(score)}
       </span>
     </div>
   );
@@ -187,7 +188,7 @@ export const PlateScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ sc
   const wellStroke = tier === 'dirty' ? '#B9A58C' : tier === 'messy' ? '#D6C6B2' : '#E6DFD5';
 
   return (
-    <span role="img" aria-label={`Scor Onest ${formatScore(score)} din 10`} className={`relative inline-flex items-center justify-center shrink-0 select-none ${box}`}>
+    <span role="img" aria-label={score > 0 ? `Scor Onest ${formatScore(score)} din 10` : 'Fără Scor Onest încă: localul nu are review-uri'} className={`relative inline-flex items-center justify-center shrink-0 select-none ${box}`}>
       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" aria-hidden="true">
         <circle cx="50" cy="50" r="48" fill={outerFill} stroke={outerStroke} strokeWidth="2" />
         <circle cx="50" cy="50" r="36" fill={wellFill} stroke={wellStroke} strokeWidth="1.5" />
@@ -249,7 +250,7 @@ export const PlateScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ sc
         )}
       </svg>
       <span className={`relative font-display leading-none tabular-nums ${digits}`} style={{ color: '#3A2418' }}>
-        {formatScore(score)}
+        {formatHonest(score)}
       </span>
     </span>
   );
@@ -273,7 +274,7 @@ export const MugScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ scor
   const rimStroke = tier === 'dirty' ? '#7D5E42' : tier === 'messy' ? '#A3774B' : '#B98A5E';
 
   return (
-    <span role="img" aria-label={`Scor Onest ${formatScore(score)} din 10`} className={`relative inline-block shrink-0 select-none ${box}`}>
+    <span role="img" aria-label={score > 0 ? `Scor Onest ${formatScore(score)} din 10` : 'Fără Scor Onest încă: localul nu are review-uri'} className={`relative inline-block shrink-0 select-none ${box}`}>
       <svg viewBox="-16 0 116 100" className="absolute inset-0 w-full h-full" aria-hidden="true">
         {/* toartă */}
         <path d="M74 40h7a11 11 0 0 1 11 11v13a11 11 0 0 1-11 11h-7" fill="none" stroke={rimStroke} strokeWidth="6" />
@@ -336,7 +337,7 @@ export const MugScore: React.FC<{ score: number; size?: 'md' | 'lg' }> = ({ scor
         className={`absolute flex items-center justify-center font-display leading-none tabular-nums ${digits}`}
         style={{ color: '#17382C', left: '20.7%', width: '58.6%', top: '36%', height: '58%' }}
       >
-        {formatScore(score)}
+        {formatHonest(score)}
       </span>
     </span>
   );
@@ -839,3 +840,14 @@ export const CrowdMeter: React.FC<{
     <span className="text-[12px] text-[#F4EEE2]/75">{label}</span>
   </div>
 );
+
+/** Scorul Onest ca text: „—” vizual când nu există, plus „fără scor încă” pentru cititoarele de ecran. */
+export const HonestValue: React.FC<{ score: number }> = ({ score }) =>
+  score > 0 ? (
+    <>{formatHonest(score)}</>
+  ) : (
+    <>
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">fără scor încă</span>
+    </>
+  );

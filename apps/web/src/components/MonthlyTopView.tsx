@@ -4,7 +4,6 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Award, ChevronDown, ChevronLeft, Download, Sparkles, Trophy } from 'lucide-react';
 import { MonthlyAwards, Restaurant, TopReviewer, Vertical, formatScore } from '../types';
-import { TOP_LOCAL_REVIEWERS } from '../data/restaurants';
 import { InfluencerBadge, LocalnicBadge } from './BrandPrimitives';
 
 export interface MonthlyTopViewProps {
@@ -34,14 +33,14 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
   restaurants,
   onBack,
   onSelectRestaurant,
-  topReviewers = TOP_LOCAL_REVIEWERS,
+  topReviewers = [],
   awards,
   selectedMonth: selectedMonthProp = null,
   onSelectMonth,
 }) => {
   const isDrink = vertical === 'drink';
-  const availableMonths = awards?.months?.length ? awards.months : ['2026-11', '2026-10'];
-  const [internalMonth, setInternalMonth] = useState<string>(availableMonths[0] ?? '2026-11');
+  const availableMonths = awards?.months ?? [];
+  const [internalMonth, setInternalMonth] = useState<string>(availableMonths[0] ?? '');
   const selectedMonth = selectedMonthProp ?? internalMonth;
   const setSelectedMonth = (m: string) => {
     setInternalMonth(m);
@@ -52,24 +51,10 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
 
   // Build ranked list for the podium (1–3) and list (4–7)
   const rankedVenues = useMemo(() => {
+    // Doar localurile din topul înghețat al lunii (calculat din review-uri reale); fără top, lista e goală
     const withRank = restaurants
-      .filter((r) => !r.isSponsored && r.touristTrapIndex < 60)
-      .sort((a, b) => {
-        if (a.monthlyRank && b.monthlyRank) {
-          return a.monthlyRank - b.monthlyRank;
-        }
-        if (a.monthlyRank) return -1;
-        if (b.monthlyRank) return 1;
-        return b.foodQualityScore - a.foodQualityScore;
-      });
-
-    if (selectedMonth === '2026-10') {
-      // Archived October snapshot for demonstration
-      return withRank.slice(0, 7).map((v, idx) => ({
-        ...v,
-        displayScore: Number(Math.max(7.6, (v.monthlyScore ?? v.foodQualityScore) - (idx === 0 ? 0 : 0.1)).toFixed(1)),
-      }));
-    }
+      .filter((r) => !r.isSponsored && r.monthlyRank != null)
+      .sort((a, b) => (a.monthlyRank ?? 0) - (b.monthlyRank ?? 0));
 
     return withRank.slice(0, 7).map((v) => ({
       ...v,
@@ -177,6 +162,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
               Topul lunii
             </h1>
 
+            {availableMonths.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 shrink-0 max-w-full">
               <a
                 href={`/api/share/top-luna?vertical=${vertical}&month=${encodeURIComponent(selectedMonth)}`}
@@ -190,6 +176,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
                 <span>Imagine IG / TikTok</span>
+                <span className="sr-only"> (se deschide într-o filă nouă)</span>
               </a>
               <div className="relative shrink-0 max-w-full">
                 <select
@@ -220,6 +207,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                 />
               </div>
             </div>
+            )}
           </div>
 
           <p
@@ -300,7 +288,12 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
         {/* ===================================================================
             PODIUM + RANKS 4–7 (Visible on Localuri tab)
             =================================================================== */}
-        {activeSubTab === 'localuri' && (
+        {activeSubTab === 'localuri' && rankedVenues.length === 0 && (
+          <p className={`py-8 text-center text-[15px] ${isDrink ? 'text-[#F4EEE2]/80' : 'text-[#6E5649]'}`}>
+            Topul lunii apare după prima lună încheiată cu review-uri reale.
+          </p>
+        )}
+        {activeSubTab === 'localuri' && rankedVenues.length > 0 && (
           <section aria-label="Podiumul lunii" className="space-y-0">
             {/* Podium Columns: logical DOM order #1 -> #2 -> #3, visual 2 - 1 - 3 */}
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 items-end pt-3">
@@ -326,7 +319,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   >
                     <img
                       src={first.photoUrl}
-                      alt={first.name}
+                      alt=""
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
@@ -376,7 +369,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   >
                     <img
                       src={second.photoUrl}
-                      alt={second.name}
+                      alt=""
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
@@ -427,7 +420,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                   >
                     <img
                       src={third.photoUrl}
-                      alt={third.name}
+                      alt=""
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover venue-photo-zoom"
@@ -506,7 +499,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                         >
                           <img
                             src={spot.photoUrl}
-                            alt={spot.name}
+                            alt=""
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full object-cover venue-photo-zoom"

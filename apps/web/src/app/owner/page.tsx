@@ -67,7 +67,7 @@ export default async function OwnerHome() {
   if (!userId) return <AuthForm />;
 
   const db = getDb();
-  const [mine, invites, employments, name, unanswered, resume, checklists, appealed, food, drink] = await Promise.all([
+  const [mine, invites, employments, name, unanswered, resume, checklists, appealed, food, drink, owned] = await Promise.all([
     owner.managedVenues(db, userId),
     owner.pendingInvites(db, userId),
     owner.myEmployments(db, userId),
@@ -78,13 +78,15 @@ export default async function OwnerHome() {
     owner.openTrapAppeals(db, userId),
     cityPage(db, { citySlug: 'timisoara', vertical: 'food', limit: 200 }),
     cityPage(db, { citySlug: 'timisoara', vertical: 'drink', limit: 200 }),
+    owner.ownedVenueIds(db),
   ]);
   const activeEmployments = employments.filter((e) => e.accepted);
   const ranked = new Map([...food.top, ...drink.top].map((v) => [v.id, v]));
   const claimable = [
     ...food.top.map((v) => ({ id: v.id, name: v.name, group: 'Restaurante', neighborhood: v.neighborhood, vertical: 'food' as const })),
     ...drink.top.map((v) => ({ id: v.id, name: v.name, group: 'Baruri și cluburi', neighborhood: v.neighborhood, vertical: 'drink' as const })),
-  ].filter((v) => !mine.some((m) => m.id === v.id));
+  // Doar localurile fără proprietar: pe cele revendicate deja nu le mai poate cere altcineva
+  ].filter((v) => !mine.some((m) => m.id === v.id) && !owned.has(v.id));
 
   // Antetul: ce așteaptă o acțiune, fiecare cu link către locul unde se rezolvă.
   const totalUnanswered = [...unanswered.values()].reduce((a, b) => a + b, 0);

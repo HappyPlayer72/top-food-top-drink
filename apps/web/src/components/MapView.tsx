@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { HonestValue } from './BrandPrimitives';
 import type * as maplibreglType from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -40,7 +41,7 @@ import {
   TouristZone,
   TrapTier,
   Vertical,
-  formatScore,
+  formatHonest, honestSpoken, formatScore,
 } from '../types';
 import { DRINK_VENUES, INITIAL_RESTAURANTS, TOURIST_ZONES } from '../data/restaurants';
 import {
@@ -1146,7 +1147,7 @@ export function MapView({
       btn.type = 'button';
       btn.setAttribute(
         'aria-label',
-        `${restaurant.name} (${isDrinkVenue ? 'băutură' : 'mâncare'}), ${restaurant.shortNeighborhood ?? restaurant.neighborhood}, scor ${formatScore(restaurant.foodQualityScore)} din 10${isTrap ? `, ${tierStyle.label}` : ''}`
+        `${restaurant.name} (${isDrinkVenue ? 'băutură' : 'mâncare'}), ${restaurant.shortNeighborhood ?? restaurant.neighborhood}, ${honestSpoken(restaurant.foodQualityScore)}${isTrap ? `, ${tierStyle.label}` : ''}`
       );
       btn.setAttribute('aria-pressed', String(isSelected));
       btn.className = `group relative min-w-[44px] min-h-[44px] inline-flex items-end justify-center pb-1 bg-transparent cursor-pointer transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F2A33A] ${
@@ -1182,7 +1183,7 @@ export function MapView({
         btn.innerHTML = `
           <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-md font-display text-[14px] leading-none tabular-nums"
             style="background:${coasterBg}; color:${coasterFg}; border: ${isSelected ? '3px' : '2.5px'} solid ${coasterBorder};">
-            <span>${formatScore(restaurant.foodQualityScore)}</span>${coasterTrapTri}
+            <span>${formatHonest(restaurant.foodQualityScore)}</span>${coasterTrapTri}
           </div>
         `;
       } else {
@@ -1199,7 +1200,7 @@ export function MapView({
           <div class="relative flex flex-col items-center drop-shadow-md">
             <div class="px-2 py-1 rounded-[5px] flex items-center font-display text-[15px] leading-none tabular-nums"
               style="background:${bg}; color:${fg}; border: 1.8px solid ${border};">
-              <span>${formatScore(restaurant.foodQualityScore)}</span>
+              <span>${formatHonest(restaurant.foodQualityScore)}</span>
               ${trapTri}
             </div>
             <div class="w-2.5 h-2.5 rotate-45 -mt-1.5"
@@ -1908,7 +1909,7 @@ export function MapView({
                       </div>
 
                       <span className="font-display text-[26px] leading-none tabular-nums shrink-0">
-                        {formatScore(r.foodQualityScore)}
+                        <HonestValue score={r.foodQualityScore} />
                       </span>
                     </button>
                   );
@@ -2178,7 +2179,7 @@ export function MapView({
                       isDrink ? 'text-[#F4EEE2]' : 'text-[#3A2418]'
                     }`}
                   >
-                    {formatScore(activeRestaurant.foodQualityScore)}
+                    <HonestValue score={activeRestaurant.foodQualityScore} />
                   </span>
                 </div>
 

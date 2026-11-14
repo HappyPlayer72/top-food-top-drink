@@ -1,56 +1,75 @@
 # Ghid Demo (3–5 minute)
 
-Scenariul parcurge punctele esențiale ale aplicației folosind datele deterministe din `timisoara` (`npm run seed -- --reset`).
+Baza are doar **date reale**: cele 30 de locale din Timișoara (`seed/venues.ts`) și ce vine din Google Places (`npm run import:real`). Tripadvisor nu îl folosim: nu are variantă gratuită. Nu mai există useri, review-uri sau scoruri inventate. Totul se testează logat pe un **cont de test**.
 
-> Localurile din seed sunt reale, dar notele, review-urile, răspunsurile despre facilități și voturile din seed sunt date demo ilustrative. Spune asta la prezentare.
+> Fără cheia Google, localurile apar fără scor („Încă nu are review-uri”) până scrie cineva primul review.
 
 ---
 
-## Pregătire înainte de prezentare
+## Pregătire
 
 ```bash
 npm run db:up
 npm run db:migrate
-npm run seed -- --reset
-npm exec -- tsx --env-file-if-exists=.env seed/test-accounts.ts   # creează test.user, test.owner, test.admin
+npm run seed -- --reset   # 30 de locale reale + conturile de test (doar pe baza locală)
+npm run import:real       # cu GOOGLE_PLACES_API_KEY în .env: ratinguri, program și până la 5 review-uri reale per local
 npm run dev -w @topfood/web
 ```
 
-Deschide în browser: **[http://localhost:3000/topfood/timisoara](http://localhost:3000/topfood/timisoara)**.
+Deschide **[http://localhost:3000/topfood/timisoara](http://localhost:3000/topfood/timisoara)**.
 
-### Conturi disponibile după seed
+### Conturile de test
 
-| Rol | Username | Parolă | Utilizare demo |
-|---|---|---|---|
-| Patron verificat | `sandu.proprietar` | valoarea `DEMO_PASSWORD` din `.env` | Dashboard `/owner` pentru *Restaurant Nora* |
-| Utilizator test | `test.user` | `TestUser2026!` | Scriere review, check-in, carduri fidelitate |
-| Patron test | `test.owner` | `TestOwner2026!` | Flux revendicare local (`DEMO_CLAIM_CODE`, implicit `123456`) |
-| Admin / Moderator | `test.admin` | `TestAdmin2026!` | Panoul `/admin` (rapoarte, bonuri, potriviri, parteneriate, reclame) |
+Pe ecranul de login, la „Acces rapid cu un cont de test” (ascuns în producție, dacă nu pui `DEMO_LOGIN=on`):
 
-> **Notă**: Dacă rulezi aplicația fără Postgres pornit, UI-ul comută automat pe setul static din [`apps/web/src/data/restaurants.ts`](../apps/web/src/data/restaurants.ts). Pentru demo-ul complet cu persistență (review nou, claim, bon, QR fidelitate), folosește baza de date.
+| Cont | Parolă | Pentru ce |
+|---|---|---|
+| `test.user` | `TestUser2026!` | review, „util”, check-in, fidelitate, adaugă local |
+| `test.owner` | `TestOwner2026!` | `/owner`: își alege localul din listă și îl revendică (codul demo din `DEMO_CLAIM_CODE`) |
+| `test.admin` | `TestAdmin2026!` | `/admin`: rapoarte, bonuri, locale noi de aprobat |
+
+> Conturile se creează doar pe o bază locală. Pe baza online nu există.
 
 ---
 
-## Scenariul de 4 minute
+## Scenariul
 
-### 1. Descoperire & Capcane turistice — `/topfood/timisoara` (60s)
-- Arată lista **TopFood Timișoara**: pe primul loc este **Restaurant Nora** (Iosefin, favorit al localnicilor, scor onest ~9.4).
-- Arată banda **Sponsorizat** deasupra/separat: **Vinto Gastro Wine Bar** este etichetat clar `"Sponsorizat"`, fără să modifice clasamentul organic.
-- Comută filtrul **„Fără capcane”** și arată cum localurile marcate ca **Capcană turistică** (ex. **Miorița**, unde localnicii dau ~4.9 și turiștii ~8.6, în Piața Unirii cu prețuri ridicate) sunt identificate cu motive explicite în română.
-- Deschide harta interactivă (`Harta`) și compară zona Cetate vs. cartierele rezidențiale.
+### 1. Lista reală — `/topfood/timisoara` (45 s)
+- Localurile cu review-uri sunt primele, ordonate după **Scorul Onest**; cele fără review-uri sunt la final, cu „—” și „Încă nu are review-uri”.
+- Review-urile importate au atribuirea „de pe Google”.
+- *„Nu inventăm nicio notă: scorul există doar când există review-uri, și fiecare scor are explicația lui.”*
 
-### 2. Pagina de local, transparență și review-uri — `/topfood/timisoara/restaurant-nora` (60s)
-- Arată defalcarea pe aspecte (`Mâncare`, `Servire`, `Preț/Calitate`, `Atmosferă`), programul deschis/închis în timp real (`Europe/Bucharest`) și echipa localului.
-- Arată filtrul de review-uri: **Localnici**, **Turiști**, **Influenceri** — la **Vinto Gastro Wine Bar** (`/topfood/timisoara/vinto-gastro-wine-bar`), review-ul de influencer are badge vizibil `"Parteneriat plătit"` și pondere redusă (`0.2×`).
-- Arată **Harold's** (`/topfood/timisoara/harolds-restaurant`) pentru detecția rafalei de review-uri false (`fake_probability` ridicat).
+### 2. Primul review — logat ca `test.user` (60 s)
+- Deschide un local fără review-uri → „Scrie un review” → notă + text concret → Publică.
+- Mesajul arată ponderea review-ului (cont nou = pondere mică) și localul primește scor.
+- Apasă „Util” la alt review: numărul vine din baza de date.
 
-### 3. TopDrink, vibe în timp real & Scârnavii — `/topdrink/timisoara` (60s)
-- Comută pe **TopDrink** (`/topdrink/timisoara`) — întreaga temă trece pe verde sticlă (`#17382C`) cu accente chihlimbar (`#F2A33A`).
-- Deschide **The 80's Pub** (`/topdrink/timisoara/the-80s-pub`): scorul este defalcat între **Weekend noaptea** (~9.1) și **În cursul săptămânii** (~6.0), cu **Vibe Check** live (expiră la 2 ore).
-- Vizitează **`/topdrink/timisoara/weekend`** pentru evenimentele viitoare și **`/scarnavii`** pentru cele 6 jocuri de masă/recomandare în grup.
+### 3. Owner-ul — `test.owner`, `/owner` (45 s)
+- Răspunde la review-ul de mai sus. **Nu există buton de ștergere**: poate doar să răspundă sau să raporteze, decide un admin.
+- Secțiunea **Fidelitate**: creează programul; codul QR se schimbă la fiecare minut.
 
-### 4. Fidelitate QR, Patron & Moderare — `/fidelitate`, `/owner`, `/admin` (60s)
-- **`/fidelitate`**: arată cardurile de ștampile și codul QR rotativ la 60 de secunde (semnat HMAC).
-- **`/owner`** (logat cu `sandu.proprietar`): arată statisticile zilnice, invitațiile de echipă, postările/ofertele și regula nr. 2 — proprietarul poate **răspunde** public la review-uri sau le poate **raporta**, dar **nu le poate șterge sau ascunde**.
-- **`/admin`** (logat cu `test.admin`): arată coada de rapoarte, aprobarea bonurilor de casă (care oferă multiplicator `×1.3`), candidații de potrivire și gestionarea parteneriatelor/reclamelor (unde o capcană turistică cu `trap >= 80` este respinsă automat).
-- Bonus vizual: **`/topfood/timisoara/top-luna`** și exportul vertical 9:16 de share (`/api/share/top-luna?vertical=food`).
+### 4. Fidelitate — `test.user`, `/fidelitate` (45 s)
+- „Scanează la casă” (sau introdu codul de pe ecranul owner-ului) → **+1 ștampilă**; a doua în aceeași zi e refuzată.
+
+### 5. Local nou + moderare — `test.user`, apoi `test.admin` (45 s)
+- Caută un local care nu e la noi → „Adaugă localul” → în așteptare.
+- `/admin` logat ca `test.admin`: aprobă → apare în listă.
+
+### 6. TOP DRINK — `/topdrink/timisoara` (30 s)
+- Aceeași logică pentru baruri; „Cât e de plin acum” vine doar din raportările oamenilor de acolo (expiră în 2 ore).
+
+---
+
+## Verificare automată
+
+```bash
+npx tsx --env-file-if-exists=.env seed/smoke.ts
+```
+
+Trece prin toate fluxurile de mai sus pe conturile de test, într-o tranzacție anulată la final: baza rămâne neschimbată.
+
+## Dacă te întreabă
+
+- **De unde vin review-urile?** Google Places API (oficial) + review-urile scrise pe site. Fără scraping.
+- **Cum știți că e localnic?** Check-in în oraș în 5 zile diferite din 30 sau email universitar. Din GPS păstrăm doar ziua, nu traseul.
+- **Cum faceți bani?** Parteneriate (blog, statistici, fidelitate, „Sponsorizat”) + reclame. Nimic din ele nu intră în scor.

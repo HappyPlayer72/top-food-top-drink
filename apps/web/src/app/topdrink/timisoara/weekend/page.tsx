@@ -5,7 +5,7 @@ import { weekendEvents } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { toWeekendEvent } from '@/lib/backend/toRestaurant';
 import { Footer } from '@/components/Footer';
-import { DRINK_VENUES, WEEKEND_EVENTS } from '@/data/restaurants';
+import { DRINK_VENUES } from '@/data/restaurants';
 import type { WeekendEvent } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -23,13 +23,14 @@ const DAY_TITLE: Record<WeekendEvent['dayShort'], string> = {
 };
 
 export default async function TopDrinkWeekendPage() {
-  let events: WeekendEvent[] = WEEKEND_EVENTS;
+  // Doar evenimentele reale postate de localuri; fără bază sau fără evenimente, lista e goală
+  let events: WeekendEvent[] = [];
   if (process.env.DATABASE_URL) {
     try {
       const rows = await weekendEvents(getDb(), 'timisoara');
-      if (rows.length > 0) events = rows.map(toWeekendEvent);
+      events = rows.map(toWeekendEvent);
     } catch {
-      events = WEEKEND_EVENTS;
+      events = [];
     }
   }
 

@@ -1,68 +1,88 @@
 # Deploy în producție
 
-Proiectul rulează în 3 componente: **PostgreSQL 16 + pgvector**, aplicația web **Next.js (`@topfood/web`)** și procesul **Worker (`@tftd/worker`)**.
+Trei componente: **PostgreSQL 16 cu PostGIS + pgvector**, site-ul **Next.js (`@topfood/web`)** și, după hackathon, **worker-ul (`@tftd/worker`)**. Pentru demo e nevoie doar de primele două: datele reale sunt deja în `seed/data/google-snapshot.json`.
+
+Recomandat: **Neon** (baza) + **Vercel** (site). Durează ~15 minute. Conturile le face cineva din echipă; nimic din cod nu trebuie schimbat.
 
 ---
 
-## 1. Bază de date PostgreSQL + `pgvector`
+## 1. Baza de date (Neon)
 
-Imaginea Docker din [`packages/db/docker/Dockerfile`](../packages/db/docker/Dockerfile) pornește `postgres:16` cu extensia `vector` preinstalată. În producție (ex. Supabase, Neon, RDS, server propriu):
-1. Activează extensia: `CREATE EXTENSION IF NOT EXISTS vector;`
-2. Setează `DATABASE_URL` în mediul aplicației web și al worker-ului.
-3. Aplică schema:
+1. Proiect nou pe [neon.tech](https://neon.tech), regiunea **Frankfurt (eu-central-1)**, Postgres 16.
+2. Din „Connection details” ia două adrese: **directă** (fără `-pooler`, pentru migrații și seed de pe laptop) și **pooled** (cu `-pooler`, pentru Vercel).
+3. De pe laptop, cu adresa **directă**:
+
    ```bash
-   npm run db:migrate
+   DATABASE_URL="postgresql://…neon.tech/neondb?sslmode=require" npm run db:migrate
+   DATABASE_URL="postgresql://…neon.tech/neondb?sslmode=require" npm run seed
    ```
-   *(Opțional, pentru date inițiale în Timișoara: `npm run seed`.)*
-4. Dacă folosești un pooler extern (PgBouncer / Supabase Transaction Pooler), lasă `DATABASE_PREPARE=false` și ajustează `DATABASE_POOL_MAX` (implicit `10`).
+
+   - Migrația inițială creează extensiile `postgis` și `vector` (Neon le are pe amândouă).
+   - `npm run seed` încarcă cele 184 de locale și 919 review-uri din snapshot, **fără niciun apel Google**. Pe o bază online seed-ul nu șterge nimic (`--reset` e refuzat) și nu creează conturile de test.
+
+> Supabase merge la fel: adresa directă e pe portul 5432, cea prin pool pe 6543 (codul detectează singur și oprește prepared statements).
 
 ---
 
-## 2. Variabile de mediu obligatorii și opționale
+## 2. Site-ul (Vercel)
 
-Copiază [`.env.example`](../.env.example) și completează pentru producție:
+1. **Add New Project** → repo-ul `top-food-top-drink`, **Root Directory** `apps/web`, cu „Include files outside of the Root Directory” bifat (pachetele `@tftd/*` sunt în rădăcină).
+2. **Environment Variables:**
 
-| Variabilă | Obligatorie | Rol |
+| Variabilă | Ce pui | De ce |
 |---|---|---|
-| `DATABASE_URL` | **Da** | Conexiunea PostgreSQL + pgvector |
-| `SESSION_SECRET` | **Da** | Secret lung aleatoriu pentru semnarea cookie-ului `tf_session` și a QR-urilor de fidelitate |
-| `SITE_URL` | **Da** | URL-ul public (folosit în `sitemap.xml`, `robots.txt` și OG tags), ex. `https://topfood.ro` |
-| `GOOGLE_PLACES_API_KEY` | Recomandat | Descoperire și actualizare localuri prin Google Places API (New) |
-| `TRIPADVISOR_API_KEY` | Opțional | Rating și surse TripAdvisor |
-| `META_OEMBED_TOKEN` | Opțional | Extragere preview Instagram / Facebook oEmbed (`app_id\|client_token`) |
-| `ANTHROPIC_API_KEY` | Opțional | Analiză aspecte cu Claude (`claude-haiku-5-5`); fără cheie, folosește fallback pe cuvinte-cheie |
-| `STRIPE_SECRET_KEY` | Opțional | Rezervat pentru integrare billing externă |
-| `DEMO_PASSWORD` / `DEMO_CLAIM_CODE` / `DEMO_SCAN` / `DEMO_EMAIL_CODES` | **Nu în prod** | Lăsate necompletate în producție! Nu păstra shortcut-uri de demo active |
+| `DATABASE_URL` | adresa **pooled** de la Neon | conexiunea la bază |
+| `DATABASE_POOL_MAX` | `3` | funcțiile serverless deschid multe conexiuni |
+| `SESSION_SECRET` | 48+ caractere aleatorii (`openssl rand -base64 48`) | fără ea login-ul nu merge |
+| `SITE_URL` | ex. `https://topfood-timisoara.vercel.app` | sitemap, linkuri canonice, imagini de share |
+| `GEOAPIFY_API_KEY` | cheia Geoapify | coordonatele unui local adăugat de mână |
+| `GOOGLE_PLACES_API_KEY` | **doar dacă** vrei „Caută și pe internet” live | max 3 căutări per cont la 2 zile și 100/zi pe tot site-ul (vezi mai jos) |
+| `DEMO_LOGIN`, `DEMO_SCAN`, `DEMO_EMAIL_CODES`, `DEMO_VISIT_GPS` | `off` după demo | scurtăturile de demo (pentru prezentare pot rămâne `on`) |
+| `GOOGLE_ROUTES_API_KEY` | nu pune | nu mai e folosită: „Turul de gust” calculează traseul și prețul local (estimare demo), fără Google |
+| `TRIPADVISOR_API_KEY` | nu pune | nu îl folosim (nu are variantă gratuită) |
+
+3. **Deploy.** Build-ul trece local (`npm run build:web`), inclusiv pe Windows.
+4. Verifică: `/topfood/timisoara`, un local (`/topfood/timisoara/restaurant-nora`), `/topdrink/timisoara`, `/owner`, `/sitemap.xml`.
 
 ---
 
-## 3. Build & Pornire servicii
+## 3. Google Places: cine poate cheltui și cât
 
-### Aplicația Web (`@topfood/web`)
-```bash
-npm ci
-npm run build:web
-npm run start -w @topfood/web
-```
-Rulează în spatele unui reverse proxy HTTPS (Caddy, Nginx, Cloudflare, Vercel/Railway).
+Cheia Google e una singură și costă bani peste pragul gratuit (~1.000 de cereri cu review-uri pe lună). De aceea:
 
-### Worker programat (`@tftd/worker`)
-```bash
-npm exec -w @tftd/worker -- tsx --env-file-if-exists=.env src/main.ts
-```
-Rulează ca serviciu permanent (`systemd`, container separat sau process manager) cu `TZ=Europe/Bucharest`.
-Pentru declanșarea manuală a unui job din cron extern:
-```bash
-npx tsx --env-file-if-exists=.env apps/worker/src/main.ts --once recalculeaza-scoruri
-```
+- **Colegii nu au nevoie de cheie.** Datele sunt în `seed/data/google-snapshot.json`; `npm run seed` le încarcă local.
+- **Importul nu pornește din greșeală.** `npm run import:real` fără `IMPORT_CONFIRM=da` doar spune câte cereri ar face și se oprește. Pe o bază care nu e locală refuză, dacă nu pui și `IMPORT_TARGET=online`. Se oprește singur la `IMPORT_MAX_REQUESTS` (implicit 300). Implicit e mic și incremental (`IMPORT_MAX_PAGES=1`, `IMPORT_SKIP_FRESH_HOURS=24`).
+
+  ```bash
+  npm run import:real                         # simulare: nicio cerere
+  IMPORT_CONFIRM=da npm run import:real       # rulează, max 300 de cereri
+  npx tsx --env-file-if-exists=.env seed/export-google.ts   # salvează rezultatul în snapshot, apoi commit
+  ```
+
+- **Pe site**, „Caută și pe internet” cheamă Google doar pentru un cont logat: max **3 căutări la 48 de ore** per cont și **100 de cereri pe zi** pe tot site-ul (`packages/ingestion/src/google-limits.ts`). „Adaugă de pe Google” merge doar pentru un loc găsit de același cont.
+- **În Google Cloud** (o dată, de proprietarul cheii):
+  1. APIs & Services → Credentials → cheia → **API restrictions**: doar *Places API (New)*.
+  2. APIs & Services → Places API (New) → **Quotas**: plafon pe zi (ex. 500 de cereri).
+  3. Billing → **Budgets & alerts**: alertă la 5 USD.
 
 ---
 
-## 4. Checklist înainte de lansare
+## 4. Worker-ul (după hackathon)
 
-- [ ] `NODE_ENV=production` și `SESSION_SECRET` generat criptografic (`openssl rand -hex 32`)
-- [ ] `DEMO_EMAIL_CODES`, `DEMO_SCAN`, `DEMO_CLAIM_CODE`, `DEMO_PASSWORD` eliminate/golite din mediul de producție
-- [ ] `npm test` și `npm run typecheck` trec fără erori
-- [ ] `npm run build:web` reușește cu `DATABASE_URL` accesibil
-- [ ] Worker-ul `@tftd/worker` are conexiune la același `DATABASE_URL` și rulează continuu
-- [ ] Backup automat configurat pentru PostgreSQL
+Pe Vercel nu stă pornit permanent. Pentru demo nu e nevoie. După: `npm run start -w @tftd/worker` pe Railway/Render/Fly, cu aceleași variabile și `TZ=Europe/Bucharest`. Joburile Google din el se opresc singure fără `IMPORT_CONFIRM=da`, deci un worker pornit nu cheltuie nimic fără să vrei.
+
+---
+
+## 5. Înainte de lansare
+
+- [ ] `npm test`, `npm run typecheck`, `npm run build:web` trec
+- [ ] `SESSION_SECRET` generat aleatoriu; `DEMO_*` pe `off` după prezentare
+- [ ] Restricțiile și plafonul pe cheia Google sunt puse (pasul 3)
+- [ ] Backup automat la bază (Neon îl are inclus)
+- [ ] După hackathon: șterge `seed/data/google-snapshot.json` (termenii Google limitează păstrarea review-urilor, iar review-urile conțin numele autorilor)
+
+## Probleme cunoscute
+
+- **„prepared statement … does not exist”**: adresa e prin pool dar nu conține `-pooler` / `:6543`; pune `DATABASE_PREPARE=false`.
+- **Login-ul nu ține minte sesiunea**: lipsește `SESSION_SECRET` sau e prea scurt.
+- **Localuri fără scor/review-uri**: site-ul nu ajunge la bază (vezi Logs în Vercel). Fără bază arată doar informațiile reale din datele statice, fără note.

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+  <rect width="1200" height="800" fill="#17382C"/>
+  <g fill="none" stroke="#285443" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="500" y="260" width="200" height="300" rx="20" stroke-width="12" fill="#143025"/>
+    <path d="M700 320h40a40 40 0 0 1 40 40v80a40 40 0 0 1-40 40h-40" stroke-width="12"/>
+    <path d="M490 290c0-40 35-60 70-52 15-30 65-35 80-5 30-12 70 5 70 57" stroke-width="12"/>
+  </g>
+</svg>

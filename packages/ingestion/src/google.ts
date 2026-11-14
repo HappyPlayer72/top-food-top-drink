@@ -73,13 +73,34 @@ function apiKey(): string {
   return key;
 }
 
+/**
+ * Plafonul de cereri Google pentru procesul curent (importul îl setează din IMPORT_MAX_REQUESTS).
+ * Fiecare cerere trece prin googleFetch: peste plafon se oprește înainte să plece cererea.
+ */
+let budget: number | null = null;
+let used = 0;
+export class GoogleBudgetExceeded extends Error {}
+export function limitGoogleRequests(max: number | null) {
+  budget = max;
+  used = 0;
+}
+export const googleRequestsUsed = () => used;
+
+async function googleFetch(url: string, init: RequestInit): Promise<Response> {
+  if (budget !== null && used >= budget) {
+    throw new GoogleBudgetExceeded(`Plafonul de ${budget} cereri Google pentru această rulare s-a atins; m-am oprit. Mărește IMPORT_MAX_REQUESTS doar dacă ești sigur.`);
+  }
+  used++;
+  return fetch(url, init);
+}
+
 export async function searchText(
   query: string,
   center: { lat: number; lng: number },
   radiusM = 6000,
   pageToken?: string,
 ): Promise<{ places: GooglePlace[]; nextPageToken?: string }> {
-  const res = await fetch(`${BASE}/places:searchText`, {
+  const res = await googleFetch(`${BASE}/places:searchText`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey(), "X-Goog-FieldMask": DISCOVERY_FIELDS },
     body: JSON.stringify({
@@ -98,7 +119,7 @@ export async function searchText(
 /** Un singur loc cu toate câmpurile de prezentare (pentru adăugarea de către un user). */
 export async function getPlace(placeId: string): Promise<GooglePlace> {
   const fields = DISCOVERY_FIELDS.split(",").filter((f) => f.startsWith("places.")).map((f) => f.slice(7)).join(",");
-  const res = await fetch(`${BASE}/places/${encodeURIComponent(placeId)}?languageCode=ro`, {
+  const res = await googleFetch(`${BASE}/places/${encodeURIComponent(placeId)}?languageCode=ro`, {
     headers: { "X-Goog-Api-Key": apiKey(), "X-Goog-FieldMask": fields },
   });
   if (!res.ok) throw new Error(`Google Places get ${res.status}: ${await res.text()}`);
@@ -106,7 +127,7 @@ export async function getPlace(placeId: string): Promise<GooglePlace> {
 }
 
 export async function placeDetails(placeId: string): Promise<GooglePlace> {
-  const res = await fetch(`${BASE}/places/${encodeURIComponent(placeId)}?languageCode=ro`, {
+  const res = await googleFetch(`${BASE}/places/${encodeURIComponent(placeId)}?languageCode=ro`, {
     headers: { "X-Goog-Api-Key": apiKey(), "X-Goog-FieldMask": DETAIL_FIELDS },
   });
   if (!res.ok) throw new Error(`Google Places details ${res.status}: ${await res.text()}`);

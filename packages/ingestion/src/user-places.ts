@@ -11,10 +11,15 @@ import { and, eq, inArray } from "drizzle-orm";
 import { invalid, reports, venueSources, venues, type Db } from "@tftd/db";
 import { findMatch, linkExternalPlace, normalizeName, slugify, uniqueSlug } from "@tftd/matching";
 import * as google from "./google.ts";
+import { recordSearchResults, reserveGoogleAdd, reserveGoogleSearch } from "./google-limits.ts";
 
 type Vertical = "food" | "drink";
 
-export async function searchPlaces(db: Db, q: { citySlug: string; vertical: Vertical; query: string; center?: { lat: number; lng: number } }) {
+/**
+ * Căutarea pe Google se face doar pentru un user logat și în limitele din google-limits.ts.
+ * `internetBlocked` = mesajul pentru user când a atins limita (căutarea la noi merge oricum).
+ */
+export async function searchPlaces(db: Db, q: { citySlug: string; vertical: Vertical; query: string; center?: { lat: number; lng: number }; userId?: string | null }) {
   const needle = normalizeName(q.query);
   if (needle.length < 2) throw invalid("Scrie cel puțin 2 litere.");
 
@@ -24,7 +29,11 @@ export async function searchPlaces(db: Db, q: { citySlug: string; vertical: Vert
     .where(and(eq(venues.citySlug, q.citySlug), eq(venues.vertical, q.vertical)));
   const onPlatform = all.filter((v) => v.status === "active" && normalizeName(v.name).includes(needle)).slice(0, 10);
 
-  if (!process.env.GOOGLE_PLACES_API_KEY || !q.center) return { onPlatform, fromInternet: [], internetSearched: false };
+  const none = { onPlatform, fromInternet: [] as { placeId: string; name: string; address: string | null; googleRating: number | null; googleReviews: number | null }[], internetSearched: false, internetBlocked: null as string | null, remaining: null as number | null };
+  if (!process.env.GOOGLE_PLACES_API_KEY || !q.center) return none;
+  if (!q.userId) return { ...none, internetBlocked: "Intră în cont ca să cauți și pe internet." };
+  const slot = await reserveGoogleSearch(db, q.userId);
+  if (!slot.ok) return { ...none, internetBlocked: slot.message };
 
   const { places } = await google.searchText(`${q.query} ${q.vertical === "food" ? "restaurant" : "bar"}`, q.center, 15000);
   const ids = places.map((p) => p.id);
@@ -45,11 +54,14 @@ export async function searchPlaces(db: Db, q: { citySlug: string; vertical: Vert
       googleRating: p.rating ?? null,
       googleReviews: p.userRatingCount ?? null,
     }));
-  return { onPlatform, fromInternet, internetSearched: true };
+  await recordSearchResults(db, slot.callId, fromInternet.map((p) => p.placeId));
+  return { onPlatform, fromInternet, internetSearched: true, internetBlocked: null, remaining: slot.remaining };
 }
 
 /** Userul adaugă un local găsit pe Google: intră direct în listă (scorul vine după primele review-uri). */
 export async function addFromGoogle(db: Db, userId: string, input: { citySlug: string; vertical: Vertical; placeId: string }) {
+  const slot = await reserveGoogleAdd(db, userId, input.placeId);
+  if (!slot.ok) throw invalid(slot.message);
   const place = await google.getPlace(input.placeId);
   if (!place.location) throw invalid("Locul nu are coordonate pe Google.");
   const result = await linkExternalPlace(db, google.toExternalPlace(place, input.citySlug, input.vertical));

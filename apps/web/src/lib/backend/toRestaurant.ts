@@ -1,7 +1,8 @@
 /**
  * Transformă datele din backend (@tftd/api) în tipurile folosite de componente (src/types.ts).
  * Funcții pure, fără acces la DB, ca să poată fi testate și înțelese ușor.
- * Ce nu există încă în DB (poze, texte editoriale) se ia din `fallback` (datele statice), după slug.
+ * Din `fallback` (datele statice, după slug) se iau doar informații reale despre local: poze, texte, meniu, livrare, facilități.
+ * Scorurile, nota Google, aspectele, review-urile și poveștile owner-ului vin numai din DB: fără date, rămân goale.
  */
 import type { cityPage, leaderboardPage, SocialAnalysis, topReviewers, venuePage, weekendEvents } from '@tftd/api';
 import type {
@@ -26,6 +27,8 @@ type CityPage = Awaited<ReturnType<typeof cityPage>>;
 type Leaderboard = Awaited<ReturnType<typeof leaderboardPage>>;
 type ApiReview = VenuePage['reviews'][number];
 
+import { TIMISOARA_NEIGHBORHOOD_ZONES } from '../../data/timisoaraGeo';
+
 const CATEGORY_LABEL: Record<string, string> = {
   romanesc: 'Românesc',
   pizza: 'Pizza',
@@ -44,12 +47,33 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 const label = (cat?: string) => (cat ? CATEGORY_LABEL[cat] ?? cat : '');
 
+/** Fără poză reală: o ilustrație neutră (farfurie / halbă), nu o fotografie care ar părea a localului. */
 const PLACEHOLDER_PHOTO = {
-  food: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=80',
-  drink: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80',
+  food: '/placeholder-food.svg',
+  drink: '/placeholder-drink.svg',
 };
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
+
+/** Punct în poligon (ray casting), pe coordonate [lng, lat]. */
+function inside(lng: number, lat: number, ring: [number, number][]) {
+  let c = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]!, [xj, yj] = ring[j]!;
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+
+/**
+ * Cartierul unui local importat fără cartier: zona în care cade, altfel cea mai apropiată
+ * (aproximativ: harta are doar cartierele centrale).
+ */
+export function neighborhoodAt(lat: number, lng: number): Neighborhood {
+  const zone = TIMISOARA_NEIGHBORHOOD_ZONES.find((z) => z.coordinates.some((ring) => inside(lng, lat, ring)))
+    ?? [...TIMISOARA_NEIGHBORHOOD_ZONES].sort((a, b) => Math.hypot(a.center[0] - lng, a.center[1] - lat) - Math.hypot(b.center[0] - lng, b.center[1] - lat))[0]!;
+  return zone.cameraKey as Neighborhood;
+}
 
 export function trapTier(index: number | null | undefined): TrapTier {
   const i = index ?? 0;
@@ -103,6 +127,7 @@ export function toReview(r: ApiReview, now: Date): Review {
     authorId: r.authorId ?? undefined,
     authorUsername: a.username,
     authorName: a.name,
+    sourceLabel: r.source === 'google' ? 'de pe Google' : r.source === 'tripadvisor' ? 'de pe Tripadvisor' : undefined,
     authorRole: a.role,
     authorNeighborhood: a.neighborhood,
     followerCountText: a.followers,
@@ -123,14 +148,23 @@ export function toReview(r: ApiReview, now: Date): Review {
   };
 }
 
-function aspects(scores: Record<string, number>, fallback?: AspectScores): AspectScores {
-  const pick = (k: string, fb?: number) => scores[k] ?? fb ?? 7;
+/** Aspectele din review-urile analizate; 0 = încă nu avem date (UI-ul afișează „—”). */
+function aspects(scores: Record<string, number>): AspectScores {
+  const pick = (k: string) => scores[k] ?? 0;
   return {
-    food: pick('mancare', fallback?.food ?? scores['muzica']),
-    service: pick('servire', fallback?.service),
-    value: pick('pret', fallback?.value),
-    atmosphere: pick('atmosfera', fallback?.atmosphere),
+    food: scores['mancare'] ?? pick('muzica'),
+    service: pick('servire'),
+    value: pick('pret'),
+    atmosphere: pick('atmosfera'),
   };
+}
+
+/** Fraza din „Cum se calculează?” despre punctul de pornire al scorului (regula 3). */
+export function priorNote(p?: { cityMean: number; mean: number; external: { rating5: number; count: number } | null }): string | undefined {
+  if (!p) return undefined;
+  const n = (x: number) => x.toLocaleString('ro-RO', { maximumFractionDigits: 1 });
+  if (!p.external) return `Pornește de la media orașului (${n(p.cityMean)}), apoi review-urile analizate îl mută în sus sau în jos.`;
+  return `Pornește de la nota de pe Google Maps (${n(p.external.rating5)}★ din ${p.external.count.toLocaleString('ro-RO')} de note), trasă spre media orașului (${n(p.cityMean)}): ${n(p.mean)}. Apoi review-urile analizate îl corectează.`;
 }
 
 export type MonthlyInfo = { rank: number; score: number; movement: number | null };
@@ -186,7 +220,7 @@ export function toRestaurant(
         : null;
   const google = p.externalRatings.find((x) => x.source === 'google');
   const kitchen = p.blog.find((b) => b.type === 'news');
-  const neighborhood = (v.neighborhood ?? fb?.neighborhood ?? 'Cetate / Piața Unirii') as Neighborhood;
+  const neighborhood = (v.neighborhood ?? fb?.neighborhood ?? neighborhoodAt(v.location.lat, v.location.lng)) as Neighborhood;
 
   return {
     id: v.slug,
@@ -195,7 +229,7 @@ export function toRestaurant(
     name: v.name,
     vertical: v.vertical,
     neighborhood,
-    shortNeighborhood: v.neighborhood ?? fb?.shortNeighborhood,
+    shortNeighborhood: v.neighborhood ?? fb?.shortNeighborhood ?? neighborhood,
     cuisine: label(v.categories[0]) || fb?.cuisine || '',
     shortCategory: label(v.categories[0]) || fb?.shortCategory,
     categories: v.categories.length ? v.categories : fb?.categories,
@@ -212,6 +246,9 @@ export function toRestaurant(
           : fb?.priceRangeLabel,
     openUntilLabel: v.openLabel ? `${v.openLabel}.` : fb?.openUntilLabel,
     photoUrl: v.photos[0] ?? fb?.photoUrl ?? PLACEHOLDER_PHOTO[v.vertical],
+    hasPhoto: !!(v.photos[0] ?? fb?.photoUrl),
+    // Data reală a ultimei recalculări a scorului (nu o dată scrisă de mână)
+    lastUpdated: s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Bucharest' }) : undefined,
     editorialHeadline: v.headline ?? fb?.editorialHeadline ?? '',
     editorialWriteup: v.writeup.length ? v.writeup : (fb?.editorialWriteup ?? []),
     // „Ce să comanzi” = doar felurile marcate recomandat, nu tot meniul.
@@ -226,11 +263,12 @@ export function toRestaurant(
     foodQualityScore: s.honest ?? 0,
     localsScore: s.locals ?? s.honest ?? 0,
     touristsScore: s.tourists ?? s.honest ?? 0,
-    googleRawRating: google?.rating ?? fb?.googleRawRating ?? 0,
+    googleRawRating: google?.rating ?? 0,
     touristTrapIndex: s.touristTrapIndex ?? 0,
     trapTier: trapTier(s.touristTrapIndex),
     trapReasons: (s.explanation?.trapReasons ?? []).map((r) => r.text),
     verifiedVisitCount: s.explanation?.verifiedVisitCount,
+    scorePriorNote: priorNote(s.explanation?.prior),
     trapBreakdown: {
       touristVsLocalGap: inputs?.localsScore != null && inputs.touristsScore != null ? round1(inputs.touristsScore - inputs.localsScore) : 0,
       touristZoneProximityM: Math.round(inputs?.distanceToTouristZoneM ?? 0),
@@ -238,7 +276,7 @@ export function toRestaurant(
       foreignLangReviewsPct: Math.round((inputs?.foreignLanguageShare ?? 0) * 100),
       singleVisitPct: Math.round((inputs?.oneTimeVisitorShare ?? 0) * 100),
     },
-    aspectScores: aspects(p.aspectScores, fb?.aspectScores),
+    aspectScores: aspects(p.aspectScores),
 
     isSponsored: ctx.isSponsored,
     sponsoredNote: ctx.isSponsored ? 'Sponsorizat. Nu schimbă scorul.' : undefined,
@@ -266,7 +304,6 @@ export function toRestaurant(
     crowdLabel: p.vibe ? `${p.vibe.label}, acum ${p.vibe.minutesAgo} min` : undefined,
     drinkTags: v.drinkTags.length ? (v.drinkTags as Restaurant['drinkTags']) : fb?.drinkTags,
 
-    warnings: fb?.warnings,
     facilities: fb?.facilities,
     delivery: fb?.delivery,
 
@@ -274,13 +311,13 @@ export function toRestaurant(
     reviews: p.reviews.map((r) => toReview(r, ctx.now)),
     kitchenStory: kitchen
       ? {
-          author: fb?.kitchenStory?.author ?? 'Proprietarul',
+          author: 'Proprietarul',
           date: new Date(kitchen.publishAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }),
           title: kitchen.title,
           body: kitchen.body,
           photoUrl: kitchen.photos[0] ?? fb?.kitchenStory?.photoUrl,
         }
-      : fb?.kitchenStory,
+      : undefined,
     ownerPosts: p.blog
       .filter((b) => b.type !== 'news')
       .map((b) => ({ id: b.id, type: b.type, title: b.title, content: b.body, date: new Date(b.publishAt).toLocaleDateString('ro-RO') })),

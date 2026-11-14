@@ -1,96 +1,74 @@
 'use server';
-
-import { and, eq, inArray } from 'drizzle-orm';
-import { venueSources } from '@tftd/db';
+/**
+ * „Turul de gust”: distanța pe jos și intervalul de preț pentru opririle din tur.
+ * Date demo calculate local, fără niciun apel Google (oricine poate cere un tur, deci nu cheltuim cheia):
+ * - traseul = distanța în linie dreaptă între opriri × 1,3 (străzile nu merg drept), la 4,8 km/h;
+ * - prețul = din nivelul de preț al localului salvat în DB (1–4), transformat într-un interval orientativ în lei.
+ * Pe ecran ambele apar ca „Estimare demo”.
+ */
+import { inArray } from 'drizzle-orm';
+import { venues } from '@tftd/db';
 import { getDb } from '../../lib/server/db';
 
 type Point = { lat: number; lng: number };
 type Stop = Point & { venueId?: string };
-type Price = { start: number | null; end: number | null; currency: string; attribution: 'Google Maps' };
+export type TourAttribution = 'Estimare demo';
+type Price = { start: number | null; end: number | null; currency: string; attribution: TourAttribution };
 type TourData = {
-  route: { distanceMeters: number; durationSeconds: number; warnings: string[]; attribution: 'Google Maps' } | null;
+  route: { distanceMeters: number; durationSeconds: number; warnings: string[]; attribution: TourAttribution } | null;
   prices: (Price | null)[];
 };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const placeId = /^[A-Za-z0-9_-]{1,255}$/;
 const inCity = (p: Point) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.lat >= 45.65 && p.lat <= 45.85 && p.lng >= 21.10 && p.lng <= 21.38;
-const waypoint = (p: Point) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
 
-// ponytail: process-local limit; use a shared rate limiter before scaling across instances.
-const state = globalThis as typeof globalThis & { tasteTourRequests?: number[] };
-function allowRequest() {
-  const now = Date.now();
-  state.tasteTourRequests = (state.tasteTourRequests ?? []).filter((time) => now - time < 60_000);
-  if (state.tasteTourRequests.length >= 30) return false;
-  state.tasteTourRequests.push(now);
-  return true;
-}
+/** Cât de mult mai lung e drumul pe stradă decât linia dreaptă, și viteza de mers. */
+export const WALK = { streetFactor: 1.3, kmPerHour: 4.8 } as const;
+/** Nivelul de preț (1 = ieftin … 4 = scump) → interval orientativ per persoană, în lei. */
+export const PRICE_BANDS: Record<number, [number, number]> = { 1: [20, 40], 2: [40, 70], 3: [70, 120], 4: [120, 200] };
 
-async function googleJson(url: string, key: string, fields: string, body?: unknown): Promise<any> {
-  try {
-    const response = await fetch(url, {
-      method: body ? 'POST' : 'GET',
-      headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': fields, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(5000), cache: 'no-store',
-    });
-    return response.ok ? await response.json() : null;
-  } catch { return null; }
-}
-
-function money(value: any): { amount: number; currency: string } | null {
-  if (!value || typeof value.currencyCode !== 'string' || !/^[A-Z]{3}$/.test(value.currencyCode)) return null;
-  const units = value.units === undefined ? 0 : Number(value.units);
-  const nanos = value.nanos === undefined ? 0 : Number(value.nanos);
-  if (!Number.isSafeInteger(units) || !Number.isInteger(nanos) || units < 0 || nanos < 0 || nanos >= 1e9) return null;
-  return { amount: units + nanos / 1e9, currency: value.currencyCode };
-}
-
-async function priceFor(id: string, key: string): Promise<Price | null> {
-  const data = await googleJson(`https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`, key, 'priceRange');
-  const low = money(data?.priceRange?.startPrice);
-  const high = money(data?.priceRange?.endPrice);
-  if ((!low && !high) || (low && high && (low.currency !== high.currency || low.amount >= high.amount))) return null;
-  return { start: low?.amount ?? null, end: high?.amount ?? null, currency: (low ?? high)!.currency, attribution: 'Google Maps' };
+function haversineM(a: Point, b: Point) {
+  const R = 6_371_000;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
 }
 
 export async function getTasteTourGoogleData(input: { origin: Point; stops: Stop[] }): Promise<TourData> {
   const stops = Array.isArray(input?.stops) && input.stops.length <= 3 ? input.stops : [];
-  const empty: TourData = { route: null, prices: stops.map(() => null) };
-  if (!inCity(input?.origin) || stops.length < 1 || !stops.every(inCity) || !allowRequest()) return empty;
+  if (!inCity(input?.origin) || stops.length < 1 || !stops.every(inCity)) return { route: null, prices: stops.map(() => null) };
 
-  const routeKey = process.env.GOOGLE_ROUTES_API_KEY;
-  const placesKey = process.env.GOOGLE_PLACES_API_KEY;
-  const routePromise = routeKey ? googleJson('https://routes.googleapis.com/directions/v2:computeRoutes', routeKey,
-    'routes.distanceMeters,routes.duration,routes.warnings', {
-      origin: waypoint(input.origin), destination: waypoint(stops[stops.length - 1]),
-      intermediates: stops.slice(0, -1).map(waypoint), travelMode: 'WALK', languageCode: 'ro',
-    }) : Promise.resolve(null);
+  const points = [input.origin, ...stops];
+  let straight = 0;
+  for (let i = 1; i < points.length; i++) straight += haversineM(points[i - 1]!, points[i]!);
+  const distanceMeters = Math.round(straight * WALK.streetFactor);
+  const durationSeconds = Math.round((distanceMeters / 1000 / WALK.kmPerHour) * 3600);
 
-  let ids: { venueId: string; externalId: string }[] = [];
-  const venueIds = stops.map((s) => s.venueId).filter((id): id is string => typeof id === 'string' && uuid.test(id));
-  if (placesKey && process.env.DATABASE_URL && venueIds.length) {
+  // Nivelul de preț vine din DB (salvat la import), nu dintr-un apel nou
+  const ids = stops.map((s) => s.venueId).filter((id): id is string => typeof id === 'string' && uuid.test(id));
+  const levels = new Map<string, number>();
+  if (ids.length && process.env.DATABASE_URL) {
     try {
-      ids = await getDb().select({ venueId: venueSources.venueId, externalId: venueSources.externalId }).from(venueSources)
-        .where(and(eq(venueSources.source, 'google'), inArray(venueSources.venueId, venueIds)));
-    } catch { /* Datele Google sunt opționale. */ }
+      for (const v of await getDb().select({ id: venues.id, level: venues.priceLevel }).from(venues).where(inArray(venues.id, ids))) {
+        if (v.level) levels.set(v.id, v.level);
+      }
+    } catch {
+      /* fără bază: turul merge, doar fără prețuri */
+    }
   }
-  const [data, prices] = await Promise.all([
-    routePromise,
-    Promise.all(stops.map((stop) => {
-      const id = ids.find((source) => source.venueId === stop.venueId)?.externalId;
-      return placesKey && id && placeId.test(id) ? priceFor(id, placesKey) : null;
-    })),
-  ]);
-  const route = data?.routes?.[0];
-  const duration = typeof route?.duration === 'string' && /^\d+(?:\.\d+)?s$/.test(route.duration) ? Number(route.duration.slice(0, -1)) : NaN;
-  const distance = route?.distanceMeters;
-  const warnings = Array.isArray(route?.warnings) ? route.warnings.filter((w: unknown): w is string => typeof w === 'string') : [];
+
   return {
-    route: Number.isFinite(distance) && distance >= 0 && Number.isFinite(duration) && duration >= 0
-      ? { distanceMeters: distance, durationSeconds: duration, warnings: warnings.length ? warnings : ['Traseele pietonale pot să nu includă trotuare sau căi pietonale clare.'], attribution: 'Google Maps' }
-      : null,
-    prices,
+    route: {
+      distanceMeters,
+      durationSeconds,
+      warnings: ['Estimare: distanța în linie dreaptă × 1,3, la pas de plimbare. Traseul real poate diferi.'],
+      attribution: 'Estimare demo',
+    },
+    prices: stops.map((s) => {
+      const band = s.venueId ? PRICE_BANDS[levels.get(s.venueId) ?? 0] : undefined;
+      return band ? { start: band[0], end: band[1], currency: 'RON', attribution: 'Estimare demo' as const } : null;
+    }),
   };
 }

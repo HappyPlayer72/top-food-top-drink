@@ -991,7 +991,7 @@ export function getVenueLastUpdated(restaurant: Restaurant): string {
   return (
     restaurant.lastUpdated ??
     VENUE_EXTRAS[restaurant.id]?.lastUpdated ??
-    '10 nov 2026'
+    '—'
   );
 }
 
@@ -1196,8 +1196,8 @@ const VENUE_WARNINGS_FACILITIES: Record<string, VenueProfileExtras> = {
 };
 
 export function getVenueWarnings(restaurant: Restaurant): VenueWarnings {
-  const staticWarnings =
-    restaurant.warnings ?? VENUE_WARNINGS_FACILITIES[restaurant.id]?.warnings ?? {};
+  // Avertizările vin doar din ce raportează oamenii în review-uri (sau din DB), nu din texte scrise de noi
+  const staticWarnings = restaurant.warnings ?? {};
 
   const safetyRatings = restaurant.reviews
     .map((r) => r.safetyScore)

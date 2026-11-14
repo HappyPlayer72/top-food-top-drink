@@ -3,7 +3,7 @@
  * Regula 1: aici nu se citește NIMIC din tabelele de monetizare (verificat de rule1.test.ts).
  */
 import { and, count, countDistinct, eq, inArray, isNotNull } from "drizzle-orm";
-import { checkins, cities, ensureExtendedSchema, reviews, touristZones, users, venueScoreSnapshots, venues, type Db } from "@tftd/db";
+import { checkins, cities, ensureExtendedSchema, reviews, touristZones, users, venueScoreSnapshots, venueSources, venues, type Db } from "@tftd/db";
 import { cityMean } from "./honest.ts";
 import { aggregateAspects, distanceToNearestZone, priceRatio, scoreVenue, type VenueReview } from "./venue.ts";
 import { reviewWeight } from "./weights.ts";
@@ -83,6 +83,15 @@ export async function recalculateCity(db: Db, citySlug: string, vertical: "food"
     };
   };
 
+  // Nota agregată Google per local (punctul de pornire al scorului)
+  const external = new Map<string, { source: "google"; rating5: number; count: number }>();
+  for (const s of await db
+    .select({ venueId: venueSources.venueId, rating: venueSources.rawRating, count: venueSources.rawReviewCount })
+    .from(venueSources)
+    .where(and(inArray(venueSources.venueId, venueIds), eq(venueSources.source, "google")))) {
+    if (s.rating && s.count) external.set(s.venueId, { source: "google", rating5: s.rating, count: s.count });
+  }
+
   const scored = rows.map((r) => ({ row: r, s: toScoring(r) }));
   const mean = cityMean(scored.map((x) => x.s), city.meanScore[vertical], now);
   const day = now.toISOString().slice(0, 10);
@@ -101,29 +110,33 @@ export async function recalculateCity(db: Db, citySlug: string, vertical: "food"
             );
       const result = scoreVenue(
         own.map((x) => x.s),
-        { cityMean: mean, distanceToTouristZoneM: distanceToNearestZone({ lat: v.location.y, lng: v.location.x }, zones), priceRatio: price },
+        { cityMean: mean, external: external.get(v.id) ?? null, distanceToTouristZoneM: distanceToNearestZone({ lat: v.location.y, lng: v.location.x }, zones), priceRatio: price },
         now,
       );
+      // Fără niciun review nu există scor: altfel localul ar primi media orașului, adică o notă inventată
+      const hasReviews = own.length > 0;
       await tx
         .update(venues)
         .set({
-          honestScore: result.overall.score,
+          honestScore: hasReviews ? result.overall.score : null,
           localsScore: result.locals.enoughData ? result.locals.score : null,
           touristsScore: result.tourists.enoughData ? result.tourists.score : null,
           totalWeight: result.overall.totalWeight,
-          touristTrapIndex: result.trap.index,
+          touristTrapIndex: hasReviews ? result.trap.index : null,
           scoreExplanation: result.explanation,
           aspectScores: aggregateAspects(own.map((x) => ({ weight: reviewWeight(x.s, now), aspects: x.row.aspects }))),
           scoreUpdatedAt: now,
         })
         .where(eq(venues.id, v.id));
-      await tx
-        .insert(venueScoreSnapshots)
-        .values({ venueId: v.id, day, score: result.overall.score, reviewCount: own.length })
-        .onConflictDoUpdate({
-          target: [venueScoreSnapshots.venueId, venueScoreSnapshots.day],
-          set: { score: result.overall.score, reviewCount: own.length },
-        });
+      if (hasReviews) {
+        await tx
+          .insert(venueScoreSnapshots)
+          .values({ venueId: v.id, day, score: result.overall.score, reviewCount: own.length })
+          .onConflictDoUpdate({
+            target: [venueScoreSnapshots.venueId, venueScoreSnapshots.day],
+            set: { score: result.overall.score, reviewCount: own.length },
+          });
+      }
       for (const x of own) {
         await tx.update(reviews).set({ weight: reviewWeight(x.s, now) }).where(eq(reviews.id, x.row.id));
       }

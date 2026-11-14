@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { HonestValue } from '../BrandPrimitives';
 import {
   ArrowRight,
   Compass,
@@ -13,7 +14,7 @@ import {
   Navigation,
   RefreshCw,
 } from 'lucide-react';
-import { Coordinates, Restaurant, Vertical, formatScore } from '../../types';
+import { Coordinates, Restaurant, Vertical, formatHonest, formatScore } from '../../types';
 
 export interface MysteryDirectionsProps {
   vertical: Vertical;
@@ -545,7 +546,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
                   <strong>2. Specific & scor:</strong> {targetVenue.cuisine} ·
                   Scor Onest{' '}
                   <span className="tabular-nums">
-                    {formatScore(targetVenue.foodQualityScore)}
+                    <HonestValue score={targetVenue.foodQualityScore} />
                   </span>
                 </div>
               )}
@@ -656,7 +657,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
               </span>
               <span>· {targetVenue.cuisine}</span>
               <span>
-                · Scor Onest {formatScore(targetVenue.foodQualityScore)}
+                · Scor Onest <HonestValue score={targetVenue.foodQualityScore} />
               </span>
             </div>
           </div>

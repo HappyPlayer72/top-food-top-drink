@@ -60,7 +60,7 @@ export function FoodFeaturedCard({ venue, onSelect, badge, themed, children }: C
       }`}
     >
       <div className="relative h-44 sm:h-52 w-full overflow-hidden bg-[#ECE6DD]">
-        <img src={venue.photoUrl} alt={venue.name} className="w-full h-full object-cover object-center venue-photo-zoom" />
+        <img src={venue.photoUrl} alt="" className="w-full h-full object-cover object-center venue-photo-zoom" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
           {badge}
@@ -128,7 +128,7 @@ export function FoodRow({ venue, onSelect, rank, staggerIdx, themed, children }:
           {rank}
         </span>
         <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 bg-[#ECE6DD] border border-[#E6DFD5]">
-          <img src={venue.photoUrl} alt={venue.name} loading="lazy" decoding="async" className="w-full h-full object-cover object-center venue-photo-zoom" />
+          <img src={venue.photoUrl} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover object-center venue-photo-zoom" />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="font-bold text-[16px] sm:text-[17px] text-[#3A2418] leading-snug line-clamp-2 sm:truncate">{venue.name}</div>
@@ -167,7 +167,7 @@ export function DrinkFeaturedCard({ venue, onSelect, badge, themed, children }: 
       }`}
     >
       <div className="relative h-40 sm:h-48 w-full overflow-hidden bg-[#122B22]">
-        <img src={venue.photoUrl} alt={venue.name} className="w-full h-full object-cover object-center venue-photo-zoom" />
+        <img src={venue.photoUrl} alt="" className="w-full h-full object-cover object-center venue-photo-zoom" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#143025] via-[#143025]/25 to-transparent" />
         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
           {badge}
@@ -230,7 +230,7 @@ export function DrinkRow({ venue, onSelect, rank, staggerIdx, themed, children }
           {rank}
         </span>
         <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[4px] overflow-hidden shrink-0 border border-[#285443] bg-[#122B22]">
-          <img src={venue.photoUrl} alt={venue.name} loading="lazy" decoding="async" className="w-full h-full object-cover object-center venue-photo-zoom" />
+          <img src={venue.photoUrl} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover object-center venue-photo-zoom" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-bold text-[16px] sm:text-[17px] leading-snug text-[#F4EEE2] line-clamp-2 sm:truncate">{venue.name}</div>

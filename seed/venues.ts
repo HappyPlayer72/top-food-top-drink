@@ -1,9 +1,9 @@
 /**
  * 30 de locale REALE din Timișoara (20 food, 10 drink), cu adrese, coordonate, fotografii și informații de livrare.
- * Review-urile de pornire sunt generate determinist (seed/generate.ts);
- * pentru date live din Google Places: packages/ingestion cu GOOGLE_PLACES_API_KEY.
+ * În bază intră doar datele reale (nume, adresă, coordonate, poze, prețuri). Review-urile și ratingurile vin din
+ * Google Places (`npm run import:real`).
  *
- * `profile` descrie distribuția review-urilor generate:
+ * `profile` descrie distribuția review-urilor sintetice din teste (seed/generate.ts), nu ajunge în bază:
  *  localMean / touristMean = nota medie (0–10) dată de localnici / turiști
  *  locals / tourists = câte review-uri din fiecare grup
  *  fakeBurst = câte review-uri false de 10 în ultimele 24h (scenariul de demo 3)

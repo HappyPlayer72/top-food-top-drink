@@ -377,14 +377,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
             </div>
 
-            {/* Quick Demo Accounts */}
+            {/* Acces rapid cu conturile de test (lista e goală în producție) */}
+            {demoUsers.length > 0 && (
             <div className="space-y-2.5">
               <div
                 className={`text-[12px] font-semibold ${
                   isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'
                 }`}
               >
-                Acces rapid cu un cont demo
+                Acces rapid cu un cont de test
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                 {demoUsers.map((acc) => (
@@ -415,7 +416,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                             size="xs"
                           />
                         ) : (
-                          <TuristBadge label="Turist" size="xs" />
+                          <TuristBadge label={acc.badgeLabel ?? 'Turist'} size="xs" />
                         )}
                       </div>
                       {acc.email && (
@@ -442,6 +443,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 ))}
               </div>
             </div>
+            )}
           </div>
 
           {/* Right Column: Login / Register Form Card */}
@@ -568,7 +570,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="andreea@e-uvt.ro"
+                      placeholder="nume@exemplu.ro"
                       aria-invalid={Boolean(error)}
                       aria-describedby={error ? 'auth-error-msg' : undefined}
                       className={`w-full min-h-[44px] pl-9 pr-3 py-2.5 rounded-[4px] border text-[16px] sm:text-[14px] focus:outline-none ${inputClasses}`}

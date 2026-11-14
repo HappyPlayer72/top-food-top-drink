@@ -125,10 +125,11 @@ export function SocialAndTeamSection({ user }: { user: UserAccount }) {
   );
 }
 
-/** Conturile demo de pe ecranul de login (aceeași listă ca în actions/user.ts). */
+/** Conturile de test de pe ecranul de login (aceeași listă ca în actions/user.ts). */
 const DEMO_ACCOUNTS = [
-  { email: 'andreea@e-uvt.ro', name: 'Andreea', note: 'localnic' },
-  { email: 'luca@visit.ro', name: 'Luca', note: 'turist' },
+  { email: 'test.user@example.invalid', name: 'Utilizator', note: 'test' },
+  { email: 'test.owner@example.invalid', name: 'Proprietar', note: 'test' },
+  { email: 'test.admin@example.invalid', name: 'Admin', note: 'test' },
 ];
 
 export function AccountActions({ email }: { email?: string }) {
@@ -155,7 +156,7 @@ export function AccountActions({ email }: { email?: string }) {
     <div className="space-y-5">
       {isDemo && (
         <fieldset className="space-y-2" disabled={pending}>
-          <legend className="text-[14px] font-semibold text-o-fg">Cont demo activ</legend>
+          <legend className="text-[14px] font-semibold text-o-fg">Cont de test activ</legend>
           <div className="flex flex-wrap gap-2">
             {DEMO_ACCOUNTS.map((a) => {
               const active = a.email === email;

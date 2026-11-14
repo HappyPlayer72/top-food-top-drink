@@ -35,7 +35,7 @@ Compared `docs/ARHITECTURA.md` (the spec) with the code on `oli` (14 Nov 2026). 
 | 17 | Owner connections: Google Business Profile, Facebook, Instagram, TikTok | OAuth apps + review import |
 | 18 | Stripe for partnerships (Basic/Highlight) + invoices | Stripe keys; now `buyPartnership` is free |
 | 19 | Scheduled jobs in production | Worker on Railway/Render or Vercel Cron (see `docs/DEPLOY.md`) |
-| 20 | Real Timișoara venues | `GOOGLE_PLACES_API_KEY`, then `npm run import:google` |
+| 20 | Real Timișoara venues | `GOOGLE_PLACES_API_KEY`, then `npm run import:real` |
 | 21 | ML fraud model, more cities, reservations, "Top Pass" | — |
 
 ## Bug fixed while setting up
@@ -60,4 +60,4 @@ npm run dev -w @topfood/web       # http://localhost:3000
 
 Done already: `npm install`, `.env` (with a generated `SESSION_SECRET`), `npm run db:migrate`, `npm run seed` (30 venues, 821 reviews, 82 users), `seed/test-accounts.ts`. `npm test` → 93/93 pass, `npm run typecheck` → clean.
 
-Demo logins: `andreea@e-uvt.ro`, `luca@visit.ro`, `sandu.proprietar`, `admin` (password `demo1234`); `test.user` / `test.owner` / `test.admin` (see `seed/README.md`).
+Test logins (local DB only): `test.user` / `test.owner` / `test.admin` (see `docs/DEMO.md`). The seed has no generated users or reviews.
