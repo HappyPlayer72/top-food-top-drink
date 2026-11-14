@@ -193,4 +193,16 @@ await accounts.confirmClaim(db, user.id, claim.claimId, { code: claim.code! });
 ok("cine l-a adăugat îl poate revendica (owner)", (await db.query.venueManagers.findFirst({ where: (m, { eq }) => eq(m.venueId, added.venueId) }))?.role === "owner");
 await db.update(usersTable).set({ roles: ["user", "local", "owner"] }).where(eq(usersTable.id, sanduOwner.id));
 
+// ---------- Conturile demo de pe ecranul de login + fidelitatea în modul demo ----------
+const demoPassword = process.env.DEMO_PASSWORD ?? "demo1234";
+for (const email of ["andreea@e-uvt.ro", "luca@visit.ro"]) {
+  const u = await accounts.login(db, { login: email, password: demoPassword }).catch(() => null);
+  ok(`contul demo ${email} intră cu parola demo`, !!u);
+}
+const programs = await loyalty.cityPrograms(db, "timisoara");
+ok("programele de fidelitate din oraș", programs.length >= 2 && programs.every((p) => !("stampSecret" in p)), programs.map((p) => p.venueName).join(", "));
+const demoCode = await loyalty.demoStampCode(db, programs.find((p) => p.venueSlug === "pivnita-cu-bolta")!.id);
+const demoScan = await loyalty.scanCode(db, user.id, demoCode);
+ok("codul demo (ca la tejghea) pune ștampila", demoScan.action === "stamped", demoScan.message);
+
 process.exit();

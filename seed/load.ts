@@ -133,10 +133,15 @@ async function main() {
     body: "O fierbem de la zero, șase ore. Nu putem face asta zilnic, deci nu o vindem zilnic.",
     publishAt: new Date(now.getTime() - 3 * DAY),
   });
-  const saturday = new Date(now.getTime() + ((6 - now.getUTCDay() + 7) % 7) * DAY);
+  // Evenimentele cad mereu în weekendul curent sau următor, după ora de acum (pagina ascunde ce a trecut)
+  const day0 = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const fri = new Date(day0.getTime() + ((5 - now.getUTCDay() + 7) % 7) * DAY - (now.getUTCDay() === 6 ? DAY : now.getUTCDay() === 0 ? 2 * DAY : 0));
+  const upcoming = (d: Date, fallbackHours: number) => (d > now ? d : new Date(now.getTime() + fallbackHours * 3_600_000));
+  const bluesAt = upcoming(new Date(fri.getTime() + 19 * 3_600_000), 1); // vineri 21:00 ora României
+  const vinylAt = upcoming(new Date(fri.getTime() + DAY + 21 * 3_600_000), 2); // sâmbătă 23:00
   await db.insert(posts).values([
-    { venueId: venueIds.get("pivnita-cu-bolta")!, authorId: ownerId, type: "event", title: "Concert de blues", body: "De la 21:00. Intrare liberă.", eventAt: new Date(saturday.getTime() - DAY) },
-    { venueId: venueIds.get("depoul-de-tramvaie")!, authorId: ownerId, type: "event", title: "Noaptea de vinil", body: "De la 23:00. 30 lei.", eventAt: saturday },
+    { venueId: venueIds.get("pivnita-cu-bolta")!, authorId: ownerId, type: "event", title: "Concert de blues", body: "De la 21:00. Intrare liberă.", eventAt: bluesAt },
+    { venueId: venueIds.get("depoul-de-tramvaie")!, authorId: ownerId, type: "event", title: "Noaptea de vinil", body: "De la 23:00. 30 lei.", eventAt: vinylAt },
   ]);
 
   // ---------- Program, meniu, prezentare ----------
