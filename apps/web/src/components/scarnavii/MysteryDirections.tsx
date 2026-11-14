@@ -301,9 +301,9 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
           <Compass
             className={`w-4 h-4 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}
           />
-          <h2 className="font-display text-[24px] sm:text-[28px] leading-tight">
+          <h1 className="font-display text-[38px] sm:text-[48px] leading-[0.94]">
             Destinație secretă — doar pe indicații
-          </h2>
+          </h1>
         </div>
         <p
           className={`text-[13px] sm:text-[14px] ${

@@ -38,6 +38,8 @@ type ScarnaviiModeId =
 
 type CategoryFilter = 'all' | 'minigame' | 'explore';
 
+const MODE_PARAM = 'mod';
+
 interface ScarnaviiItem {
   id: ScarnaviiModeId;
   category: Exclude<CategoryFilter, 'all'>;
@@ -141,6 +143,39 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
     };
   }, []);
 
+  // Modul activ trăiește în URL (?mod=...), ca butonul Înapoi al browserului să revină la listă.
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const mod = new URLSearchParams(window.location.search).get(MODE_PARAM);
+      setActiveMode(SCARNAVII_LIST.find((item) => item.id === mod)?.id ?? null);
+    };
+    syncFromUrl();
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, []);
+
+  const openMode = (id: ScarnaviiModeId) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set(MODE_PARAM, id);
+    window.history.pushState({ scarnaviiMode: id }, '', url);
+    window.scrollTo({ top: 0 });
+    setActiveMode(id);
+  };
+
+  const closeMode = () => {
+    // Dacă am intrat din listă, revenim pe aceeași intrare din istoric; la link direct, înlocuim URL-ul.
+    if (window.history.state?.scarnaviiMode) {
+      window.history.back();
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete(MODE_PARAM);
+    window.history.replaceState(null, '', url);
+    setActiveMode(null);
+  };
+
+  const activeItem = SCARNAVII_LIST.find((item) => item.id === activeMode);
+
   const visibleList =
     categoryFilter === 'all'
       ? SCARNAVII_LIST
@@ -150,14 +185,9 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
     if (isRolling) return;
     setIsRolling(true);
 
-    const pool = activeMode ? SCARNAVII_LIST : visibleList;
-    const candidates = activeMode
-      ? pool.filter((item) => item.id !== activeMode)
-      : pool;
+    const pool = visibleList;
     const finalPick =
-      candidates[Math.floor(Math.random() * candidates.length)] ??
-      pool[0] ??
-      SCARNAVII_LIST[0];
+      pool[Math.floor(Math.random() * pool.length)] ?? SCARNAVII_LIST[0];
 
     let step = 0;
     if (rollIntervalRef.current) window.clearInterval(rollIntervalRef.current);
@@ -174,7 +204,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
         rollIntervalRef.current = null;
       }
       setIsRolling(false);
-      setActiveMode(finalPick.id);
+      openMode(finalPick.id);
     }, 520);
   };
 
@@ -190,7 +220,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={activeMode ? () => setActiveMode(null) : onBack}
+              onClick={activeMode ? closeMode : onBack}
               aria-label={
                 activeMode ? 'Înapoi la lista de Scârnăvii' : 'Înapoi'
               }
@@ -215,9 +245,11 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
               >
                 scârnăvii
               </strong>
+              {activeItem && `/${activeItem.shortTab.toLowerCase()}`}
             </span>
           </div>
 
+          {!activeMode && (
           <button
             type="button"
             onClick={handleRollScarnavie}
@@ -233,9 +265,11 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
             />
             <span>{isRolling ? 'Se alege...' : 'Trage la sorți'}</span>
           </button>
+          )}
         </div>
 
-        {/* Hero Title */}
+        {/* Hero Title (doar pe listă; în mod, titlul modului e titlul paginii) */}
+        {!activeMode && (
         <section className="space-y-2">
           <h1 className="font-display text-[38px] sm:text-[48px] leading-[0.94]">
             Scârnăvii
@@ -249,34 +283,6 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
             descoperă localuri, alege cu gașca sau pornește într-o aventură.
           </p>
         </section>
-
-        {/* Quick Mode Switcher Tabs when inside a mode */}
-        {activeMode && (
-          <div className="flex flex-wrap items-center gap-2">
-            {SCARNAVII_LIST.map((item) => {
-              const Icon = item.icon;
-              const active = activeMode === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveMode(item.id)}
-                  className={`btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[12px] font-semibold border ${
-                    active
-                      ? isDrink
-                        ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
-                        : 'bg-[#3A2418] text-white border-[#3A2418]'
-                      : isDrink
-                      ? 'border-[#2D5947] text-[#F4EEE2]/80 hover:border-[#F2A33A]/60'
-                      : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{item.shortTab}</span>
-                </button>
-              );
-            })}
-          </div>
         )}
 
         {/* Active Interactive Mode OR Scârnăvii List */}
@@ -369,7 +375,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setActiveMode(item.id)}
+                    onClick={() => openMode(item.id)}
                     className={`btn-press group relative w-full min-h-[250px] overflow-hidden text-left rounded-[4px] border-2 p-5 sm:p-6 transition-all duration-200 hover:-rotate-1 hover:scale-[1.015] hover:shadow-[7px_7px_0_rgba(58,36,24,0.2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 ${
                       isHighlighted
                         ? 'ring-4 ring-[#E0A526] ring-offset-2'
