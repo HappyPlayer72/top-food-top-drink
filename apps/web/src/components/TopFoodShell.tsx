@@ -49,6 +49,7 @@ import { MapView } from './MapView';
 import { MonthlyTopView } from './MonthlyTopView';
 import { ScarnaviiView } from './ScarnaviiView';
 import { FidelityView } from './FidelityView';
+import { Footer } from './Footer';
 import { RestaurantDetailModal } from './RestaurantDetailModal';
 
 const USER_ACCOUNTS: UserAccount[] = [
@@ -963,6 +964,26 @@ export function TopFoodShell({
           />
         )}
       </main>
+
+      <Footer
+        vertical={vertical}
+        onVerticalChange={(v) => {
+          scrollPositionsRef.current = {};
+          pendingScrollYRef.current = 0;
+          setVertical(v);
+          setNavSection('top');
+          setSelectedRestaurantId(null);
+          setSelectedCategory(null);
+        }}
+        onNavigateSection={navigateToSection}
+        onSelectCategory={(cat) => {
+          setSelectedCategory(cat);
+          navigateToSection('top');
+        }}
+        onOpenLogin={handleOpenLogin}
+        isLoggedIn={Boolean(currentUser)}
+        hasBottomNav
+      />
 
       <RestaurantDetailModal
         restaurant={selectedRestaurant}
