@@ -149,7 +149,7 @@ export function groupMenu(menu: VenuePage['menu'], vertical: 'food' | 'drink'): 
 
 /** Topurile tematice din cityPage → doar ce afișează pagina (fără scoruri interne). */
 export function toThemeTops(themes: CityPage['themes']): ThemeTop[] {
-  const entry = (v: CityPage['themes'][number]['declared'][number]) => ({ slug: v.slug, name: v.name, neighborhood: v.neighborhood, facts: v.facts });
+  const entry = (v: CityPage['themes'][number]['declared'][number]) => ({ slug: v.slug, name: v.name, neighborhood: v.neighborhood, facts: v.facts, quick: v.quick });
   return themes.map((t) => ({
     theme: t.theme,
     label: t.label,
@@ -213,6 +213,7 @@ export function toRestaurant(
       : (fb?.whatToOrder ?? []),
     menuCategories: p.menu.length ? groupMenu(p.menu, v.vertical) : fb?.menuCategories,
     features: p.features,
+    quick: p.quick,
     occasionTags: v.occasionTags.length ? v.occasionTags : (fb?.occasionTags ?? []),
 
     foodQualityScore: s.honest ?? 0,

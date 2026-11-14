@@ -3,12 +3,12 @@
  * Dacă baza de date nu e configurată sau nu răspunde, întoarce null și site-ul folosește
  * datele statice din src/data — așa merge și fără Docker.
  */
-import { cityPage, leaderboardPage, topReviewers, venuePage, weekendEvents, type Db } from '@tftd/api';
+import { cityPage, leaderboardPage, myQuickVotes, topReviewers, venuePage, weekendEvents, type Db } from '@tftd/api';
 import { getDb } from '../server/db';
 import { cities } from '@tftd/db';
 import { eq } from 'drizzle-orm';
 import { DRINK_VENUES, INITIAL_RESTAURANTS } from '../../data/restaurants';
-import type { Restaurant, ThemeTop, TopReviewer, UserAccount, WeekendEvent } from '../../types';
+import type { QuickKind, Restaurant, ThemeTop, TopReviewer, UserAccount, WeekendEvent } from '../../types';
 import { getUserId } from '../server/session';
 import { toUserAccount } from './user';
 import { monthlyBySlug, toRestaurant, toThemeTops, toTopReviewer, toWeekendEvent } from './toRestaurant';
@@ -54,6 +54,8 @@ export type ShellData = {
   backendOnline: true;
   /** Userul din cookie-ul de sesiune (null = vizitator) */
   initialUser: UserAccount | null;
+  /** Voturile rapide ale userului (venueId din DB → siguranță 1–5, zgomot 1–4), ca butoanele să le arate. */
+  myQuickVotes: Record<string, Partial<Record<QuickKind, number>>>;
 };
 
 export async function loadShellData(now = new Date()): Promise<ShellData | null> {
@@ -61,12 +63,13 @@ export async function loadShellData(now = new Date()): Promise<ShellData | null>
   if (!d) return null;
   try {
     const userId = await getUserId();
-    const [food, drink, events, reviewers, initialUser] = await Promise.all([
+    const [food, drink, events, reviewers, initialUser, quickVotes] = await Promise.all([
       loadVertical(d, 'food', now),
       loadVertical(d, 'drink', now),
       weekendEvents(d, CITY, now),
       topReviewers(d, CITY, {}, now),
       userId ? toUserAccount(d, userId, now) : Promise.resolve(null),
+      userId ? myQuickVotes(d, userId) : Promise.resolve({}),
     ]);
     return {
       foodRestaurants: food.venues,
@@ -76,6 +79,7 @@ export async function loadShellData(now = new Date()): Promise<ShellData | null>
       topReviewers: reviewers.map(toTopReviewer),
       backendOnline: true,
       initialUser,
+      myQuickVotes: quickVotes,
     };
   } catch (error) {
     console.error('[backend] Nu pot citi din baza de date, folosesc datele statice:', error);

@@ -10,7 +10,7 @@ import {
 import { venueProgram } from "@tftd/loyalty";
 import { activePartnership, sponsoredSlots } from "@tftd/monetization";
 import { formatHours, openStatus } from "./hours.ts";
-import { venueFeatureData, venueFeatures } from "./features.ts";
+import { venueFeatureData, venueFeatures, venueQuickData } from "./features.ts";
 import { activeThemes, featureStatus, rankTheme, themeQuestions, type Theme, type ThemeCandidate } from "@tftd/scoring/features";
 import { PRIOR_WEIGHT, POSSIBLE_TRAP, TRAP } from "@tftd/scoring";
 
@@ -97,7 +97,7 @@ export async function thematicTops(db: Db, q: { citySlug: string; vertical: Vert
     // Aceleași localuri ca topul general (cu Scor Onest), ca pagina să le poată deschide.
     // shortcut: web-ul încarcă primele 100 din topul general; la orașe cu > 100 localuri, încarcă și localurile din topurile tematice.
     .where(and(eq(venues.citySlug, q.citySlug), eq(venues.vertical, q.vertical), eq(venues.status, "active"), isNotNull(venues.honestScore)));
-  const data = await venueFeatureData(db, rows.map((r) => r.id));
+  const [data, quick] = await Promise.all([venueFeatureData(db, rows.map((r) => r.id)), venueQuickData(db, rows.map((r) => r.id))]);
   const candidates = rows.map((r) => ({ ...r, ...data.get(r.id)! }));
   const entry = (theme: Theme, v: (typeof candidates)[number] & ThemeCandidate) => {
     const { stats: _s, declarations: _d, openingHours, ...rest } = v;
@@ -106,6 +106,8 @@ export async function thematicTops(db: Db, q: { citySlug: string; vertical: Vert
       ...rest,
       openNow: open.openNow,
       trapLevel: trapLevel(v.touristTrapIndex),
+      // Doar afișat (siguranță la Ieșiri, zgomot la Lucru); ordinea vine din rankTheme.
+      quick: quick.get(v.id)!,
       facts: themeQuestions(theme).map((qq) => featureStatus(qq, v.stats.get(qq.key), v.declarations.get(qq.key))),
     };
   };
@@ -248,6 +250,7 @@ export async function venuePage(
     },
     menu,
     features: venueFeatures((await venueFeatureData(db, [venue.id])).get(venue.id)),
+    quick: (await venueQuickData(db, [venue.id])).get(venue.id)!,
     aspectScores: venue.aspectScores ?? {},
     loyalty: await venueProgram(db, venue.id),
     scores: {

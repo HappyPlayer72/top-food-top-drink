@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   aggregateAnswers,
   featureStatus,
+  isNoisy,
+  quickButtonsFor,
+  quickNoiseText,
+  quickSafetyText,
+  quickStats,
+  quickWarnings,
   MIN_ANSWERS,
   orderTops,
   QUESTION_BY_KEY,
@@ -121,5 +127,39 @@ describe("preferințe", () => {
     expect(orderTops([])).toEqual(["general", "accesibilitate", "lucru", "iesiri"]);
     expect(orderTops(["iesiri", "lucru"])).toEqual(["lucru", "iesiri", "general", "accesibilitate"]);
     expect(orderTops(["accesibilitate", "mancare"])).toEqual(["general", "accesibilitate", "lucru", "iesiri"]);
+  });
+});
+
+describe("voturi rapide (siguranță 1–5, zgomot 1–4)", () => {
+  const votes = (kind: "safety" | "noise", values: number[]) => values.map((value) => ({ kind, value }));
+
+  it("sub prag nu afișăm nimic; de la prag: media siguranței și mediana zgomotului", () => {
+    expect(quickStats(votes("safety", [5, 4, 3, 5]))).toEqual({ safety: null, noise: null });
+    const q = quickStats([...votes("safety", [5, 4, 4, 5, 2]), ...votes("noise", [1, 1, 2, 4, 1, 3])]);
+    expect(q.safety).toEqual({ average: 4, votes: 5 });
+    expect(q.noise).toMatchObject({ level: 1, id: "linistit", votes: 6 });
+    expect(quickSafetyText(q)).toBe("Siguranță 4,0/5 din voturile vizitatorilor");
+    expect(quickNoiseText(q)).toBe("De obicei liniștit");
+  });
+
+  it("avertizări doar din voturi reale: siguranță ≤ 2,5 și zgomot de obicei „Zgomotos”", () => {
+    const bad = quickStats([...votes("safety", [1, 2, 3, 2, 2]), ...votes("noise", [4, 4, 3, 4, 4])]);
+    expect(quickWarnings(bad).unsafeFeeling).toBe("Unii vizitatori nu s-au simțit în siguranță (medie 2,0/5).");
+    expect(quickWarnings(bad).veryNoisy).toBeDefined();
+    expect(quickWarnings(quickStats(votes("safety", [1, 1, 1])))).toEqual({ unsafeFeeling: undefined, veryNoisy: undefined });
+    // 33 / 13 ≈ 2,54: peste prag, deși afișat rotunjit ar fi 2,5
+    expect(quickWarnings(quickStats(votes("safety", [3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2]))).unsafeFeeling).toBeUndefined();
+  });
+
+  it("filtrul „Doar liniștite” ascunde Animat/Zgomotos, nu și localurile fără destule voturi", () => {
+    expect(isNoisy(quickStats(votes("noise", [3, 3, 4, 2, 3])))).toBe(true);
+    expect(isNoisy(quickStats(votes("noise", [2, 2, 1, 2, 3])))).toBe(false);
+    expect(isNoisy(quickStats(votes("noise", [4, 4])))).toBe(false);
+  });
+
+  it("butoanele după profil: Lucru → zgomotul primul; Ieșiri → siguranța primul și evidențiată", () => {
+    expect(quickButtonsFor([])).toEqual({ order: ["safety", "noise"], highlighted: [] });
+    expect(quickButtonsFor(["lucru"])).toEqual({ order: ["noise", "safety"], highlighted: ["noise"] });
+    expect(quickButtonsFor(["iesiri", "lucru"])).toEqual({ order: ["safety", "noise"], highlighted: ["safety", "noise"] });
   });
 });

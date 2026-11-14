@@ -5,9 +5,9 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { createDb, partnerships, reviewAnswers, reviews, users, venueManagers, venues, type Db } from "@tftd/db";
+import { createDb, partnerships, reviewAnswers, reviews, users, venueManagers, venueQuickVotes, venues, type Db } from "@tftd/db";
 import { MIN_ANSWERS } from "@tftd/scoring/features";
-import { accounts, owner, thematicTops, venuePage, writeReview } from "./index.ts";
+import { accounts, myQuickVotes, owner, submitQuickVote, thematicTops, venuePage, writeReview } from "./index.ts";
 
 const url = process.env.TEST_DATABASE_URL;
 const db = url ? createDb(url) : (null as unknown as Db);
@@ -118,5 +118,28 @@ describe.skipIf(!url)("integrare PostgreSQL (bază de test)", () => {
         allFood.map((v) => ({ venueId: v.id, plan: "highlight" as const, startsAt: new Date(now.getTime() - 86_400_000), endsAt: new Date(now.getTime() + 30 * 86_400_000), paymentStatus: "paid" as const })),
       );
       expect(await order()).toEqual(before);
+    }));
+
+  it("voturi rapide: un vot per user și tip (se schimbă), validate, agregate de la prag, fără efect asupra ordinii", () =>
+    inTx(async (tx) => {
+      const v = await venue(tx, "hanul-cu-tei");
+      const u = await newUser(tx);
+      await submitQuickVote(tx, u.id, v.id, "safety", 2);
+      await submitQuickVote(tx, u.id, v.id, "safety", 4);
+      await submitQuickVote(tx, u.id, v.id, "noise", 1);
+      expect(await tx.select().from(venueQuickVotes).where(eq(venueQuickVotes.userId, u.id))).toHaveLength(2);
+      expect((await myQuickVotes(tx, u.id))[v.id]).toEqual({ safety: 4, noise: 1 });
+
+      await expect(submitQuickVote(tx, u.id, v.id, "noise", 5)).rejects.toThrow(/de la 1 la 4/);
+      await expect(submitQuickVote(tx, u.id, v.id, "safety", 0)).rejects.toThrow(/de la 1 la 5/);
+      await expect(submitQuickVote(tx, u.id, v.id, "pret", 3)).rejects.toThrow(/necunoscut/);
+
+      const page = () => venuePage(tx, { citySlug: v.citySlug, vertical: v.vertical, slug: v.slug }).then((p) => p.quick);
+      expect((await page()).safety).toBeNull();
+      const before = (await thematicTops(tx, { citySlug: "timisoara", vertical: "food" })).map((t) => t.community.map((c) => c.slug));
+      for (let i = 0; i < 5; i++) await submitQuickVote(tx, (await newUser(tx)).id, v.id, "safety", 1);
+      expect((await page()).safety).toEqual({ average: 1.5, votes: 6 });
+      const after = (await thematicTops(tx, { citySlug: "timisoara", vertical: "food" })).map((t) => t.community.map((c) => c.slug));
+      expect(after).toEqual(before);
     }));
 });

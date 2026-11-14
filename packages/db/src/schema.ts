@@ -18,6 +18,7 @@ import {
   pgTable,
   primaryKey,
   real,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -61,6 +62,8 @@ export const interest = pgEnum("interest", ["accesibilitate", "lucru", "iesiri",
 export const featureAnswer = pgEnum("feature_answer", ["yes", "no", "not_observed"]);
 /** Declarația owner-ului; „nespecificat” = lipsa rândului. */
 export const declarationValue = pgEnum("declaration_value", ["yes", "no"]);
+/** Voturile rapide din bara localului: siguranță 1–5, zgomot 1–4 (liniștit … zgomotos). */
+export const quickVoteKind = pgEnum("quick_vote_kind", ["safety", "noise"]);
 
 // ---------- Oraș ----------
 
@@ -380,6 +383,25 @@ export const venueFacilityDeclarations = pgTable(
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.venueId, t.questionKey] })],
+);
+
+/**
+ * Vot rapid, fără review: un vot per user, per local, per tip (se poate schimba oricând).
+ * Se afișează (medie / nivel obișnuit, de la prag) și dă avertizări; nu intră în ordinea topurilor.
+ */
+export const venueQuickVotes = pgTable(
+  "venue_quick_votes",
+  {
+    venueId: uuid().notNull().references(() => venues.id, { onDelete: "cascade" }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: quickVoteKind().notNull(),
+    value: smallint().notNull(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.venueId, t.userId, t.kind] }),
+    check("venue_quick_votes_value", sql`${t.value} between 1 and (case when ${t.kind} = 'noise' then 4 else 5 end)`),
+  ],
 );
 
 export const reviewReplies = pgTable("review_replies", {

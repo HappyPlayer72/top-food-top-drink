@@ -6,7 +6,7 @@
  */
 import { randomInt } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { accounts, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
+import { accounts, submitQuickVote, submitVibe, toggleHelpful, writeReview } from '@tftd/api';
 import { getDb } from '@/lib/server/db';
 import { clearSession, errorMessage, getUserId, setSession } from '@/lib/server/session';
 import { toUserAccount } from '@/lib/backend/user';
@@ -104,6 +104,20 @@ export async function savePreferences(interests: string[]): Promise<Result<{ use
     await accounts.setInterests(getDb(), userId, interests);
     revalidatePath('/', 'layout');
     return { ok: true, user: (await toUserAccount(getDb(), userId))! };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
+
+/** Vot rapid din bara localului (siguranță 1–5, zgomot 1–4): cere cont; validat pe server. */
+export async function castQuickVote(venueId: string, kind: string, value: number): Promise<Result> {
+  if (!hasDb()) return OFFLINE;
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Intră în cont ca să votezi.' };
+  try {
+    await submitQuickVote(getDb(), userId, venueId, kind, value);
+    revalidatePath('/', 'layout');
+    return { ok: true };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
   }

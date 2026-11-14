@@ -4,14 +4,17 @@
  * Nu citește parteneriate/sponsorizări (regula 1).
  */
 import { and, eq, inArray } from "drizzle-orm";
-import { reviewAnswers, reviews, venueFacilityDeclarations, type Db } from "@tftd/db";
+import { reviewAnswers, reviews, venueFacilityDeclarations, venueQuickVotes, type Db } from "@tftd/db";
 import {
   aggregateAnswers,
   featureStatus,
   QUESTIONS,
+  quickStats,
   THEMES,
   type Declaration,
   type QuestionStats,
+  type QuickKind,
+  type QuickStats,
 } from "@tftd/scoring/features";
 
 export type VenueFeatureData = { stats: Map<string, QuestionStats>; declarations: Map<string, Declaration> };
@@ -45,4 +48,20 @@ export function venueFeatures(data: VenueFeatureData | undefined) {
     label: t.label,
     items: QUESTIONS.filter((q) => q.theme === t.key).map((q) => featureStatus(q, data?.stats.get(q.key), data?.declarations.get(q.key))),
   })).filter((t) => t.items.length);
+}
+
+/** Voturile rapide agregate (media de siguranță, zgomotul obișnuit), pe local. */
+export async function venueQuickData(db: Db, venueIds: string[]): Promise<Map<string, QuickStats>> {
+  const rows = venueIds.length
+    ? await db.select({ venueId: venueQuickVotes.venueId, kind: venueQuickVotes.kind, value: venueQuickVotes.value }).from(venueQuickVotes).where(inArray(venueQuickVotes.venueId, venueIds))
+    : [];
+  return new Map(venueIds.map((id) => [id, quickStats(rows.filter((r) => r.venueId === id))]));
+}
+
+/** Voturile userului (ca butoanele să arate ce a votat, și după refresh): venueId → { safety, noise }. */
+export async function myQuickVotes(db: Db, userId: string): Promise<Record<string, Partial<Record<QuickKind, number>>>> {
+  const rows = await db.select({ venueId: venueQuickVotes.venueId, kind: venueQuickVotes.kind, value: venueQuickVotes.value }).from(venueQuickVotes).where(eq(venueQuickVotes.userId, userId));
+  const out: Record<string, Partial<Record<QuickKind, number>>> = {};
+  for (const r of rows) (out[r.venueId] ??= {})[r.kind] = r.value;
+  return out;
 }

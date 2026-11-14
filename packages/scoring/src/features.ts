@@ -39,7 +39,7 @@ export const QUESTIONS: Question[] = [
   { key: "spatiu_intre_mese", theme: "accesibilitate", label: "Spațiu între mese", question: "E destul spațiu între mese ca să treci ușor?", claim: "e destul spațiu între mese", ownerDeclarable: true },
   { key: "wifi", theme: "lucru", label: "Wi-Fi", question: "A mers Wi-Fi-ul?", claim: "Wi-Fi-ul merge", ownerDeclarable: true },
   { key: "prize", theme: "lucru", label: "Prize", question: "Ai găsit prize la mese?", claim: "există prize la mese", ownerDeclarable: true },
-  { key: "liniste", theme: "lucru", label: "Liniște", question: "E destul de liniște cât să poți vorbi sau lucra?", claim: "e destul de liniște cât să poți vorbi sau lucra", ownerDeclarable: false },
+  { key: "liniste", theme: "lucru", label: "Liniște", question: "E destul de liniște cât să lucrezi?", claim: "e destul de liniște pentru lucru", ownerDeclarable: false },
   // Ieșiri: experiența personală, formulată la fel pentru toți; owner-ul nu o poate declara în locul clienților.
   { key: "atmosfera", theme: "iesiri", label: "Atmosferă", question: "Ți-a plăcut atmosfera?", claim: "le-a plăcut atmosfera", ownerDeclarable: false },
   { key: "siguranta", theme: "iesiri", label: "Siguranță", question: "Te-ai simțit în siguranță în local?", claim: "s-au simțit în siguranță în local", ownerDeclarable: false },
@@ -191,4 +191,63 @@ export function rankTheme<T extends ThemeCandidate>(theme: Theme, venues: T[]) {
     .filter((s) => s.declaredYes > 0)
     .sort((a, b) => b.declaredYes - a.declaredYes || byHonest(a.venue, b.venue));
   return { community, declared };
+}
+
+// ---------- Voturi rapide (bara localului): siguranță 1–5, zgomot pe 4 niveluri ----------
+// Se afișează și dau avertizări; NU intră în ordinea topurilor (decizie de produs).
+
+export type QuickKind = "safety" | "noise";
+export const QUICK_MAX: Record<QuickKind, number> = { safety: 5, noise: 4 };
+export const NOISE_LEVELS = [
+  { value: 1, id: "linistit", label: "Liniștit" },
+  { value: 2, id: "moderat", label: "Moderat" },
+  { value: 3, id: "animat", label: "Animat" },
+  { value: 4, id: "zgomotos", label: "Zgomotos" },
+] as const;
+export type NoiseId = (typeof NOISE_LEVELS)[number]["id"];
+
+export type QuickStats = {
+  /** Media voturilor de siguranță (1–5), de la MIN_ANSWERS voturi; altfel null. */
+  safety: { average: number; votes: number } | null;
+  /** Nivelul obișnuit de zgomot (mediana), de la MIN_ANSWERS voturi; altfel null. */
+  noise: { level: number; id: NoiseId; label: string; votes: number } | null;
+};
+
+export function quickStats(rows: { kind: QuickKind; value: number }[]): QuickStats {
+  const safety = rows.filter((r) => r.kind === "safety").map((r) => r.value);
+  const noise = rows
+    .filter((r) => r.kind === "noise")
+    .map((r) => r.value)
+    .sort((a, b) => a - b);
+  // Mediana (cea de jos la număr par): un singur vot extrem nu mută „de obicei”.
+  const median = noise[Math.floor((noise.length - 1) / 2)];
+  const level = NOISE_LEVELS.find((l) => l.value === median);
+  return {
+    // Media nerotunjită: pragul de avertizare (≤ 2,5) se compară pe valoarea reală; rotunjim doar la afișare.
+    safety: safety.length >= MIN_ANSWERS ? { average: safety.reduce((a, b) => a + b, 0) / safety.length, votes: safety.length } : null,
+    noise: noise.length >= MIN_ANSWERS && level ? { level: level.value, id: level.id, label: level.label, votes: noise.length } : null,
+  };
+}
+
+const comma = (x: number) => x.toFixed(1).replace(".", ",");
+
+/** Avertizări din voturi reale (doar de la prag). */
+export function quickWarnings(q: QuickStats): { unsafeFeeling?: string; veryNoisy?: string } {
+  return {
+    unsafeFeeling: q.safety && q.safety.average <= 2.5 ? `Unii vizitatori nu s-au simțit în siguranță (medie ${comma(q.safety.average)}/5).` : undefined,
+    veryNoisy: q.noise && q.noise.level >= 4 ? "Vizitatorii îl descriu de obicei ca zgomotos." : undefined,
+  };
+}
+
+/** Textul scurt din topuri și de pe pagina localului. */
+export const quickSafetyText = (q: QuickStats) => (q.safety ? `Siguranță ${comma(q.safety.average)}/5 din voturile vizitatorilor` : null);
+export const quickNoiseText = (q: QuickStats) => (q.noise ? `De obicei ${q.noise.label.toLowerCase()}` : null);
+/** Filtrul „Doar liniștite”: ascunde ce e de obicei Animat sau Zgomotos; fără destule voturi nu ascundem. */
+export const isNoisy = (q: QuickStats) => !!q.noise && q.noise.level >= 3;
+
+/** Ordinea butoanelor din bara localului după profil: „Lucru” → zgomotul primul; „Ieșiri” → siguranța. */
+export function quickButtonsFor(interests: readonly string[]): { order: QuickKind[]; highlighted: QuickKind[] } {
+  const highlighted: QuickKind[] = [...(interests.includes("iesiri") ? (["safety"] as const) : []), ...(interests.includes("lucru") ? (["noise"] as const) : [])];
+  const order: QuickKind[] = interests.includes("lucru") && !interests.includes("iesiri") ? ["noise", "safety"] : ["safety", "noise"];
+  return { order, highlighted };
 }

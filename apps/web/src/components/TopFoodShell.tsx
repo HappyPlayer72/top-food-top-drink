@@ -2,13 +2,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, voteHelpful } from '@/app/actions/user';
+import { castQuickVote, loginDemo, loginUser, logoutUser, registerUser, reportCrowd, submitReview, voteHelpful } from '@/app/actions/user';
 import { X } from 'lucide-react';
 import {
   DrinkQuickFilter,
   FoodQuickFilter,
   NavSection,
   Restaurant,
+  QuickKind,
   Review,
   ThemeTop,
   TopReviewer,
@@ -97,6 +98,8 @@ export interface TopFoodShellProps {
   initialUser?: UserAccount | null;
   /** Topurile tematice din backend (Accesibilitate, Locuri pentru lucru…) */
   themeTops?: { food: ThemeTop[]; drink: ThemeTop[] };
+  /** Voturile rapide ale userului din sesiune (venueId → siguranță / zgomot) */
+  myQuickVotes?: Record<string, Partial<Record<QuickKind, number>>>;
 }
 
 export function TopFoodShell({
@@ -111,7 +114,13 @@ export function TopFoodShell({
   backendOnline = false,
   initialUser = null,
   themeTops,
+  myQuickVotes: initialQuickVotes,
 }: TopFoodShellProps) {
+  const [myQuickVotes, setMyQuickVotes] = useState(initialQuickVotes ?? {});
+  // După router.refresh() vin voturile de pe server (referință nouă doar când se schimbă datele).
+  useEffect(() => {
+    if (initialQuickVotes) setMyQuickVotes(initialQuickVotes);
+  }, [initialQuickVotes]);
   const router = useRouter();
   const [vertical, setVertical] = useState<Vertical>(initialVertical);
   const [navSection, setNavSection] = useState<NavSection>(initialSection);
@@ -135,6 +144,7 @@ export function TopFoodShell({
   const [accounts, setAccounts] = useState<UserAccount[]>(USER_ACCOUNTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showLoginScreen, setShowLoginScreen] = useState<boolean>(false);
+  const [pendingOpenReview, setPendingOpenReview] = useState(true);
   const [pendingReviewVenueId, setPendingReviewVenueId] = useState<
     string | null
   >(null);
@@ -397,7 +407,7 @@ export function TopFoodShell({
     setShowLoginScreen(false);
     if (pendingReviewVenueId) {
       setSelectedRestaurantId(pendingReviewVenueId);
-      setOpenReviewOnMount(true);
+      if (pendingOpenReview) setOpenReviewOnMount(true);
       setPendingReviewVenueId(null);
     }
     setStatusMessage(`Autentificat ca ${user.name}`);
@@ -410,10 +420,12 @@ export function TopFoodShell({
     setShowLoginScreen(false);
   };
 
-  const handleOpenLogin = () => {
+  /** `openReview: false` = după login revii la local fără să se deschidă review-ul (ex. vot rapid). */
+  const handleOpenLogin = (opts?: { openReview?: boolean }) => {
     preLoginScrollYRef.current = window.scrollY;
     scrollPositionsRef.current[navSection] = window.scrollY;
     setPendingReviewVenueId(selectedRestaurantId);
+    setPendingOpenReview(opts?.openReview !== false);
     setSelectedRestaurantId(null);
     pendingScrollYRef.current = 0;
     setShowLoginScreen(true);
@@ -557,6 +569,18 @@ export function TopFoodShell({
     );
     return { ok: true };
   };
+
+  /** Vot rapid (siguranță / zgomot) pe backend; undefined = fără backend (modalul ține votul local) */
+  const handleQuickVote = backendOnline
+    ? async (venueId: string, kind: QuickKind, value: number) => {
+        const res = await castQuickVote(venueId, kind, value);
+        if (res.ok) {
+          setMyQuickVotes((prev) => ({ ...prev, [venueId]: { ...prev[venueId], [kind]: value } }));
+          router.refresh();
+        } else if (/Intră în cont/.test(res.error)) handleOpenLogin();
+        return res;
+      }
+    : undefined;
 
   /** „Util” pe backend; undefined = fără backend (modalul numără local) */
   const handleVoteHelpful = backendOnline
@@ -813,6 +837,12 @@ export function TopFoodShell({
         onClose={() => setSelectedRestaurantId(null)}
         onAddReview={handleAddReview}
         onVoteHelpful={handleVoteHelpful}
+        myQuickVote={selectedRestaurant?.venueId ? myQuickVotes[selectedRestaurant.venueId] : undefined}
+        onQuickVote={
+          handleQuickVote && selectedRestaurant?.venueId
+            ? (kind, value) => handleQuickVote(selectedRestaurant.venueId!, kind, value)
+            : undefined
+        }
         onRequireLogin={handleOpenLogin}
         onLocateOnMap={handleSwitchToMap}
         isSaved={

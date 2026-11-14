@@ -1,11 +1,11 @@
 /** Acțiunile userilor din pagini: scrie review, raportează cât e de plin. */
 import { and, eq, gte } from "drizzle-orm";
-import { checkins, employees, invalid, notFound, reviewAnswers, reviews, socialSubmissions, venues, vibeChecks, type Db } from "@tftd/db";
+import { checkins, employees, invalid, notFound, reviewAnswers, reviews, socialSubmissions, venueQuickVotes, venues, vibeChecks, type Db } from "@tftd/db";
 import { rateEmployee } from "@tftd/owner";
 import { detectPlatform, processSubmission, submitSocialLink, type SocialAnalysis } from "@tftd/ingestion";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
-import { QUESTION_BY_KEY, type Answer } from "@tftd/scoring/features";
+import { QUESTION_BY_KEY, QUICK_MAX, type Answer, type QuickKind } from "@tftd/scoring/features";
 
 export const REVIEW_COOLDOWN_DAYS = 30;
 const DAY = 86_400_000;
@@ -97,6 +97,24 @@ export async function writeReview(db: Db, userId: string, input: ReviewInput, no
   await recalculateCity(db, venue.citySlug, venue.vertical, now);
   const [saved] = await db.select().from(reviews).where(eq(reviews.id, review!.id));
   return saved!;
+}
+
+/**
+ * Vot rapid din bara localului (siguranță 1–5, zgomot 1–4). Un vot per user, per local, per tip;
+ * un vot nou îl înlocuiește pe cel vechi. Nu intră în scoruri sau în ordinea topurilor.
+ */
+export async function submitQuickVote(db: Db, userId: string, venueId: string, kind: string, value: number, now = new Date()) {
+  if (kind !== "safety" && kind !== "noise") throw invalid("Tip de vot necunoscut.");
+  const max = QUICK_MAX[kind as QuickKind];
+  if (!Number.isInteger(value) || value < 1 || value > max) throw invalid(`Alege o valoare de la 1 la ${max}.`);
+  const [v] = await db.select({ status: venues.status }).from(venues).where(eq(venues.id, venueId));
+  if (!v || v.status !== "active") throw notFound("Localul");
+  const [row] = await db
+    .insert(venueQuickVotes)
+    .values({ venueId, userId, kind, value, updatedAt: now })
+    .onConflictDoUpdate({ target: [venueQuickVotes.venueId, venueQuickVotes.userId, venueQuickVotes.kind], set: { value, updatedAt: now } })
+    .returning();
+  return row!;
 }
 
 /** „Spune cât e de plin unde ești”: 1 (gol) … 5 (coadă la intrare), expiră în 2 ore. */

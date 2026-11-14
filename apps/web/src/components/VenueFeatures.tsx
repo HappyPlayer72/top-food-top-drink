@@ -1,14 +1,27 @@
-import { MIN_ANSWERS } from '@tftd/scoring/features';
-import type { FeatureStatus, VenueFeatureGroup } from '../types';
+import { MIN_ANSWERS, quickNoiseText, quickSafetyText } from '@tftd/scoring/features';
+import type { FeatureStatus, QuickStats, VenueFeatureGroup } from '../types';
 
 /**
  * Facilitățile localului cu sursa fiecărei informații. Procentul comunității apare doar de la prag;
  * declarația owner-ului nu e prezentată niciodată ca procent al clienților.
  */
-export function VenueFeatures({ groups, dark }: { groups: VenueFeatureGroup[]; dark: boolean }) {
+export function VenueFeatures({ groups, quick, dark }: { groups: VenueFeatureGroup[]; quick?: QuickStats; dark: boolean }) {
   const muted = dark ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]';
+  const quickLines = quick ? [quickSafetyText(quick), quickNoiseText(quick)].filter(Boolean) : [];
   return (
     <div className="space-y-3">
+      <div className="space-y-1.5">
+        <h4 className="text-[13px] font-bold">Din voturile rapide</h4>
+        {quickLines.length ? (
+          <ul className={`text-[13px] px-3 py-2 rounded-[4px] border space-y-0.5 ${dark ? 'bg-[#122B22] border-[#285443]' : 'bg-white border-[#E6DFD5]'}`}>
+            {quickLines.map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className={`text-[12px] ${muted}`}>Încă prea puține voturi pentru siguranță și zgomot (de la {MIN_ANSWERS}).</p>
+        )}
+      </div>
       {groups.map((g) => (
         <div key={g.theme} className="space-y-1.5">
           <h4 className="text-[13px] font-bold">{g.label}</h4>

@@ -63,7 +63,8 @@ export type AuthorRole = 'verified-local' | 'tourist' | 'influencer' | 'regular'
 
 /** Preferințele opționale ale userului și răspunsurile structurate (catalogul e în @tftd/scoring/features). */
 export type { Answer, FeatureStatus, Interest, TopKey } from '@tftd/scoring/features';
-import type { Answer, FeatureStatus, Interest, Theme } from '@tftd/scoring/features';
+import type { Answer, FeatureStatus, Interest, QuickStats, Theme } from '@tftd/scoring/features';
+export type { QuickKind, QuickStats } from '@tftd/scoring/features';
 
 /** Facilitățile unui local, pe teme, cu sursa fiecărei informații (comunitate / declarat de local / nespecificat). */
 export interface VenueFeatureGroup {
@@ -78,6 +79,8 @@ export interface ThemeTopEntry {
   name: string;
   neighborhood: string | null;
   facts: FeatureStatus[];
+  /** Voturile rapide (siguranță, zgomot): doar afișate, nu schimbă ordinea. */
+  quick: QuickStats;
 }
 export interface ThemeTop {
   theme: Theme;
@@ -320,6 +323,8 @@ export interface Restaurant {
   menuCategories?: MenuCategory[];
   /** Din backend: facilitățile cu sursa lor. Lipsă = date statice (fără backend). */
   features?: VenueFeatureGroup[];
+  /** Din backend: media voturilor rapide de siguranță și zgomotul obișnuit (de la prag). */
+  quick?: QuickStats;
 
   // --- Monthly Leaderboard ---
   monthlyRank?: number;

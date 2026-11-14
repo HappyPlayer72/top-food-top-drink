@@ -13,7 +13,7 @@ import { desc, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import {
   checkins, cities, createDb, employees, localVerifications, loyaltyPrograms, menuItems, partnerships, posts, reviewAnswers, reviewVotes, reviews, touristZones,
-  userSocialLinks, users, venueFacilityDeclarations, venueManagers, venues, vibeChecks, type OpeningHours,
+  userSocialLinks, users, venueFacilityDeclarations, venueManagers, venueQuickVotes, venues, vibeChecks, type OpeningHours,
 } from "@tftd/db";
 import { hashPassword } from "@tftd/accounts";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
@@ -258,6 +258,21 @@ async function main() {
     Object.entries(DEMO_DECLARATIONS).flatMap(([slug, decl]) =>
       // Doar Sandu are owner în seed; la celelalte declarația demo nu are autor.
       Object.entries(decl).map(([questionKey, value]) => ({ venueId: venueIds.get(slug)!, questionKey, value, updatedBy: slug === "ciorba-lui-sandu" ? ownerId : null })),
+    ),
+  );
+
+  // DATE DEMO: voturi rapide (siguranță 1–5, zgomot 1 liniștit … 4 zgomotos), câte un vot de la useri diferiți.
+  const DEMO_QUICK: Record<string, { safety?: number[]; noise?: number[] }> = {
+    "pivnita-cu-bolta": { safety: [5, 4, 5, 4, 5, 4], noise: [3, 3, 4, 3, 2, 3] },
+    "depoul-de-tramvaie": { safety: [2, 3, 2, 1, 2], noise: [4, 4, 3, 4, 4] }, // avertizări din voturi reale
+    "cafeneaua-de-noapte": { noise: [2, 1, 2, 2, 3] },
+    "cafe-domului": { noise: [1, 1, 2, 1, 1, 2] },
+    "pizzeria-din-fabric": { noise: [3, 4, 3, 3, 4] }, // ascuns de „Doar liniștite” în topul Lucru
+  };
+  const quickVoters = [...userIds.values()];
+  await db.insert(venueQuickVotes).values(
+    Object.entries(DEMO_QUICK).flatMap(([slug, kinds]) =>
+      (["safety", "noise"] as const).flatMap((kind) => (kinds[kind] ?? []).map((value, i) => ({ venueId: venueIds.get(slug)!, userId: quickVoters[i]!, kind, value }))),
     ),
   );
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { orderTops, type TopKey } from '@tftd/scoring/features';
+import { useState } from 'react';
+import { isNoisy, orderTops, quickNoiseText, quickSafetyText, type TopKey } from '@tftd/scoring/features';
 import type { FeatureStatus, ThemeTop, ThemeTopEntry } from '../types';
 import { SourceTag } from './VenueFeatures';
 
@@ -64,6 +65,11 @@ export function TopTabs({
 /** Un top tematic: întâi ce au confirmat clienții, apoi separat ce au declarat localurile. */
 export function ThemeTopList({ top, onSelect, dark }: { top: ThemeTop; onSelect: (slug: string) => void; dark: boolean }) {
   const muted = dark ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]';
+  // „Doar liniștite” (topul Lucru): ascunde ce vizitatorii votează de obicei Animat sau Zgomotos; nu reordonează.
+  const [onlyQuiet, setOnlyQuiet] = useState(false);
+  const quietFilter = top.theme === 'lucru' && onlyQuiet;
+  const community = quietFilter ? top.community.filter((v) => !isNoisy(v.quick)) : top.community;
+  const declared = quietFilter ? top.declared.filter((v) => !isNoisy(v.quick)) : top.declared;
   const line = dark ? 'border-[#285443]' : 'border-[#E6DFD5]';
   return (
     <section aria-label={`Top: ${top.label}`} className="space-y-5">
@@ -84,12 +90,34 @@ export function ThemeTopList({ top, onSelect, dark }: { top: ThemeTop; onSelect:
         </div>
       </details>
 
+      {top.theme === 'lucru' && (
+        <div className="space-y-1">
+          <button
+            type="button"
+            aria-pressed={onlyQuiet}
+            onClick={() => setOnlyQuiet((v) => !v)}
+            className={`btn-press min-h-[44px] px-3.5 rounded-[4px] border text-[13px] font-semibold ${
+              onlyQuiet
+                ? dark
+                  ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17382C]'
+                  : 'bg-[#3A2418] border-[#3A2418] text-white'
+                : dark
+                  ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
+                  : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
+            }`}
+          >
+            Doar liniștite
+          </button>
+          {onlyQuiet && <p className={`text-[12px] ${muted}`}>Ascundem localurile votate de obicei „Animat” sau „Zgomotos”. Cele cu prea puține voturi rămân.</p>}
+        </div>
+      )}
+
       <section aria-label={`${top.label}: evaluat de clienți`} className="space-y-2">
         <h3 className="text-[15px] font-bold">Evaluat de clienți</h3>
-        {top.community.length ? (
+        {community.length ? (
           <ol className={`divide-y ${dark ? 'divide-[#285443]' : 'divide-[#E6DFD5]'} border-y ${line}`}>
-            {top.community.map((v) => (
-              <EntryRow key={v.slug} entry={v} rank={v.rank} onSelect={onSelect} dark={dark} />
+            {community.map((v) => (
+              <EntryRow key={v.slug} entry={v} rank={v.rank} onSelect={onSelect} dark={dark} theme={top.theme} />
             ))}
           </ol>
         ) : (
@@ -99,15 +127,15 @@ export function ThemeTopList({ top, onSelect, dark }: { top: ThemeTop; onSelect:
         )}
       </section>
 
-      {top.declared.length > 0 && (
+      {declared.length > 0 && (
         <section aria-label={`${top.label}: declarat de local`} className="space-y-2">
           <div>
             <h3 className="text-[15px] font-bold">Declarat de local</h3>
             <p className={`text-[12px] ${muted}`}>Încă au prea puține răspunsuri de la clienți. Informația vine de la local și nu e confirmată de comunitate.</p>
           </div>
           <ul className={`divide-y ${dark ? 'divide-[#285443]' : 'divide-[#E6DFD5]'} border-y ${line}`}>
-            {top.declared.map((v) => (
-              <EntryRow key={v.slug} entry={v} onSelect={onSelect} dark={dark} declaredOnly />
+            {declared.map((v) => (
+              <EntryRow key={v.slug} entry={v} onSelect={onSelect} dark={dark} theme={top.theme} declaredOnly />
             ))}
           </ul>
         </section>
@@ -116,9 +144,11 @@ export function ThemeTopList({ top, onSelect, dark }: { top: ThemeTop; onSelect:
   );
 }
 
-function EntryRow({ entry, rank, onSelect, dark, declaredOnly }: { entry: ThemeTopEntry; rank?: number; onSelect: (slug: string) => void; dark: boolean; declaredOnly?: boolean }) {
+function EntryRow({ entry, rank, onSelect, dark, theme, declaredOnly }: { entry: ThemeTopEntry; rank?: number; onSelect: (slug: string) => void; dark: boolean; theme: string; declaredOnly?: boolean }) {
   const muted = dark ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]';
   const shown = entry.facts.filter((f) => f.state !== 'unknown');
+  // Voturile rapide doar ca informație: siguranța la Ieșiri, zgomotul la Lucru.
+  const quickLine = theme === 'iesiri' ? quickSafetyText(entry.quick) : theme === 'lucru' ? quickNoiseText(entry.quick) : null;
   return (
     <li>
       <button type="button" onClick={() => onSelect(entry.slug)} className={`btn-press w-full text-left py-3 flex gap-3 items-start ${dark ? 'hover:bg-[#143025]' : 'hover:bg-[#FAF8F5]'}`}>
@@ -137,6 +167,7 @@ function EntryRow({ entry, rank, onSelect, dark, declaredOnly }: { entry: ThemeT
             {shown.map((f) => (
               <Fact key={f.key} fact={f} dark={dark} />
             ))}
+            {quickLine && <span className={`block text-[13px] ${muted}`}>{quickLine} (vot rapid)</span>}
           </span>
         </span>
       </button>
