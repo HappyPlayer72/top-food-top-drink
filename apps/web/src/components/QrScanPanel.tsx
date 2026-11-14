@@ -21,6 +21,7 @@ export function QrScanPanel({ isDrink, onResult }: { isDrink: boolean; onResult:
   const ids = { code: useId(), title: useId() };
   const videoRef = useRef<HTMLVideoElement>(null);
   const openRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [cameraNote, setCameraNote] = useState<string | null>(null);
   const [manual, setManual] = useState('');
@@ -41,6 +42,11 @@ export function QrScanPanel({ isDrink, onResult }: { isDrink: boolean; onResult:
     setOpen(false);
     requestAnimationFrame(() => openRef.current?.focus());
   };
+
+  // Butonul care l-a deschis dispare: focusul trece pe „Închide scanarea”
+  useEffect(() => {
+    if (open) closeRef.current?.focus();
+  }, [open]);
 
   // Pornește camera și caută QR-uri cât e deschis panoul
   useEffect(() => {
@@ -103,7 +109,7 @@ export function QrScanPanel({ isDrink, onResult }: { isDrink: boolean; onResult:
     <section aria-labelledby={ids.title} className={`mb-6 rounded-xl border p-4 space-y-3 ${t.box}`}>
       <div className="flex items-center justify-between gap-2">
         <h3 id={ids.title} className="text-[15px] font-bold">Scanează codul de la casă</h3>
-        <button type="button" onClick={close} aria-label="Închide scanarea" className="btn-press w-11 h-11 inline-flex items-center justify-center rounded-full">
+        <button ref={closeRef} type="button" onClick={close} aria-label="Închide scanarea" className="btn-press w-11 h-11 inline-flex items-center justify-center rounded-full">
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>

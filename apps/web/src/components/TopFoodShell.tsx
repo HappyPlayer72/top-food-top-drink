@@ -482,7 +482,9 @@ export function TopFoodShell({
   }, [allVenues, selectedRestaurantId]);
 
   useEffect(() => {
-    document.title = VERTICAL_TITLES[vertical];
+    document.title = selectedRestaurant
+      ? `${selectedRestaurant.name} | ${VERTICAL_TITLES[vertical]}`
+      : VERTICAL_TITLES[vertical];
     if (!urlReadyRef.current) return;
 
     if (pendingSyncRef.current) {
@@ -707,7 +709,7 @@ export function TopFoodShell({
         onLogout={handleLogout}
         profileExtra={
           backendOnline && currentUser && currentUser.role !== 'verified-local' ? (
-            <LocalVerificationPanel vertical={vertical} />
+            <LocalVerificationPanel vertical={vertical} onVerified={setStatusMessage} />
           ) : null
         }
         darkMode={darkMode}
@@ -826,10 +828,9 @@ export function TopFoodShell({
         </div>
       )}
 
+      <div role="status" aria-live="polite">
       {statusMessage && (
         <div
-          role="status"
-          aria-live="polite"
           className={`fixed left-1/2 -translate-x-1/2 z-[60] px-4 w-max max-w-[calc(100vw-2rem)] ${
             selectedRestaurant !== null
               ? 'bottom-[calc(5.75rem+env(safe-area-inset-bottom))]'
@@ -855,6 +856,7 @@ export function TopFoodShell({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

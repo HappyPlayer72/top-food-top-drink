@@ -125,9 +125,15 @@ Acțiunile userilor de pe site-ul public (gata, 13 nov seara):
 - În demo, „Scanează la casă” generează singur codul localului (`DEMO_SCAN`); cu `DEMO_SCAN=off` trebuie scanat QR-ul de la `/owner/.../fidelitate`.
 - Conturi demo (seed, parola `DEMO_PASSWORD` sau `demo1234`): andreea@e-uvt.ro (localnic), luca@visit.ro (turist), `sandu.proprietar` (owner), `admin`. Scenariul de prezentare: `docs/DEMO.md`.
 
+Adăugat în noaptea de 14 nov:
+- **URL propriu pentru fiecare local:** `/topfood/timisoara/{slug}` și `/topdrink/timisoara/{slug}`, cu titlu și descriere pentru Google (`lib/backend/venueRoute.ts`), `sitemap.xml`, `robots.txt`. Deschiderea unui local în aplicație schimbă URL-ul în forma asta.
+- **Devino localnic verificat** din panoul de profil (`LocalVerificationPanel`, `app/actions/local.ts`): check-in GPS (se salvează doar ziua) sau email universitar cu cod (în demo codul apare pe ecran, `DEMO_EMAIL_CODES`).
+- **Scanare QR cu camera** pe `/fidelitate` (`QrScanPanel`, BarcodeDetector pe Chrome/Android) + codul scris de mână; codul apare și sub QR-ul owner-ului.
+- **Pus online:** `docs/DEPLOY.md` (Neon + Vercel), `npm run import:google`.
+
 Ce rămâne:
-1. Scanarea QR cu camera telefonului pe `/fidelitate` (acum: buton demo + funcția `stampFidelity(programId, code)` acceptă deja codul scanat).
-2. Verificarea de localnic din site (check-in GPS → `accounts.checkinFromLocation`, email universitar → `startUniversityEmail`/`confirmUniversityEmail`). Acum un cont nou e „turist” (1,0×).
+1. Serviciu de email pentru codurile de verificare (acum doar modul demo).
+2. Joburile programate în producție (worker pe Railway/Render sau Vercel Cron), vezi `docs/DEPLOY.md`.
 
 Model de Server Action (`apps/web/src/app/actions.ts`):
 

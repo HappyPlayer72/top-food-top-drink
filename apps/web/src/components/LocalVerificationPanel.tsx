@@ -10,10 +10,10 @@ import type { Vertical } from '../types';
  * „Devino localnic verificat” în panoul de profil (doar pentru userii care nu sunt încă localnici).
  * Accesibilitate: butoanele nu se dezactivează sub focus (aria-disabled), zona de mesaje există mereu.
  */
-export function LocalVerificationPanel({ vertical }: { vertical: Vertical }) {
+export function LocalVerificationPanel({ vertical, onVerified }: { vertical: Vertical; onVerified?: (message: string) => void }) {
   const isDrink = vertical === 'drink';
   const router = useRouter();
-  const ids = { email: useId(), code: useId() };
+  const ids = { email: useId(), code: useId(), title: useId(), msg: useId() };
   const codeRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ days: number; needed: number } | null>(null);
@@ -28,8 +28,11 @@ export function LocalVerificationPanel({ vertical }: { vertical: Vertical }) {
     });
   }, []);
 
+  /** Succes: panoul dispare după refresh (userul devine localnic), deci focusul și mesajul trec în shell. */
   const done = (text: string) => {
     setMsg({ text, error: false });
+    (document.activeElement?.closest('[role="dialog"]') as HTMLElement | null)?.focus();
+    onVerified?.(text);
     router.refresh();
   };
 
@@ -83,8 +86,8 @@ export function LocalVerificationPanel({ vertical }: { vertical: Vertical }) {
   const btn = 'btn-press min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[4px] text-[13px] font-bold aria-disabled:opacity-60';
 
   return (
-    <section aria-labelledby="localnic-titlu" className={`pt-3 mt-1 border-t ${t.border} space-y-2.5`}>
-      <h3 id="localnic-titlu" className="text-[13px] font-bold">Devino localnic verificat (2,0×)</h3>
+    <section aria-labelledby={ids.title} className={`pt-3 mt-1 border-t ${t.border} space-y-2.5`}>
+      <h3 id={ids.title} className="text-[13px] font-bold">Devino localnic verificat (2,0×)</h3>
       <p className={`text-[12px] ${t.muted}`}>
         Check-in în Timișoara în {progress?.needed ?? 5} zile diferite din 30, sau emailul de la facultate.
         {progress ? ` Ai ${progress.days} din ${progress.needed} zile.` : ''} Păstrăm doar ziua, nu locul exact.
@@ -97,7 +100,7 @@ export function LocalVerificationPanel({ vertical }: { vertical: Vertical }) {
         <form onSubmit={sendCode} className="flex flex-col gap-1.5">
           <label htmlFor={ids.email} className="text-[12px] font-semibold">Email de la facultate</label>
           <div className="flex gap-1.5">
-            <input id={ids.email} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nume@e-uvt.ro" autoComplete="email" className={`min-w-0 flex-1 min-h-[44px] px-3 rounded-[4px] border text-[16px] sm:text-[13px] ${t.input}`} />
+            <input id={ids.email} type="email" required aria-invalid={msg?.error || undefined} aria-describedby={ids.msg} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nume@e-uvt.ro" autoComplete="email" className={`min-w-0 flex-1 min-h-[44px] px-3 rounded-[4px] border text-[16px] sm:text-[13px] ${t.input}`} />
             <button type="submit" aria-disabled={busy} className={`${btn} border ${t.quiet}`}>
               <Mail className="w-4 h-4" aria-hidden="true" /> Trimite cod
             </button>
@@ -107,14 +110,16 @@ export function LocalVerificationPanel({ vertical }: { vertical: Vertical }) {
         <form onSubmit={confirm} className="flex flex-col gap-1.5">
           <label htmlFor={ids.code} className="text-[12px] font-semibold">Codul primit</label>
           <div className="flex gap-1.5">
-            <input id={ids.code} ref={codeRef} inputMode="numeric" autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value)} className={`min-w-0 flex-1 min-h-[44px] px-3 rounded-[4px] border text-[16px] sm:text-[13px] ${t.input}`} />
+            <input id={ids.code} ref={codeRef} aria-invalid={msg?.error || undefined} aria-describedby={ids.msg} inputMode="numeric" autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value)} className={`min-w-0 flex-1 min-h-[44px] px-3 rounded-[4px] border text-[16px] sm:text-[13px] ${t.input}`} />
             <button type="submit" aria-disabled={busy} className={`${btn} ${t.primary}`}>Confirmă</button>
           </div>
         </form>
       )}
 
-      <div role="status" aria-live="polite">{msg && !msg.error ? <p className="text-[12px] font-semibold">{msg.text}</p> : null}</div>
-      <div role="alert">{msg?.error ? <p className={`text-[12px] font-semibold ${t.error}`}>{msg.text}</p> : null}</div>
+      <div id={ids.msg}>
+        <div role="status" aria-live="polite">{msg && !msg.error ? <p className="text-[12px] font-semibold">{msg.text}</p> : null}</div>
+        <div role="alert">{msg?.error ? <p className={`text-[12px] font-semibold ${t.error}`}>{msg.text}</p> : null}</div>
+      </div>
     </section>
   );
 }

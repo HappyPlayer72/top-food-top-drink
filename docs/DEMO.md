@@ -62,6 +62,12 @@ Deschide din timp două taburi: `/topfood/timisoara` și `/owner` (logat ca Sand
 - Caută „Bufetul lui Nea Gică” → nu există → „Adaugă localul” → stradă + cartier → trimis.
 - `/admin` (cont admin): apare în coadă → aprobat → apare în listă. Cu cheie Google, butonul „Caută și pe internet” îl găsește direct.
 
+## 7b. Devino localnic (opțional, 30 s)
+
+- „Acces rapid” → **Luca (turist)** → iconița de profil → „Devino localnic verificat”.
+- Email `luca@e-uvt.ro` → „Trimite cod” → în demo codul apare pe ecran → Confirmă → insigna de localnic, pondere 2,0×.
+- *„Din GPS păstrăm doar ziua, nu traseul. Sau emailul de la facultate.”*
+
 ## 8. TOP DRINK (30 s) — `/topdrink/timisoara`
 
 - **Depoul de Tramvaie**: vineri noaptea **8,5**, în timpul săptămânii **7,1** — același club, altă seară.
