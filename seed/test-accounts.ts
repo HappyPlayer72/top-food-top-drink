@@ -26,7 +26,10 @@ async function main() {
   }
 
   const db = createDb(url);
-  const prepared = await Promise.all(accounts.map(async (a) => ({ ...a, passwordHash: await hashPassword(a.password) })));
+  const prepared = [];
+  for (const a of accounts) {
+    prepared.push({ ...a, passwordHash: await hashPassword(a.password) });
+  }
   const results = await db.transaction(async (tx) => {
     const outcomes: string[] = [];
     for (const a of prepared) {
