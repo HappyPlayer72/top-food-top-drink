@@ -8,12 +8,36 @@
  * Review-urile, ratingurile și programul vin apoi din Google Places (`npm run import:real`; Tripadvisor nu, n-are variantă gratuită)
  * și din review-urile scrise de oameni pe site. Pentru teste: conturile din `seed/test-accounts.ts`, create la final.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { cities, createDb, touristZones, venues } from "@tftd/db";
+import { cities, createDb, reviews, touristZones, venueSources, venues, type Db, type OpeningHours } from "@tftd/db";
+import { analyzeVenueReviews } from "@tftd/review-analysis";
+import { recalculateCity } from "@tftd/scoring";
 import { SEED_VENUES } from "./venues.ts";
 import { createTestAccounts } from "./test-accounts.ts";
+import type { GoogleSnapshot, SnapshotVenue } from "./export-google.ts";
+
+const SNAPSHOT = join(import.meta.dirname, "data", "google-snapshot.json");
+function loadSnapshot(): GoogleSnapshot | null {
+  return existsSync(SNAPSHOT) ? (JSON.parse(readFileSync(SNAPSHOT, "utf8")) as GoogleSnapshot) : null;
+}
+
+/** Sursa Google și review-urile unui local, din snapshot. */
+async function loadGoogle(db: Db, venueId: string, s: SnapshotVenue) {
+  if (s.google) {
+    await db.insert(venueSources).values({ venueId, source: "google", externalId: s.google.placeId, rawRating: s.google.rating, rawReviewCount: s.google.reviewCount, url: s.google.url, fetchedAt: new Date() }).onConflictDoNothing();
+  }
+  if (s.reviews.length) {
+    await db.insert(reviews).values(
+      s.reviews.map((r) => ({
+        venueId, source: "google" as const, externalId: r.externalId, externalAuthor: r.author ?? { name: "Anonim" },
+        rating: r.rating, originalRating: r.originalRating ?? r.rating / 2, originalScale: r.originalScale ?? 5,
+        text: r.text, language: r.language, postedAt: new Date(r.postedAt),
+      })),
+    ).onConflictDoNothing();
+  }
+}
 
 const CITY = "timisoara";
 
@@ -62,20 +86,56 @@ async function main() {
     config.touristZones.map((z) => ({ citySlug: CITY, name: z.name, location: { x: z.lng, y: z.lat }, radiusM: z.radiusM })),
   );
 
-  // ---------- Locale reale (fără scor: îl calculează importul și review-urile) ----------
+  // ---------- Locale reale ----------
+  // Snapshot-ul Google (seed/data/google-snapshot.json) are localurile aduse din Google Places, cu program,
+  // telefon, coordonate corecte și review-uri. Cele 30 din seed/venues.ts își păstrează pozele, prețurile și cartierul.
+  const snapshot = loadSnapshot();
+  const bySlug = new Map((snapshot?.venues ?? []).map((v) => [`${v.vertical}/${v.slug}`, v]));
+  const venueIds: string[] = [];
+  const insertVenue = async (row: typeof venues.$inferInsert) => {
+    const [r] = await db.insert(venues).values(row).returning({ id: venues.id });
+    venueIds.push(r!.id);
+    return r!.id;
+  };
+  const seeded = new Set<string>();
   for (const v of SEED_VENUES) {
-    await db.insert(venues).values({
+    const s = bySlug.get(`${v.vertical}/${v.slug}`);
+    seeded.add(`${v.vertical}/${v.slug}`);
+    const id = await insertVenue({
       citySlug: CITY, vertical: v.vertical, name: v.name, slug: v.slug, categories: v.categories,
-      location: { x: v.lng, y: v.lat }, address: v.address, neighborhood: v.neighborhood,
+      location: s ? { x: s.lng, y: s.lat } : { x: v.lng, y: v.lat }, address: v.address, neighborhood: v.neighborhood,
       photos: v.photos ?? [],
       priceMinLei: v.priceMinLei ?? null, priceMaxLei: v.priceMaxLei ?? null, drinkPrices: v.drinkPrices ?? null,
+      phone: s?.phone ?? null, website: s?.website ?? null, openingHours: (s?.openingHours as OpeningHours | null) ?? null,
     });
+    if (s) await loadGoogle(db, id, s);
+  }
+  for (const s of snapshot?.venues ?? []) {
+    if (seeded.has(`${s.vertical}/${s.slug}`)) continue;
+    const id = await insertVenue({
+      citySlug: CITY, vertical: s.vertical, name: s.name, slug: s.slug, categories: s.categories,
+      location: { x: s.lng, y: s.lat }, address: s.address, neighborhood: s.neighborhood,
+      phone: s.phone, website: s.website, priceLevel: s.priceLevel, openingHours: (s.openingHours as OpeningHours | null) ?? null,
+    });
+    await loadGoogle(db, id, s);
+  }
+
+  // ---------- Analiza review-urilor și scorurile (local, fără Google și fără Claude) ----------
+  if (snapshot) {
+    const now = new Date();
+    for (const id of venueIds) await analyzeVenueReviews(db, id, { client: null, now });
+    for (const vertical of ["food", "drink"] as const) await recalculateCity(db, CITY, vertical, now);
   }
 
   // ---------- Conturile de test (doar pe baza locală) ----------
   await createTestAccounts();
 
-  console.log(`Gata: ${SEED_VENUES.length} locale reale, 0 review-uri. Review-urile vin din „npm run import:real” și de pe site.`);
+  const reviewCount = (snapshot?.venues ?? []).reduce((n, v) => n + v.reviews.length, 0);
+  console.log(
+    snapshot
+      ? `Gata: ${venueIds.length} locale reale și ${reviewCount} review-uri Google din snapshot (${snapshot.exportedAt.slice(0, 10)}), fără niciun apel Google.`
+      : `Gata: ${venueIds.length} locale reale, 0 review-uri (lipsește seed/data/google-snapshot.json).`,
+  );
   process.exit(0);
 }
 
