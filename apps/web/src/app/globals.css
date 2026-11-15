@@ -16,6 +16,9 @@
 
   /* Quiet Structural Surfaces (Vanilla Ice Cream / White Chocolate light base) */
   --color-paper: #FBF6EA;
+  --color-hartie: #FBF6EA;
+  --color-patrunjel: #2D5130;
+  --color-cafea-deschis: #6E5649;
   --color-sponsored-food: #F2EFE9;
   --color-sponsored-drink: #1E4335;
   --color-hairline: #E6DFD5;
@@ -70,6 +73,7 @@
     color: #3A2418;
     scroll-behavior: smooth;
     overflow-x: clip;
+    max-width: 100%;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -79,6 +83,7 @@
     line-height: 1.5;
     margin: 0;
     overflow-x: clip;
+    max-width: 100%;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -499,6 +504,86 @@ html.dark {
   transition: clip-path 240ms var(--ease-in-out);
 }
 
+/* Loyalty stamp & reward claim animations */
+@keyframes loyaltyStampPop {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.55) rotate(-8deg);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.12) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes loyaltyRewardCardCelebrate {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.018);
+  }
+  65% {
+    transform: scale(0.995);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes loyaltySparkleBurst {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.7);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(0) scale(1.06);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+}
+
+@keyframes loyaltyShineSweep {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateX(220%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+.loyalty-stamp-pop {
+  animation: loyaltyStampPop 380ms var(--ease-out) both;
+}
+
+.loyalty-reward-celebrate {
+  animation: loyaltyRewardCardCelebrate 650ms var(--ease-out) both;
+}
+
+.loyalty-sparkle-burst {
+  animation: loyaltySparkleBurst 850ms var(--ease-out) both;
+}
+
+.loyalty-shine-sweep {
+  animation: loyaltyShineSweep 750ms var(--ease-out) both;
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -510,9 +595,21 @@ html.dark {
   .podium-rise,
   .modal-backdrop-enter,
   .drawer-sheet-enter,
-  .popover-enter {
+  .popover-enter,
+  .loyalty-stamp-pop,
+  .loyalty-reward-celebrate,
+  .loyalty-sparkle-burst {
     animation: backdropFadeIn 120ms ease forwards;
     transform: none !important;
+  }
+
+  .loyalty-shine-sweep,
+  .animate-spin {
+    animation: none !important;
+  }
+
+  .loyalty-shine-sweep {
+    opacity: 0;
   }
 
   .modal-panel-enter {
@@ -776,13 +873,12 @@ html.dark .bg-\[\#F2A33A\] {
   isolation: isolate;
 }
 
-/* Tapet: mâzgălelile din /owner-doodles.svg, desenate cu culoarea textului la opacitate mică, deci se adaptează la fiecare temă. */
+/* Tapet opțional: mâzgălelile din /owner-doodles.svg; /owner folosește suprafețele curate ale publicației. */
 .doodle-wallpaper {
   position: relative;
   isolation: isolate;
 }
 
-.owner-shell::before,
 .doodle-wallpaper::before {
   content: "";
   position: absolute;
@@ -827,7 +923,6 @@ html.dark .bg-\[\#F2A33A\] {
 }
 
 @media (max-width: 767px) {
-  .owner-shell::before,
   .doodle-wallpaper::before {
     opacity: 0.08;
     -webkit-mask-image:
@@ -873,33 +968,8 @@ html.dark .owner-shell {
   color-scheme: dark;
 }
 
-/* Drink, mod luminos (design/README.md): cerneală Sticlă pe #f8f2e5, butoane Sticlă. */
-.owner-shell:has([data-vertical="drink"]) {
-  --o-bg: #f8f2e5;
-  --o-fg: #263e31;
-  --o-muted: #6d7463;
-  --o-line: #ddd3bf;
-  --o-card: #fffcf5;
-  --o-surface: #f8f2e5;
-  --o-quiet: #f8f2e5;
-  --o-field: #fffcf5;
-  --o-field-line: #6B7D72;
-  --o-accent: #263e31;
-  --o-accent-fg: #f7f1e8;
-  --o-accent-hover: #3c6650;
-  --o-active: #263e31;
-  --o-active-fg: #f7f1e8;
-  --o-outline: #263e31;
-  --o-danger: #B3261E;
-  --o-focus: #263e31;
-  --o-star: #C47F14;
-  --o-star-off: rgba(23, 56, 44, 0.18);
-  --o-avatar: #263e31;
-  --o-avatar-fg: #f7f1e8;
-  color-scheme: light;
-}
-
-/* Drink, mod întunecat: Sticlă, ca până acum. */
+/* Drink: suprafața semnătură Sticlă #17382C în orice mod (identic cu paginile publice TOP DRINK). */
+.owner-shell:has([data-vertical="drink"]),
 html.dark .owner-shell:has([data-vertical="drink"]) {
   --o-bg: #17382C;
   --o-fg: #F4EEE2;
@@ -957,38 +1027,6 @@ html.dark .tema-iesiri { --tema: #F0A6CF; --tema-bg: #3A2B33; --tema-ink: #22262
 html .tema-sticla.tema-accesibilitate { --tema: #A8D5BA; --tema-bg: #1D4436; --tema-ink: #17382C; }
 html .tema-sticla.tema-lucru { --tema: #D2C0EA; --tema-bg: #24403A; --tema-ink: #17382C; }
 html .tema-sticla.tema-iesiri { --tema: #F3B1D6; --tema-bg: #2A3F33; --tema-ink: #17382C; }
-
-/* TOP DRINK luminos („Șampanie și verde”, fundal crem): accentele de temă revin la varianta luminoasă. */
-html[data-vertical="drink"]:not(.dark) .tema-sticla.tema-accesibilitate { --tema: #2F5D45; --tema-bg: #EEF3EC; --tema-ink: #FFFFFF; }
-html[data-vertical="drink"]:not(.dark) .tema-sticla.tema-lucru { --tema: #5B3A7A; --tema-bg: #F3EFF6; --tema-ink: #FFFFFF; }
-html[data-vertical="drink"]:not(.dark) .tema-sticla.tema-iesiri { --tema: #9C2A6B; --tema-bg: #F8EEF3; --tema-ink: #FFFFFF; }
-html[data-vertical="drink"]:not(.dark) :is(.border-\[\#F4EEE2\]\/60) { border-color: #6d7463; }
-/* Avertizările (siguranță, zgomot, „Închis acum”) erau gândite pe verde închis: pe crem iau culorile din TOP FOOD luminos. */
-html[data-vertical="drink"]:not(.dark) :is(.text-\[\#FCA5A5\], .text-\[\#FCA5A5\]\/80) { color: #9E1F18; }
-html[data-vertical="drink"]:not(.dark) :is(.bg-\[\#3B1D1D\], .bg-\[\#3B1D1D\]\/70) { background-color: #FDECEC; }
-html[data-vertical="drink"]:not(.dark) .text-\[\#FEE2E2\] { color: #7A1812; }
-html[data-vertical="drink"]:not(.dark) :is(.border-\[\#FCA5A5\]\/30, .border-\[\#FCA5A5\]\/60) { border-color: #F5C2C0; }
-html[data-vertical="drink"]:not(.dark) .bg-\[\#3A2D14\]\/70 { background-color: #FEF6E4; }
-html[data-vertical="drink"]:not(.dark) .text-\[\#FDE68A\] { color: #6B4A0B; }
-html[data-vertical="drink"]:not(.dark) .border-\[\#F2A33A\]\/35 { border-color: #E8CF96; }
-
-/* Șampanie și verde: componentele publice folosesc culorile istorice ca utilitare. */
-html[data-vertical="drink"]:not(.dark) { background: #f8f2e5; color-scheme: light; }
-html[data-vertical="drink"]:not(.dark) :is(.bg-\[\#17382C\], .bg-\[\#17382C\]\/95, .bg-\[\#17382C\]\/60, .bg-\[\#122B22\], .bg-\[\#122B22\]\/50) { background-color: #f8f2e5; }
-html[data-vertical="drink"]:not(.dark) :is(.bg-\[\#143025\], .bg-\[\#143025\]\/90, .bg-\[\#1A3D30\], .bg-\[\#1E4335\], .bg-\[\#1A3E30\]) { background-color: #fffcf5; }
-html[data-vertical="drink"]:not(.dark) :is(.text-\[\#F4EEE2\], [class^="text-[#F4EEE2]/"], [class*=" text-[#F4EEE2]/"]) { color: #263e31; }
-html[data-vertical="drink"]:not(.dark) :is(.text-\[\#F2A33A\], .hover\:text-\[\#F2A33A\]:hover) { color: #3c6650; }
-html[data-vertical="drink"]:not(.dark) :is(.border-\[\#285443\], .border-\[\#2D5947\], .border-\[\#336652\], .border-\[\#47705C\]) { border-color: #ddd3bf; }
-html[data-vertical="drink"]:not(.dark) .divide-\[\#285443\] > :not(:last-child) { border-color: #ddd3bf; }
-/* Suprafețele verzi păstrate închise au nevoie de text deschis. */
-html[data-vertical="drink"]:not(.dark) .bg-\[\#285443\].text-\[\#F4EEE2\],
-html[data-vertical="drink"]:not(.dark) .bg-\[\#285443\] :is(.text-\[\#F4EEE2\], [class^="text-[#F4EEE2]/"], [class*=" text-[#F4EEE2]/"]) { color: #fff; }
-html[data-vertical="drink"]:not(.dark) .bg-\[\#F2A33A\] { background-color: #3c6650; color: #fff; border-color: #3c6650; }
-html[data-vertical="drink"]:not(.dark) .bg-\[\#F2A33A\] :is(.text-\[\#17382C\], .text-\[\#F4EEE2\]) { color: #fff; }
-html[data-vertical="drink"]:not(.dark) :is(input, textarea).bg-\[\#122B22\]::placeholder { color: #6d7463; opacity: 1; }
-html[data-vertical="drink"]:not(.dark) :is(.hover\:bg-\[\#1E4335\]:hover, .hover\:bg-\[\#143025\]:hover, .hover\:bg-\[\#1C4234\]:hover, .hover\:bg-\[\#1E4738\]:hover, .hover\:bg-\[\#1A3D30\]:hover, .hover\:bg-\[\#122B22\]:hover) { background-color: #eee6d6; }
-html[data-vertical="drink"]:not(.dark) .bg-\[\#F2A33A\].text-\[\#17382C\] { color: #fff; }
-html[data-vertical="drink"]:not(.dark) :is(.placeholder\:text-\[\#F4EEE2\]\/40, .placeholder\:text-\[\#F4EEE2\]\/50, .placeholder-\[\#F4EEE2\]\/45)::placeholder { color: #6d7463; }
 
 /* Fixed poster colours: global theme overrides must not separate ink from paper. */
 .scarnavii-card-orange {

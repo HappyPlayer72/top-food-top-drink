@@ -17,7 +17,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "import:real": "npm run job -w @tftd/worker -- descopera-locale && npm run job -w @tftd/worker -- actualizeaza-ratinguri",
     "import:social": "npm run job -w @tftd/worker -- cauta-social",
-    "build:web": "npm run build -w @topfood/web"
+    "build:web": "npm run build -w @topfood/web",
+    "android:export-catalog": "tsx seed/export-android-catalog.ts",
+    "android:build": "npm run build -w @topfood/android",
+    "android:test": "npm test -w @topfood/android"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

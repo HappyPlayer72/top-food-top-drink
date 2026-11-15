@@ -999,8 +999,9 @@ export function getVenueWeeklyHours(restaurant: Restaurant): WeeklyHoursEntry[] 
   if (restaurant.weeklyHours && restaurant.weeklyHours.length > 0) {
     return restaurant.weeklyHours;
   }
-  if (VENUE_EXTRAS[restaurant.id]?.weeklyHours) {
-    return VENUE_EXTRAS[restaurant.id].weeklyHours;
+  const extra = VENUE_EXTRAS[restaurant.id];
+  if (extra?.weeklyHours) {
+    return extra.weeklyHours;
   }
   const parsed = parseHoursText(restaurant.hours);
   if (parsed) return parsed;
@@ -1017,11 +1018,12 @@ export function parseHoursText(text: string | undefined): WeeklyHoursEntry[] | n
   for (const part of text.split(',').map((segment) => segment.trim()).filter(Boolean)) {
     const match = /^(\p{L}+)(?:\s*[–-]\s*(\p{L}+))?\s+(.+)$/u.exec(part);
     if (!match) return null;
-    const from = WEEK_ORDER.indexOf(match[1]);
-    const to = match[2] ? WEEK_ORDER.indexOf(match[2]) : from;
+    const [, fromDay = '', toDay, rawHours = ''] = match;
+    const from = WEEK_ORDER.indexOf(fromDay);
+    const to = toDay ? WEEK_ORDER.indexOf(toDay) : from;
     if (from < 0 || to < from) return null;
-    const hours = /^[iî]nchis$/i.test(match[3]) ? 'Închis' : match[3].replace(/\s*[–-]\s*/, ' – ');
-    for (let day = from; day <= to; day += 1) byDay.set(WEEK_ORDER[day], hours);
+    const hours = /^[iî]nchis$/i.test(rawHours) ? 'Închis' : rawHours.replace(/\s*[–-]\s*/, ' – ');
+    for (let day = from; day <= to; day += 1) byDay.set(WEEK_ORDER[day]!, hours);
   }
   // O zi care lipsește din text rămâne necunoscută („—”), nu o declarăm închisă.
   return byDay.size ? WEEK_ORDER.map((day) => ({ day, hours: byDay.get(day) ?? '—' })) : null;
@@ -1031,8 +1033,9 @@ export function getVenueMenu(restaurant: Restaurant): MenuCategory[] {
   if (restaurant.menuCategories && restaurant.menuCategories.length > 0) {
     return restaurant.menuCategories;
   }
-  if (VENUE_EXTRAS[restaurant.id]?.menuCategories) {
-    return VENUE_EXTRAS[restaurant.id].menuCategories;
+  const extra = VENUE_EXTRAS[restaurant.id];
+  if (extra?.menuCategories) {
+    return extra.menuCategories;
   }
   return [
     {
@@ -1057,7 +1060,7 @@ export function getTodayDayName(): string {
     'Vineri',
     'Sâmbătă',
   ];
-  return days[new Date().getDay()];
+  return days[new Date().getDay()] ?? 'Luni';
 }
 
 interface VenueProfileExtras {

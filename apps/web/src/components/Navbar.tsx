@@ -406,15 +406,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     <>
       {/* TOP MASTHEAD HEADER */}
       <header
-        className={`sticky top-0 z-40 transition-colors pt-[env(safe-area-inset-top)] ${
+        className={`sticky top-0 z-40 w-full max-w-full overflow-x-clip transition-colors pt-[env(safe-area-inset-top)] ${
           isDrink
             ? 'bg-[#17382C]/95 text-[#F4EEE2] border-b border-[#285443]'
             : 'bg-white/95 text-[#3A2418] border-b border-[#E6DFD5]'
         } backdrop-blur-sm`}
       >
-        <div className="max-w-5xl mx-auto px-2.5 min-[375px]:px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 min-[375px]:gap-2 sm:gap-4">
+        <div className="max-w-5xl mx-auto px-2 min-[375px]:px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1 min-[375px]:gap-2 sm:gap-4">
           {/* Brand Wordmark */}
-          <div className="min-w-0 flex-1 md:flex-none flex items-center [&>button]:min-h-[44px] [&>button]:max-w-full">
+          <div className="min-w-0 flex-1 md:flex-none flex items-center [&>button]:min-h-[44px] [&>button]:max-w-full max-[419px]:[&_.brand-city]:hidden">
             <BrandWordmark
               vertical={vertical}
               onClick={() => handleNavClick('top')}
@@ -469,8 +469,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </nav>
 
-          {/* Right Controls: Dark Mode + Saved/Profile Icon + Optional Login */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {/* Right Controls: Mobile Vertical Switch + Dark Mode + Saved/Profile Icon + Optional Login */}
+          <div className="flex items-center gap-0.5 min-[375px]:gap-1 sm:gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleSwitchVertical}
+              aria-label={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
+              title={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
+              className={`md:hidden btn-press inline-flex items-center gap-1 min-h-[44px] px-2 rounded-[4px] border text-[11px] min-[375px]:text-[12px] font-bold transition-colors shrink-0 ${
+                isDrink
+                  ? 'border-[#2D5947] bg-[#143025] text-[#F4EEE2] active:bg-[#1E4335]'
+                  : 'border-[#D6CFC5] bg-[#FAF8F5] text-[#3A2418] active:bg-[#EFE7D8]'
+              }`}
+            >
+              {isDrink ? <CarouMark size={16} /> : <CoasterMark size={16} />}
+              <span>{isDrink ? 'Food' : 'Drink'}</span>
+            </button>
+
             <button
               type="button"
               onClick={onToggleDarkMode}
@@ -555,13 +570,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenLogin}
-                className={`btn-press inline-flex items-center justify-center gap-1.5 min-h-[44px] min-w-[44px] px-2.5 min-[375px]:px-3 py-2 rounded-[4px] text-[13px] font-bold whitespace-nowrap shrink-0 ${
+                className={`btn-press inline-flex items-center justify-center gap-1.5 min-h-[44px] min-w-[44px] px-2 min-[375px]:px-3 py-2 rounded-[4px] text-[12px] min-[375px]:text-[13px] font-bold whitespace-nowrap shrink-0 ${
                   isDrink
                     ? 'bg-[#F2A33A] text-[#17382C] hover:opacity-95'
                     : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
                 }`}
               >
-                <LogIn className="w-3.5 h-3.5 shrink-0 hidden min-[375px]:block" />
+                <LogIn className="w-3.5 h-3.5 shrink-0 hidden min-[400px]:block" />
                 <span className="sm:hidden">Cont</span>
                 <span className="hidden sm:inline">Intră în cont</span>
               </button>
@@ -611,7 +626,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       )}
 
-      {/* BOTTOM NAVIGATION BAR (Phone Navigation: Top | Hartă | Luna asta | Scârnăvii | Fidelitate | topdrink) */}
+      {/* BOTTOM NAVIGATION BAR (Phone Navigation: Top | Hartă | Luna asta | Scârnăvii | Fidelitate) */}
       <nav
         aria-label="Navigație jos"
         className={`fixed bottom-0 inset-x-0 z-40 md:hidden border-t overflow-x-hidden pb-[env(safe-area-inset-bottom)] ${
@@ -620,7 +635,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             : 'bg-white/95 border-[#E6DFD5] text-[#3A2418]'
         } backdrop-blur-sm`}
       >
-        <div className="grid grid-cols-6 w-full max-w-full h-14 overflow-hidden">
+        <div className="grid grid-cols-5 w-full max-w-full h-14 overflow-hidden">
           {NAV_ITEMS.map((item) => {
             const active = navSection === item.id;
             return (
@@ -629,7 +644,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={() => handleNavClick(item.id)}
                 aria-current={active ? 'page' : undefined}
-                className={`btn-press relative min-w-0 w-full px-0.5 overflow-hidden flex flex-col items-center justify-center gap-0.5 text-[10px] min-[375px]:text-[11px] ${
+                className={`btn-press relative min-w-0 w-full px-1 overflow-hidden flex flex-col items-center justify-center gap-0.5 text-[11px] sm:text-[12px] leading-tight tracking-tight ${
                   active
                     ? isDrink
                       ? 'font-bold text-[#F2A33A]'
@@ -648,22 +663,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   />
                 )}
                 {renderBottomNavIcon(item.id, active)}
-                <span className="leading-none max-w-full truncate">
+                <span className="leading-tight max-w-full truncate">
                   {item.label}
                 </span>
               </button>
             );
           })}
-
-          <button
-            type="button"
-            onClick={handleSwitchVertical}
-            aria-label={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
-            title={isDrink ? 'Comută la topfood' : 'Comută la topdrink'}
-            className="btn-press min-w-0 w-full px-0.5 overflow-hidden flex items-center justify-center"
-          >
-            {isDrink ? <CarouMark size={22} /> : <CoasterMark size={22} />}
-          </button>
         </div>
       </nav>
     </>

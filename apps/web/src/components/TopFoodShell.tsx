@@ -1107,7 +1107,7 @@ export function TopFoodShell({
               type="button"
               onClick={() => setStatusMessage(null)}
               aria-label="Închide notificarea"
-              className="btn-press opacity-75 hover:opacity-100 w-9 h-9 -mr-2 -my-1.5 flex items-center justify-center rounded"
+              className="btn-press opacity-75 hover:opacity-100 w-11 h-11 -mr-2.5 -my-2 flex items-center justify-center rounded shrink-0"
             >
               <X className="w-4 h-4" />
             </button>

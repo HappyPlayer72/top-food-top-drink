@@ -924,7 +924,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                           <TrophyMedalBadge rank={award.rank} categoryId={award.categoryId} size="md" />
                           <div className="min-w-0 leading-tight">
                             <div
-                              className={`text-[10px] font-bold uppercase tracking-[0.06em] ${
+                              className={`text-[11px] font-bold uppercase tracking-[0.06em] ${
                                 isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
                               }`}
                             >
@@ -1181,7 +1181,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                                     </span>
                                     {item.isMustOrder && (
                                       <span
-                                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[2px] ${
+                                        className={`text-[11px] font-bold px-1.5 py-0.5 rounded-[2px] ${
                                           isDrink
                                             ? 'bg-[#F2A33A] text-[#17382C]'
                                             : 'bg-[#B3261E] text-white'
@@ -1726,7 +1726,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         </span>
                         {dish.isMustOrder && (
                           <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[2px] ${
+                            className={`text-[11px] font-bold px-1.5 py-0.5 rounded-[2px] ${
                               isDrink
                                 ? 'bg-[#F2A33A] text-[#17382C]'
                                 : 'bg-[#B3261E] text-white'
@@ -1870,18 +1870,6 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                               rev.authorName
                             )}
                           </span>
-                          {rev.isVerifiedVisit && (
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[11px] font-semibold ${
-                                isDrink
-                                  ? 'bg-[#285443] text-[#F4EEE2]'
-                                  : 'bg-patrunjel/12 text-patrunjel'
-                              }`}
-                            >
-                              <ShieldCheck className="w-3 h-3" aria-hidden="true" />
-                              Vizită verificată
-                            </span>
-                          )}
                           {(rev.authorRole === 'verified-local' ||
                             rev.authorRole === 'regular') && (
                             <LocalnicBadge
@@ -1958,7 +1946,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                               step={1}
                               value={editScoreText}
                               onChange={(e) => setEditScoreText(e.target.value)}
-                              className={`w-20 px-2.5 py-1.5 rounded-[4px] border text-[14px] font-bold tabular-nums focus:outline-none ${
+                              className={`w-24 min-h-[44px] px-3 py-2 rounded-[4px] border text-[16px] sm:text-[14px] font-bold tabular-nums focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#E0A526] ${
                                 isDrink
                                   ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] focus:border-[#F2A33A]'
                                   : 'bg-white border-[#D6CFC5] text-[#3A2418] focus:border-[#3A2418]'
@@ -1971,7 +1959,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
                             aria-label="Text review editat"
-                            className={`w-full px-3 py-2 rounded-[4px] border text-[14px] leading-relaxed focus:outline-none ${
+                            className={`w-full min-h-[44px] px-3 py-2.5 rounded-[4px] border text-[16px] sm:text-[14px] leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#E0A526] ${
                               isDrink
                                 ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] focus:border-[#F2A33A]'
                                 : 'bg-white border-[#D6CFC5] text-[#3A2418] focus:border-[#3A2418]'
@@ -1989,7 +1977,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                               type="button"
                               disabled={isSavingEdit}
                               onClick={() => handleSaveEdit(rev.id!)}
-                              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] text-[12px] font-bold disabled:opacity-50 ${
+                              className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-[4px] text-[13px] font-bold disabled:opacity-50 ${
                                 isDrink
                                   ? 'bg-[#F2A33A] text-[#17382C]'
                                   : 'bg-[#B3261E] text-white'
@@ -2005,7 +1993,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                                 setEditingReviewKey(null);
                                 setEditError(null);
                               }}
-                              className={`btn-press px-3 py-2 rounded-[4px] border text-[12px] font-semibold ${
+                              className={`btn-press min-h-[44px] px-4 py-2 rounded-[4px] border text-[13px] font-semibold ${
                                 isDrink
                                   ? 'border-[#2D5947] text-[#F4EEE2]/80'
                                   : 'border-[#D6CFC5] text-[#6E5649]'
@@ -2353,7 +2341,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     onChange={(e) => setVideoUrlInput(e.target.value)}
                     placeholder="Lipește un link TikTok, Instagram, YouTube sau Facebook"
                     aria-label="Link video TikTok, Instagram, YouTube sau Facebook"
-                    className={`min-w-[220px] flex-1 rounded-[4px] border px-3 py-2 text-[13px] ${
+                    className={`min-w-0 w-full sm:min-w-[220px] sm:flex-1 min-h-[44px] rounded-[4px] border px-3 py-2 text-[16px] sm:text-[14px] ${
                       isDrink
                         ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder:text-[#F4EEE2]/60'
                         : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder:text-[#6E5649]'
@@ -2362,7 +2350,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   <button
                     type="submit"
                     disabled={videoBusy || !videoUrlInput.trim()}
-                    className={`btn-press rounded-[4px] px-3.5 py-2 text-[13px] font-bold disabled:opacity-50 ${
+                    className={`btn-press min-h-[44px] rounded-[4px] px-4 py-2 text-[13px] font-bold disabled:opacity-50 ${
                       isDrink ? 'bg-[#F2A33A] text-[#17382C]' : 'bg-[#3A2418] text-white'
                     }`}
                   >
@@ -2413,7 +2401,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveQuickVote(null)}
-                    className={`text-[12px] font-medium px-2 py-0.5 rounded-[4px] ${
+                    className={`min-h-[44px] px-2.5 inline-flex items-center text-[12px] font-medium rounded-[4px] ${
                       isDrink
                         ? 'text-[#F4EEE2]/70 hover:text-[#F4EEE2]'
                         : 'text-[#6E5649] hover:text-[#3A2418]'
@@ -2435,7 +2423,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                             onClick={() => handleScaleVote('safety', lvl)}
                             aria-pressed={active}
                             aria-label={`Siguranță ${lvl} din 5`}
-                            className={`btn-press min-h-[40px] rounded-[4px] border text-[13px] font-bold ${
+                            className={`btn-press min-h-[44px] rounded-[4px] border text-[13px] font-bold ${
                               active
                                 ? isDrink
                                   ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -2451,7 +2439,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                       })}
                     </div>
                     <div
-                      className={`flex justify-between text-[10px] ${
+                      className={`flex justify-between text-[11px] ${
                         isDrink ? 'text-[#F4EEE2]/65' : 'text-[#6E5649]'
                       }`}
                     >
@@ -2471,7 +2459,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                             handleScaleVote('noise', NOISE_LEVELS.find((l) => l.id === opt.id)!.value)
                           }
                           aria-pressed={active}
-                          className={`btn-press min-h-[40px] px-2 rounded-[4px] border text-[12px] font-semibold ${
+                          className={`btn-press min-h-[44px] px-2 rounded-[4px] border text-[12px] font-semibold ${
                             active
                               ? isDrink
                                 ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -2491,7 +2479,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
             </div>
           )}
 
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
+          <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-1.5 sm:gap-3">
             <button
               type="button"
               onClick={() => {
@@ -2502,15 +2490,20 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 setActiveQuickVote(null);
                 setIsReviewDrawerOpen(true);
               }}
-              className={`btn-press flex-1 min-w-[160px] min-h-[48px] py-3 px-4 sm:px-5 rounded-[4px] font-bold text-[15px] hover:opacity-90 ${
+              className={`btn-press flex-1 min-w-0 min-h-[44px] sm:min-h-[48px] py-2.5 sm:py-3 px-3 sm:px-5 rounded-[4px] font-bold text-[13px] min-[375px]:text-[14px] sm:text-[15px] hover:opacity-90 ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#B3261E] text-white'
               }`}
             >
-              {currentUser
-                ? 'Scrie un review'
-                : 'Intră în cont ca să scrii un review'}
+              <span className="sm:hidden truncate block">
+                {currentUser ? 'Scrie review' : 'Cont pt review'}
+              </span>
+              <span className="hidden sm:inline truncate">
+                {currentUser
+                  ? 'Scrie un review'
+                  : 'Intră în cont ca să scrii un review'}
+              </span>
             </button>
 
             {/* Ordinea vine din profil și e și ordinea din DOM (tastatură, cititor de ecran). */}
@@ -2526,7 +2519,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   }
                   aria-pressed={activeQuickVote === 'safety'}
                   title={quickButtons.highlighted.includes('safety') ? 'Relevant pentru preferințele tale (Ieșiri)' : undefined}
-                  className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
+                  className={`btn-press min-h-[44px] sm:min-h-[48px] px-2.5 sm:px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
                     quickButtons.highlighted.includes('safety') && safetyScore === null ? (isDrink ? 'ring-2 ring-[#F2A33A] ' : 'ring-2 ring-[#B3261E] ') : ''
                   }${
                     safetyScore !== null || activeQuickVote === 'safety'
@@ -2539,11 +2532,14 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   }`}
                 >
                   <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>
-                    {safetyScore !== null
-                      ? `Siguranță ${safetyScore}/5`
-                      : 'Te-ai simțit în siguranță?'}
-                  </span>
+                  {safetyScore !== null ? (
+                    <span>Siguranță {safetyScore}/5</span>
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Siguranță</span>
+                      <span className="hidden sm:inline">Te-ai simțit în siguranță?</span>
+                    </>
+                  )}
                 </button>
               ) : (
                 <button
@@ -2554,7 +2550,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   }
                   aria-pressed={activeQuickVote === 'noise'}
                   title={quickButtons.highlighted.includes('noise') ? 'Relevant pentru preferințele tale (Locuri pentru lucru)' : undefined}
-                  className={`btn-press min-h-[48px] px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
+                  className={`btn-press min-h-[44px] sm:min-h-[48px] px-2.5 sm:px-3 rounded-[4px] border text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 shrink-0 ${
                     quickButtons.highlighted.includes('noise') && noiseLevel === null ? (isDrink ? 'ring-2 ring-[#F2A33A] ' : 'ring-2 ring-[#B3261E] ') : ''
                   }${
                     noiseLevel !== null || activeQuickVote === 'noise'
@@ -2567,11 +2563,14 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   }`}
                 >
                   <Volume2 className="w-4 h-4 shrink-0" />
-                  <span>
-                    {noiseLevel !== null
-                      ? NOISE_LABELS[noiseLevel]
-                      : 'E gălăgie?'}
-                  </span>
+                  {noiseLevel !== null ? (
+                    <span>{NOISE_LABELS[noiseLevel]}</span>
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Gălăgie</span>
+                      <span className="hidden sm:inline">E gălăgie?</span>
+                    </>
+                  )}
                 </button>
               )
             )}
@@ -2581,7 +2580,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               onClick={handleToggleBookmark}
               aria-label={saved ? 'Salvat în listă' : 'Salvează localul'}
               title={saved ? 'Salvat' : 'Salvează localul'}
-              className={`btn-press w-12 h-12 rounded-[4px] border flex items-center justify-center shrink-0 ${
+              className={`btn-press w-11 h-11 sm:w-12 sm:h-12 rounded-[4px] border flex items-center justify-center shrink-0 ${
                 saved
                   ? isDrink
                     ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17382C]'

@@ -1,0 +1,529 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TopFood & TopDrink Mobile API",
+    "version": "1.0.0",
+    "description": "REST JSON API v1 for native Android / mobile clients of TopFood & TopDrink (Timișoara). Uses Bearer token authentication (`Authorization: Bearer <token>`) alongside web cookie compatibility."
+  },
+  "servers": [
+    {
+      "url": "http://10.0.2.2:3000",
+      "description": "Android Emulator targeting local Next.js dev server"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "HMAC-SHA256 (userId.expMs.signature)"
+      },
+      "voterToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Voter-Token"
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": ["ok", "error"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [false] },
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["invalid", "unauthorized", "forbidden", "not_found", "conflict", "rate_limited", "offline", "internal_error"]
+              },
+              "message": { "type": "string" },
+              "details": { "type": "object", "additionalProperties": true }
+            }
+          }
+        }
+      },
+      "AuthSession": {
+        "type": "object",
+        "required": ["token", "expiresAt", "tokenType", "user"],
+        "properties": {
+          "token": { "type": "string" },
+          "expiresAt": { "type": ["string", "null"], "format": "date-time" },
+          "tokenType": { "type": "string", "enum": ["Bearer"] },
+          "user": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Server and DB health check",
+        "tags": ["System"],
+        "responses": { "200": { "description": "Health status" } }
+      }
+    },
+    "/api/v1/config": {
+      "get": {
+        "summary": "City configuration, neighborhoods, tourist zones, scoring/loyalty/anti-bot rules, and feature flags",
+        "tags": ["System"],
+        "responses": { "200": { "description": "Platform configuration" } }
+      }
+    },
+    "/api/v1/design-tokens": {
+      "get": {
+        "summary": "Canonical TopFood/TopDrink visual design tokens",
+        "tags": ["System"],
+        "responses": { "200": { "description": "Design tokens JSON" } }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Sign in with email/username/phone and password",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "login": { "type": "string" },
+                  "password": { "type": "string" },
+                  "setCookie": { "type": "boolean", "default": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Authenticated session with Bearer token" } }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "Register a new account",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "username": { "type": "string" },
+                  "email": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "password": { "type": "string", "minLength": 8 },
+                  "interests": { "type": "array", "items": { "type": "string" } },
+                  "setCookie": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created session with Bearer token" } }
+      }
+    },
+    "/api/v1/auth/demo": {
+      "post": {
+        "summary": "Quick sign-in with demo account",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "enum": ["andreea@e-uvt.ro", "luca@visit.ro"] },
+                  "setCookie": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Demo session with Bearer token" } }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Clear web session cookie (clients drop Bearer token locally)",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "Logged out" } }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "Get current authenticated user and quick votes",
+        "tags": ["Auth"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Current user profile" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/venues": {
+      "get": {
+        "summary": "List venues for a vertical with optional filters and sorting (supports DB and static fallback)",
+        "tags": ["Venues"],
+        "parameters": [
+          { "name": "vertical", "in": "query", "schema": { "type": "string", "enum": ["food", "drink"], "default": "food" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "neighborhood", "in": "query", "schema": { "type": "string" } },
+          { "name": "maxPriceLei", "in": "query", "schema": { "type": "number" } },
+          { "name": "noTraps", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "openNow", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["honest", "trap_asc", "price_asc", "reviews"] } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Venues catalog, sponsored slots, traps, themes, ads" } }
+      },
+      "post": {
+        "summary": "Submit a missing venue manually (moderation queue)",
+        "tags": ["Venues"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "201": { "description": "Submission outcome" } }
+      }
+    },
+    "/api/v1/venues/from-google": {
+      "post": {
+        "summary": "Add a venue from Google Places placeId",
+        "tags": ["Venues"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Linked existing venue" }, "201": { "description": "Created venue" } }
+      }
+    },
+    "/api/v1/venues/{slug}": {
+      "get": {
+        "summary": "Get full venue details by slug",
+        "tags": ["Venues"],
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "vertical", "in": "query", "schema": { "type": "string", "enum": ["food", "drink"] } },
+          { "name": "reviews", "in": "query", "schema": { "type": "string", "enum": ["all", "local", "tourist", "influencer"] } },
+          { "name": "trackView", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": { "200": { "description": "Venue detail" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/v1/venues/{slug}/view": {
+      "post": {
+        "summary": "Record a venue view for owner analytics",
+        "tags": ["Venues"],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Recorded" } }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "summary": "Search venues on platform and optionally Google Places",
+        "tags": ["Venues"],
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "minLength": 2 } },
+          { "name": "vertical", "in": "query", "schema": { "type": "string", "enum": ["food", "drink"] } }
+        ],
+        "responses": { "200": { "description": "Search results" } }
+      }
+    },
+    "/api/v1/reviews/form-token": {
+      "get": {
+        "summary": "Issue anti-bot review form token tied to user, venue, and timestamp",
+        "tags": ["Reviews"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "venueId", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Anti-bot token and timing rules" } }
+      }
+    },
+    "/api/v1/venues/{slug}/reviews": {
+      "post": {
+        "summary": "Publish a native review (runs anti-bot gate, review analysis, and recalculates honest score)",
+        "tags": ["Reviews"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "201": { "description": "Published review" }, "202": { "description": "Held for moderation" } }
+      }
+    },
+    "/api/v1/reviews/{reviewId}": {
+      "patch": {
+        "summary": "Edit own native review",
+        "tags": ["Reviews"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "reviewId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "summary": "Delete own review",
+        "tags": ["Reviews"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "reviewId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    },
+    "/api/v1/reviews/{reviewId}/helpful": {
+      "post": {
+        "summary": "Toggle helpful vote on a review",
+        "tags": ["Reviews"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "reviewId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated helpful count" } }
+      }
+    },
+    "/api/v1/reviews/{reviewId}/receipt": {
+      "post": {
+        "summary": "Upload receipt photo (multipart/form-data field `receipt`, raw image/*, or JSON base64) for x1.3 verified visit weight",
+        "tags": ["Reviews"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "reviewId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "201": { "description": "Queued for moderation" } }
+      }
+    },
+    "/api/v1/venues/{slug}/checkin": {
+      "post": {
+        "summary": "GPS check-in at a venue (within 100m, or simulated in demo mode)",
+        "tags": ["Venues"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Check-in recorded" } }
+      }
+    },
+    "/api/v1/venues/{slug}/vibe": {
+      "post": {
+        "summary": "Report current crowd level (1-5) for drink venues",
+        "tags": ["Venues"],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Vibe recorded" } }
+      }
+    },
+    "/api/v1/venues/{slug}/quick-vote": {
+      "post": {
+        "summary": "Cast safety (1-5) or noise (1-4) quick vote",
+        "tags": ["Venues"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Vote saved" } }
+      }
+    },
+    "/api/v1/venues/{slug}/videos": {
+      "post": {
+        "summary": "Submit TikTok/Instagram/YouTube/Facebook link for a venue",
+        "tags": ["Venues"],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "201": { "description": "Processed video card" } }
+      }
+    },
+    "/api/v1/me/preferences": {
+      "put": {
+        "summary": "Update user preference interests",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Updated user" } }
+      }
+    },
+    "/api/v1/me/saved/{slug}": {
+      "put": {
+        "summary": "Save a venue to personal list",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated saved slugs" } }
+      },
+      "delete": {
+        "summary": "Remove a venue from personal list",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated saved slugs" } }
+      }
+    },
+    "/api/v1/me/local-verification": {
+      "get": {
+        "summary": "Get local verification progress (GPS days / needed)",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Progress" } }
+      }
+    },
+    "/api/v1/me/local-verification/checkin": {
+      "post": {
+        "summary": "Submit city GPS check-in toward verified local status",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Updated days count" } }
+      }
+    },
+    "/api/v1/me/local-verification/email/start": {
+      "post": {
+        "summary": "Start university email verification",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Verification started" } }
+      }
+    },
+    "/api/v1/me/local-verification/email/confirm": {
+      "post": {
+        "summary": "Confirm university email code",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Verified local granted" } }
+      }
+    },
+    "/api/v1/me/social/start": {
+      "post": {
+        "summary": "Start social bio code verification",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Verification code issued" } }
+      }
+    },
+    "/api/v1/me/social/confirm": {
+      "post": {
+        "summary": "Confirm social bio code verification",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Social link verified" } }
+      }
+    },
+    "/api/v1/me/social/{platform}": {
+      "delete": {
+        "summary": "Unlink a social account",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "platform", "in": "path", "required": true, "schema": { "type": "string", "enum": ["tiktok", "instagram", "facebook", "youtube"] } }],
+        "responses": { "200": { "description": "Unlinked" } }
+      }
+    },
+    "/api/v1/me/team-invites/{employeeId}": {
+      "post": {
+        "summary": "Accept or decline a venue team invite",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "employeeId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated user" } }
+      },
+      "delete": {
+        "summary": "Leave a venue team",
+        "tags": ["Account"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "employeeId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Left team" } }
+      }
+    },
+    "/api/v1/users/{username}": {
+      "get": {
+        "summary": "Public user profile",
+        "tags": ["Account"],
+        "parameters": [{ "name": "username", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Public profile" } }
+      }
+    },
+    "/api/v1/leaderboard": {
+      "get": {
+        "summary": "Monthly awards, snapshot rankings, public category tops, and live vote counts",
+        "tags": ["Leaderboard"],
+        "parameters": [
+          { "name": "vertical", "in": "query", "schema": { "type": "string", "enum": ["food", "drink"] } },
+          { "name": "month", "in": "query", "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" } }
+        ],
+        "responses": { "200": { "description": "Leaderboard & monthly category votes" } }
+      }
+    },
+    "/api/v1/monthly-votes": {
+      "post": {
+        "summary": "Cast 1 vote per category per month in Topul lunii",
+        "tags": ["Leaderboard"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "201": { "description": "Vote recorded" }, "409": { "description": "Already voted in category" } }
+      }
+    },
+    "/api/v1/weekend": {
+      "get": {
+        "summary": "Weekend events (Friday-Sunday)",
+        "tags": ["Discovery"],
+        "responses": { "200": { "description": "Weekend events list" } }
+      }
+    },
+    "/api/v1/reviewers": {
+      "get": {
+        "summary": "Top verified local and influencer reviewers",
+        "tags": ["Discovery"],
+        "responses": { "200": { "description": "Top reviewers list" } }
+      }
+    },
+    "/api/v1/loyalty/programs": {
+      "get": {
+        "summary": "List active city loyalty programs and current user cards",
+        "tags": ["Loyalty"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Loyalty wallet" } }
+      }
+    },
+    "/api/v1/loyalty/scan": {
+      "post": {
+        "summary": "Scan rotating 60s HMAC QR code (`programId.window.sig`) or stamp personal card",
+        "tags": ["Loyalty"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Stamp or reward redeemed" } }
+      }
+    },
+    "/api/v1/loyalty/cards": {
+      "post": {
+        "summary": "Create a personal loyalty card for a venue not yet on platform",
+        "tags": ["Loyalty"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "201": { "description": "Created personal card with first stamp" } }
+      }
+    },
+    "/api/v1/polls": {
+      "post": {
+        "summary": "Create an outing poll (`Unde ieșim?`) for 2-4 venue slugs",
+        "tags": ["Scarnavii"],
+        "responses": { "201": { "description": "Poll token & share URL" } }
+      }
+    },
+    "/api/v1/polls/{token}": {
+      "get": {
+        "summary": "Get outing poll counts and current voter choice",
+        "tags": ["Scarnavii"],
+        "security": [{ "voterToken": [] }],
+        "parameters": [{ "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Poll state" } }
+      }
+    },
+    "/api/v1/polls/{token}/vote": {
+      "post": {
+        "summary": "Vote in an outing poll; returns X-Voter-Token for anonymous mobile persistence",
+        "tags": ["Scarnavii"],
+        "security": [{ "voterToken": [] }],
+        "parameters": [{ "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated poll state and voterToken" } }
+      }
+    },
+    "/api/v1/taste-tour": {
+      "post": {
+        "summary": "Parse natural-language cravings and compute optimal 2- or 3-stop walking Taste Tour",
+        "tags": ["Scarnavii"],
+        "responses": { "200": { "description": "Parsed categories, route stops, total RON, distance, optional Google Routes data" } }
+      }
+    },
+    "/api/v1/ads/{adId}/events": {
+      "post": {
+        "summary": "Record ad impression or click",
+        "tags": ["Monetization"],
+        "parameters": [{ "name": "adId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Event recorded" } }
+      }
+    }
+  }
+}

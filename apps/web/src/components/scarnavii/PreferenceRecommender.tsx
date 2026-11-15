@@ -314,7 +314,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
   };
 
   const chipClass = (active: boolean) =>
-    `btn-press px-3 py-1.5 rounded-[4px] text-[12px] font-semibold border transition-colors ${
+    `btn-press min-h-[44px] sm:min-h-[38px] inline-flex items-center px-3 py-2 rounded-[4px] text-[12px] font-semibold border transition-colors ${
       active
         ? isDrink
           ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -414,127 +414,147 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
           </div>
         </div>
 
-        {/* Neighborhood */}
-        <div className="space-y-1.5">
-          <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
-            Cartier
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedNeighborhood('any');
-                setPickIndex(0);
-              }}
-              className={chipClass(selectedNeighborhood === 'any')}
+        <details
+          className={`group border-t pt-3 ${
+            isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
+          }`}
+        >
+          <summary className="min-h-[44px] cursor-pointer list-none flex items-center justify-between gap-2 text-[13px] font-bold select-none">
+            <span>Mai multe filtre (cartier, ocazie, opțiuni)</span>
+            <span
+              aria-hidden="true"
+              className={`text-[12px] transition-transform group-open:rotate-180 ${
+                isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+              }`}
             >
-              Oriunde în Timișoara
-            </button>
-            {neighborhoods.map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => {
-                  setSelectedNeighborhood(n);
-                  setPickIndex(0);
-                }}
-                className={chipClass(selectedNeighborhood === n)}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
+              ▼
+            </span>
+          </summary>
 
-        {/* Vibe */}
-        <div className="space-y-1.5">
-          <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
-            Stare / Ocazie
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {VIBE_OPTIONS.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => {
-                  setSelectedVibe((prev) => (prev === v.id ? null : v.id));
-                  setPickIndex(0);
-                }}
-                className={chipClass(selectedVibe === v.id)}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          <div className="space-y-4 pt-3">
+            {/* Neighborhood */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
+                Cartier
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedNeighborhood('any');
+                    setPickIndex(0);
+                  }}
+                  className={chipClass(selectedNeighborhood === 'any')}
+                >
+                  Oriunde în Timișoara
+                </button>
+                {neighborhoods.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => {
+                      setSelectedNeighborhood(n);
+                      setPickIndex(0);
+                    }}
+                    className={chipClass(selectedNeighborhood === n)}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Context / Moment */}
-        <div className="space-y-1.5">
-          <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
-            Momentul / Contextul
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {CONTEXT_OPTIONS.map((ctx) => (
-              <button
-                key={ctx.id}
-                type="button"
-                onClick={() => {
-                  setSelectedContext(ctx.id);
-                  setPickIndex(0);
-                }}
-                className={chipClass(selectedContext === ctx.id)}
-              >
-                {ctx.label}
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Vibe */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
+                Stare / Ocazie
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {VIBE_OPTIONS.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedVibe((prev) => (prev === v.id ? null : v.id));
+                      setPickIndex(0);
+                    }}
+                    className={chipClass(selectedVibe === v.id)}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Toggles */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 pt-1">
-          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={noTrapsOnly}
-              onChange={(e) => {
-                setNoTrapsOnly(e.target.checked);
-                setPickIndex(0);
-              }}
-              className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
-            />
-            <span>Fără capcane turistice (Index ≤ 25%)</span>
-          </label>
-          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={openNowOnly}
-              onChange={(e) => {
-                setOpenNowOnly(e.target.checked);
-                setPickIndex(0);
-              }}
-              className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
-            />
-            <span>Doar deschis acum</span>
-          </label>
-          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={excludeLastSeen}
-              onChange={(e) => setExcludeLastSeen(e.target.checked)}
-              className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
-            />
-            <span>Exclude ultimul local văzut</span>
-          </label>
-          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showTopThree}
-              onChange={(e) => setShowTopThree(e.target.checked)}
-              className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
-            />
-            <span>Arată top 3 alternative</span>
-          </label>
-        </div>
+            {/* Context / Moment */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-bold uppercase tracking-wider opacity-75">
+                Momentul / Contextul
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {CONTEXT_OPTIONS.map((ctx) => (
+                  <button
+                    key={ctx.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedContext(ctx.id);
+                      setPickIndex(0);
+                    }}
+                    className={chipClass(selectedContext === ctx.id)}
+                  >
+                    {ctx.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Toggles */}
+            <div className="flex flex-wrap gap-x-5 gap-y-1 pt-1">
+              <label className="min-h-[44px] inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={noTrapsOnly}
+                  onChange={(e) => {
+                    setNoTrapsOnly(e.target.checked);
+                    setPickIndex(0);
+                  }}
+                  className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
+                />
+                <span>Fără capcane turistice (Index ≤ 25%)</span>
+              </label>
+              <label className="min-h-[44px] inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={openNowOnly}
+                  onChange={(e) => {
+                    setOpenNowOnly(e.target.checked);
+                    setPickIndex(0);
+                  }}
+                  className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
+                />
+                <span>Doar deschis acum</span>
+              </label>
+              <label className="min-h-[44px] inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={excludeLastSeen}
+                  onChange={(e) => setExcludeLastSeen(e.target.checked)}
+                  className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
+                />
+                <span>Exclude ultimul local văzut</span>
+              </label>
+              <label className="min-h-[44px] inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showTopThree}
+                  onChange={(e) => setShowTopThree(e.target.checked)}
+                  className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'}
+                />
+                <span>Arată top 3 alternative</span>
+              </label>
+            </div>
+          </div>
+        </details>
 
         {/* CTA */}
         <div className="pt-2">
@@ -542,7 +562,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
             type="button"
             onClick={handleRecommend}
             disabled={restaurants.length === 0}
-            className={`btn-press w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-[4px] font-bold text-[14px] ${
+            className={`btn-press min-h-[44px] w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-[4px] font-bold text-[14px] ${
               isDrink
                 ? 'bg-[#F2A33A] text-[#17382C] hover:brightness-105'
                 : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
@@ -657,7 +677,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
             <button
               type="button"
               onClick={() => onSelectRestaurant(currentPick.restaurant)}
-              className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold ${
+              className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#3A2418] text-white'
@@ -671,7 +691,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
               <button
                 type="button"
                 onClick={handleNextMatch}
-                className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
+                className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
                   isDrink
                     ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                     : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'

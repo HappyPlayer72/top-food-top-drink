@@ -23,6 +23,7 @@ import {
 import {
   AvertizareaCard,
   CarouStrip,
+  DrinkStrip,
   TrapBadge,
 } from './BrandPrimitives';
 import { DRINK_HERO_HEADERS, FOOD_HERO_HEADERS } from '../data/heroHeaders';
@@ -572,9 +573,8 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
   if (isDrink) {
     return (
       <div className="min-h-screen text-[#F4EEE2] pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 space-y-6 sm:space-y-8">
-          {/* Hero */}
-          <section className="space-y-3.5 sm:space-y-4">
+        {/* Hero */}
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-8 pb-5 sm:pb-6 space-y-3.5 sm:space-y-4">
             <h1 className="font-display text-[36px] min-[375px]:text-[44px] sm:text-[56px] leading-[0.94] text-[#F4EEE2] max-w-xl text-balance">
               {activeDrinkHero}
             </h1>
@@ -643,8 +643,11 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
             )}
           </section>
 
-          {/* Main 12-column editorial layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+        {/* Horizontal Chihlimbar strip */}
+        <DrinkStrip height={10} />
+
+        {/* Main 12-column editorial layout */}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-7 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
             {/* LEFT 7 COLUMNS: Dynamic drink ranking */}
             <section
               aria-label={drinkHeading}
@@ -706,7 +709,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onClearCategory?.()}
-                    className="inline-flex items-center gap-1 font-semibold text-[#F4EEE2]/80 hover:text-white"
+                    className="min-h-[44px] inline-flex items-center gap-1 font-semibold text-[#F4EEE2]/80 hover:text-white"
                   >
                     <X className="h-3.5 w-3.5" /> Toate categoriile
                   </button>
@@ -797,7 +800,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   </h2>
                   <Link
                     href="/topdrink/timisoara/weekend"
-                    className="text-[12px] font-semibold text-[#F2A33A] hover:underline"
+                    className="min-h-[44px] inline-flex items-center text-[12px] font-semibold text-[#F2A33A] hover:underline"
                   >
                     Tot programul →
                   </Link>
@@ -861,7 +864,6 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
               </button>
             </aside>
           </div>
-        </div>
 
         {/* Interactive Vibe Check Reporter Modal */}
         {isVibeModalOpen && (
@@ -1110,7 +1112,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onClearCategory?.()}
-                  className="inline-flex items-center gap-1 font-semibold text-[#6E5649] hover:text-[#3A2418]"
+                  className="min-h-[44px] inline-flex items-center gap-1 font-semibold text-[#6E5649] hover:text-[#3A2418]"
                 >
                   <X className="h-3.5 w-3.5" /> Toate categoriile
                 </button>

@@ -63,7 +63,7 @@ export const Footer: React.FC<FooterProps> = ({
   const basePath = isDrink ? '/topdrink/timisoara' : '/topfood/timisoara';
   const categories = CATEGORIES_BY_VERTICAL[vertical];
 
-  const linkClass = `inline-flex items-center py-1 text-[13px] transition-colors ${
+  const linkClass = `inline-flex items-center min-h-[44px] sm:min-h-0 py-2 sm:py-1 text-[13px] transition-colors ${
     isDrink
       ? 'text-[#F4EEE2]/80 hover:text-[#F2A33A]'
       : 'text-[#6E5649] hover:text-[#B3261E]'
@@ -133,7 +133,7 @@ export const Footer: React.FC<FooterProps> = ({
                     onVerticalChange(isDrink ? 'food' : 'drink');
                     scrollPageToTop();
                   }}
-                  className={`inline-flex items-center gap-1.5 rounded-[4px] border px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-[4px] border min-h-[44px] px-3 py-2 text-[12px] font-semibold transition-colors ${
                     isDrink
                       ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                       : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
@@ -145,7 +145,7 @@ export const Footer: React.FC<FooterProps> = ({
               ) : (
                 <Link
                   href={isDrink ? '/topfood/timisoara' : '/topdrink/timisoara'}
-                  className={`inline-flex items-center gap-1.5 rounded-[4px] border px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-[4px] border min-h-[44px] px-3 py-2 text-[12px] font-semibold transition-colors ${
                     isDrink
                       ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                       : 'bg-white border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
@@ -293,7 +293,7 @@ export const Footer: React.FC<FooterProps> = ({
           <button
             type="button"
             onClick={scrollPageToTop}
-            className={`self-start sm:self-auto inline-flex items-center gap-1.5 rounded-[4px] border px-2.5 py-1.5 text-[12px] font-semibold transition-colors ${
+            className={`self-start sm:self-auto inline-flex items-center gap-1.5 rounded-[4px] border min-h-[44px] px-3 py-2 text-[12px] font-semibold transition-colors ${
               isDrink
                 ? 'border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A] hover:text-[#F2A33A]'
                 : 'border-[#D6CFC5] bg-white text-[#3A2418] hover:border-[#3A2418]'

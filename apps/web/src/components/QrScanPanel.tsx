@@ -12,30 +12,67 @@ declare global {
   }
 }
 
+export interface QrScanPanelProps {
+  isDrink: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Optional custom handler (used in demo/localStorage mode); if omitted, calls stampFidelity on backend. */
+  onCustomScan?: (code: string) => Promise<{ ok: boolean; message: string; programId?: string }>;
+  onResult: (message: string, isError: boolean, programId?: string) => void;
+}
+
 /**
  * „Scanează codul de la casă”: camera citește QR-ul afișat de local (/owner/…/fidelitate) și pune ștampila.
  * Unde browserul nu are BarcodeDetector (ex. Safari, Firefox), se poate introduce codul de sub QR.
  * Codul are forma `{programId}.{minut}.{semnătură}` și expiră într-un minut.
  */
-export function QrScanPanel({ isDrink, onResult }: { isDrink: boolean; onResult: (message: string, isError: boolean) => void }) {
+export function QrScanPanel({
+  isDrink,
+  open: controlledOpen,
+  onOpenChange,
+  onCustomScan,
+  onResult,
+}: QrScanPanelProps) {
   const ids = { code: useId(), title: useId() };
   const videoRef = useRef<HTMLVideoElement>(null);
   const openRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (controlledOpen === undefined) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [cameraNote, setCameraNote] = useState<string | null>(null);
   const [manual, setManual] = useState('');
   const [busy, setBusy] = useState(false);
 
   const submit = async (code: string) => {
     const clean = code.trim();
-    const programId = clean.split('.')[0];
-    if (!programId || clean.split('.').length !== 3) return onResult('Codul nu pare un cod de fidelitate topfood.', true);
+    if (!clean) return onResult('Introdu sau scanează un cod QR.', true);
     setBusy(true);
+    if (onCustomScan) {
+      const r = await onCustomScan(clean);
+      setBusy(false);
+      onResult(r.message, !r.ok, r.programId);
+      if (r.ok) {
+        setManual('');
+        close();
+      }
+      return;
+    }
+    const programId = clean.split('.')[0];
+    if (!programId || clean.split('.').length !== 3) {
+      setBusy(false);
+      return onResult('Codul nu pare un cod de fidelitate topfood.', true);
+    }
     const r = await stampFidelity(programId, clean);
     setBusy(false);
-    onResult(r.ok ? r.message : r.error, !r.ok);
-    if (r.ok) close();
+    onResult(r.ok ? r.message : r.error, !r.ok, r.ok ? programId : undefined);
+    if (r.ok) {
+      setManual('');
+      close();
+    }
   };
 
   const close = () => {
@@ -113,7 +150,15 @@ export function QrScanPanel({ isDrink, onResult }: { isDrink: boolean; onResult:
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
-      <video ref={videoRef} muted playsInline aria-label="Imaginea de la cameră" className="w-full max-w-sm rounded-[6px] bg-black aspect-square object-cover" />
+      <div className="relative w-full max-w-sm">
+        <video ref={videoRef} muted playsInline aria-label="Imaginea de la cameră" className="w-full rounded-[8px] bg-black aspect-square object-cover" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-5">
+          <span className={`absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 rounded-tl-md ${isDrink ? 'border-[#F2A33A]' : 'border-[#B3261E]'}`} />
+          <span className={`absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 rounded-tr-md ${isDrink ? 'border-[#F2A33A]' : 'border-[#B3261E]'}`} />
+          <span className={`absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 rounded-bl-md ${isDrink ? 'border-[#F2A33A]' : 'border-[#B3261E]'}`} />
+          <span className={`absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 rounded-br-md ${isDrink ? 'border-[#F2A33A]' : 'border-[#B3261E]'}`} />
+        </div>
+      </div>
       <p className={`text-[13px] ${t.muted}`} role="status">{cameraNote ?? 'Pornesc camera…'}</p>
       <form
         className="flex flex-col gap-1.5"
@@ -124,7 +169,7 @@ export function QrScanPanel({ isDrink, onResult }: { isDrink: boolean; onResult:
       >
         <label htmlFor={ids.code} className="text-[13px] font-semibold">Sau scrie codul de sub QR</label>
         <div className="flex gap-2">
-          <input id={ids.code} value={manual} onChange={(e) => setManual(e.target.value)} autoComplete="off" spellCheck={false} className={`min-w-0 flex-1 min-h-[44px] px-3 rounded-[6px] border text-[16px] sm:text-[14px] ${t.input}`} />
+          <input id={ids.code} value={manual} onChange={(e) => setManual(e.target.value)} placeholder="Cod QR de la local..." autoComplete="off" spellCheck={false} className={`min-w-0 flex-1 min-h-[44px] px-3 rounded-[6px] border text-[16px] sm:text-[14px] ${t.input}`} />
           <button type="submit" aria-disabled={busy} className={`${btn} ${t.primary}`}>
             {busy ? 'Se verifică…' : 'Pune ștampila'}
           </button>
