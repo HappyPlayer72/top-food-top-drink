@@ -14,7 +14,7 @@ import {
   Navigation,
   RefreshCw,
 } from 'lucide-react';
-import { Coordinates, Restaurant, Vertical, formatHonest, formatScore } from '../../types';
+import { Coordinates, Restaurant, Vertical, formatHonest, formatScore, priceText } from '../../types';
 
 export interface MysteryDirectionsProps {
   vertical: Vertical;
@@ -537,8 +537,8 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
               </div>
               {unlockedClues >= 1 && (
                 <div>
-                  <strong>1. Zonă & buget:</strong> {targetVenue.neighborhood} ·
-                  ~{targetVenue.avgMealPriceRon} lei ({targetVenue.priceTier})
+                  <strong>1. Zonă & buget:</strong> {targetVenue.neighborhood}
+                  {priceText(targetVenue, ' · ')} ({targetVenue.priceTier})
                 </div>
               )}
               {unlockedClues >= 2 && (

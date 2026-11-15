@@ -42,6 +42,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   club: 'Club',
   'cocktail-bar': 'Cocktail bar',
   terasa: 'Terasă',
+  cafenea: 'Cafenea',
   'cafenea-de-seara': 'Cafenea de seară',
   'muzica-live': 'Muzică live',
 };
@@ -81,6 +82,10 @@ export function trapTier(index: number | null | undefined): TrapTier {
   if (i <= 60) return 'mixed-fair';
   return 'tourist-trap';
 }
+
+// Nivelul de preț Google (1–4), folosit doar când localul nu are prețuri în lei.
+const LEVEL_TIER: Record<number, PriceTier> = { 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' };
+const LEVEL_LABEL: Record<number, string> = { 1: 'Ieftin', 2: 'Preț mediu', 3: 'Scump', 4: 'Foarte scump' };
 
 function priceTier(avg: number | null): PriceTier {
   if (avg == null) return '$$';
@@ -220,7 +225,8 @@ export function toRestaurant(
         : null;
   const google = p.externalRatings.find((x) => x.source === 'google');
   const kitchen = p.blog.find((b) => b.type === 'news');
-  const neighborhood = (v.neighborhood ?? fb?.neighborhood ?? neighborhoodAt(v.location.lat, v.location.lng)) as Neighborhood;
+  // „Cetate” din bază și „Cetate / Piața Unirii” din hartă sunt același cartier; un singur nume în filtre.
+  const neighborhood = (v.neighborhood === 'Cetate' ? 'Cetate / Piața Unirii' : (v.neighborhood ?? fb?.neighborhood ?? neighborhoodAt(v.location.lat, v.location.lng))) as Neighborhood;
 
   return {
     id: v.slug,
@@ -233,17 +239,17 @@ export function toRestaurant(
     cuisine: label(v.categories[0]) || fb?.cuisine || '',
     shortCategory: label(v.categories[0]) || fb?.shortCategory,
     categories: v.categories.length ? v.categories : fb?.categories,
-    priceTier: priceTier(avgMeal),
+    priceTier: avgMeal != null ? priceTier(avgMeal) : (LEVEL_TIER[v.priceLevel ?? 0] ?? fb?.priceTier ?? '$$'),
     avgMealPriceRon: avgMeal ?? fb?.avgMealPriceRon ?? 0,
     categoryAvgPriceRon: ctx.categoryAvgPriceRon ?? fb?.categoryAvgPriceRon ?? 0,
     priceRangeLabel:
       v.vertical === 'drink'
         ? v.drinkPrices?.beer05l
           ? `Bere 0,5 l: ${v.drinkPrices.beer05l} lei`
-          : fb?.priceRangeLabel
+          : (fb?.priceRangeLabel ?? LEVEL_LABEL[v.priceLevel ?? 0])
         : v.priceMinLei && v.priceMaxLei
           ? `${v.priceMinLei}–${v.priceMaxLei} lei`
-          : fb?.priceRangeLabel,
+          : (fb?.priceRangeLabel ?? LEVEL_LABEL[v.priceLevel ?? 0]),
     openUntilLabel: v.openLabel ? `${v.openLabel}.` : fb?.openUntilLabel,
     photoUrl: v.photos[0] ?? fb?.photoUrl ?? PLACEHOLDER_PHOTO[v.vertical],
     hasPhoto: !!(v.photos[0] ?? fb?.photoUrl),
