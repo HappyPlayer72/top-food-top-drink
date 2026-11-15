@@ -1,17 +1,16 @@
 import Link from 'next/link';
 import { BookOpenText, Check, ChevronDown, ChevronRight, Circle, KeyRound, MessageSquareText, Store, UsersRound, type LucideIcon } from 'lucide-react';
 import { cityPage, owner } from '@tftd/api';
-import { TrapBadge } from '@/components/BrandPrimitives';
+import { CoasterScore, PlateScore, TrapBadge } from '@/components/BrandPrimitives';
 import { AuthForm } from '@/components/owner/AuthForm';
 import { ClaimForm } from '@/components/owner/ClaimForm';
 import { AppealForm } from '@/components/owner/AppealForm';
-import { HeroArt } from '@/components/owner/Doodles';
 import { IconEditor } from '@/components/owner/IconEditor';
 import { EmptyState } from '@/components/owner/ui';
 import { buttonClass } from '@/components/owner/ui-classes';
 import { getDb } from '@/lib/server/db';
 import { getUserId } from '@/lib/server/session';
-import { formatScore } from '@/types';
+
 import { respondToInviteAction, leaveTeamAsEmployeeAction } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -98,8 +97,7 @@ export default async function OwnerHome() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="relative overflow-hidden rounded-[4px] border border-o-line bg-o-card p-6 sm:p-10 lg:min-h-[360px] lg:p-12">
-        <HeroArt className="pointer-events-none absolute right-6 top-1/2 hidden h-[300px] w-[380px] -translate-y-1/2 lg:block" />
+      <header className="relative overflow-hidden rounded-[4px] border border-o-line bg-o-card p-6 sm:p-10 lg:p-12">
         {name ? (
           <p className="relative mb-4 text-[15px] text-o-muted">
             <span className="font-semibold text-o-fg">
@@ -195,7 +193,7 @@ export default async function OwnerHome() {
                 const open = unanswered.get(v.id) ?? 0;
                 const checklist = checklists.get(v.id);
                 return (
-                  <li key={v.id} className="flex items-start gap-5 px-2 py-5">
+                  <li key={v.id} className="flex items-start gap-3.5 px-2 py-5 sm:gap-5">
                     <IconEditor
                       venueId={v.id}
                       name={v.name}
@@ -208,16 +206,21 @@ export default async function OwnerHome() {
                         <span className="font-display line-clamp-2 text-[30px] leading-[1.02] text-o-fg group-hover:underline">{v.name}</span>
                         <ChevronRight aria-hidden="true" className="size-5 shrink-0 transition-transform group-hover:translate-x-0.5" />
                       </Link>
-                      <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[14px] text-o-muted">
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] text-o-muted">
                         <span>
                           {v.role === 'owner' ? 'Proprietar' : 'Manager'} · {v.vertical === 'food' ? 'TOP FOOD' : 'TOP DRINK'}
                         </span>
                         {r?.honestScore != null ? (
-                          <span>
-                            Scor onest <strong className="font-semibold tabular-nums text-o-fg">{formatScore(r.honestScore)}</strong> · locul {r.rank}
+                          <span className="inline-flex items-center gap-2">
+                            {v.vertical === 'drink' ? (
+                              <CoasterScore score={r.honestScore} size="md" />
+                            ) : (
+                              <PlateScore score={r.honestScore} size="md" />
+                            )}
+                            <span className="font-semibold tabular-nums text-o-fg">Locul #{r.rank}</span>
                           </span>
                         ) : null}
-                      </p>
+                      </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Pill href={`/owner/${v.id}/review-uri`} tone="carou" icon={MessageSquareText} solid={open > 0}>
                           Review-uri{open ? ` · ${open} fără răspuns` : ''}

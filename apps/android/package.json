@@ -1,0 +1,9 @@
+{
+  "name": "@topfood/android",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node -e \"const cp=require('child_process'),fs=require('fs'),isWin=process.platform==='win32',jbr='C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr',env={...process.env};if(!env.JAVA_HOME&&fs.existsSync(jbr))env.JAVA_HOME=jbr;cp.execFileSync(isWin?'gradlew.bat':'./gradlew',['assembleDebug'],{stdio:'inherit',shell:isWin,env});\"",
+    "test": "node -e \"const cp=require('child_process'),fs=require('fs'),isWin=process.platform==='win32',jbr='C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr',env={...process.env};if(!env.JAVA_HOME&&fs.existsSync(jbr))env.JAVA_HOME=jbr;cp.execFileSync(isWin?'gradlew.bat':'./gradlew',['testDebugUnitTest'],{stdio:'inherit',shell:isWin,env});\""
+  }
+}

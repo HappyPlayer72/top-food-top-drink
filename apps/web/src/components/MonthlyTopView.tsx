@@ -513,7 +513,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
         {rankedVenues.length > 0 && (
         <section aria-label="Podiumul lunii" className="space-y-0">
             {/* Podium Columns: logical DOM order #1 -> #2 -> #3, visual 2 - 1 - 3 */}
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 items-end pt-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5 items-end pt-3">
               {/* #1 Center (tallest, 1st in DOM for screen readers) */}
               {first && (
                 <button
@@ -542,7 +542,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
-                  <span className="font-bold text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                  <span className="font-bold text-[12px] min-[375px]:text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
                     <span className="sr-only">Locul 1: </span>
                     {first.name}
                   </span>
@@ -592,7 +592,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
-                  <span className="font-bold text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                  <span className="font-bold text-[12px] min-[375px]:text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
                     <span className="sr-only">Locul 2: </span>
                     {second.name}
                   </span>
@@ -643,7 +643,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                       className="w-full h-full object-cover venue-photo-zoom"
                     />
                   </div>
-                  <span className="font-bold text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
+                  <span className="font-bold text-[12px] min-[375px]:text-[13px] sm:text-[15px] leading-tight group-hover:text-[#B3261E] line-clamp-2">
                     <span className="sr-only">Locul 3: </span>
                     {third.name}
                   </span>
@@ -1338,13 +1338,13 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
                                       disabled={submittingKey !== null}
                                       onClick={() => handleCastVote(category, nominee)}
                                       aria-label={`Votează ${nominee.venueName} la ${category.title}`}
-                                      className={`btn-press min-h-[36px] px-3 py-1 rounded-[4px] border text-[12px] font-bold disabled:opacity-50 ${
+                                      className={`btn-press min-h-[44px] px-3.5 py-2 rounded-[4px] border text-[12px] font-bold disabled:opacity-50 ${
                                         isDrink
                                           ? 'border-[#F2A33A] bg-[#122B22] text-[#F2A33A] hover:bg-[#F2A33A] hover:text-[#17382C]'
                                           : 'border-[#B3261E] bg-white text-[#B3261E] hover:bg-[#B3261E] hover:text-white'
                                       }`}
                                     >
-                                      {isSubmittingHere ? '...' : 'Votează'}
+                                      {isSubmittingHere ? 'Se votează…' : 'Votează'}
                                     </button>
                                   ) : null
                                 )}
@@ -1363,7 +1363,7 @@ export const MonthlyTopView: React.FC<MonthlyTopViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveSubmenu('clasament')}
-                className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] border text-[13px] font-semibold ${
+                className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
                   isDrink
                     ? 'border-[#2D5947] bg-[#143025] text-[#F4EEE2] hover:border-[#F2A33A]'
                     : 'border-[#D6CFC5] bg-white text-[#3A2418] hover:border-[#3A2418]'

@@ -165,15 +165,20 @@ export function Stars({ value, max = 10, size = 16 }: { value: number; max?: num
 
 /** Rezumatul din capul paginii: numere mari, etichete mici, fără cutii identice. */
 export function StatStrip({ items }: { items: { value: string | number; label: string }[] }) {
+  const isThree = items.length === 3;
   return (
     <dl
-      className="grid divide-x divide-o-line rounded-[4px] border border-o-line bg-o-surface"
-      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      className={`grid rounded-[4px] border border-o-line bg-o-surface ${
+        isThree
+          ? 'grid-cols-1 divide-y divide-o-line min-[360px]:grid-cols-3 min-[360px]:divide-x min-[360px]:divide-y-0'
+          : 'divide-x divide-o-line'
+      }`}
+      style={isThree ? undefined : { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       {items.map((i) => (
-        <div key={i.label} className="flex flex-col-reverse justify-end gap-2 px-4 py-5 sm:px-7">
+        <div key={i.label} className="flex min-w-0 flex-col-reverse justify-end gap-2 px-3.5 py-3.5 sm:px-7 sm:py-5">
           <dt className="text-[13px] leading-tight text-o-muted">{i.label}</dt>
-          <dd className="font-display text-[44px] leading-[0.9] tabular-nums text-o-fg sm:text-[52px]">{i.value}</dd>
+          <dd className="font-display text-[32px] leading-[0.9] tabular-nums text-o-fg min-[390px]:text-[38px] sm:text-[52px]">{i.value}</dd>
         </div>
       ))}
     </dl>

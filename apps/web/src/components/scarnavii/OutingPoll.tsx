@@ -103,21 +103,21 @@ export function OutingPoll({ vertical, restaurants, pollId, onSelectRestaurant }
           </div>
           <label className="block">
             <span className="sr-only">Caută un local</span>
-            <span className="relative block"><Search className={`absolute left-3 top-3 w-4 h-4 ${muted}`} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Caută după nume, cartier sau specific" className={`w-full rounded-[4px] border pl-9 pr-3 py-2.5 text-sm bg-transparent ${outline}`} />
+            <span className="relative block"><Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${muted}`} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Caută după nume, cartier sau specific" className={`w-full min-h-[44px] rounded-[4px] border pl-9 pr-3 py-2 text-[16px] sm:text-sm bg-transparent ${outline}`} />
             </span>
           </label>
           <div className="max-h-80 overflow-y-auto space-y-2">
             {filtered.map((restaurant) => {
               const checked = selected.includes(restaurant.slug);
-              return <label key={restaurant.slug} className={`flex items-center gap-3 rounded-[4px] border p-3 cursor-pointer ${outline}`}>
+              return <label key={restaurant.slug} className={`flex items-center gap-3 min-h-[44px] rounded-[4px] border p-3 cursor-pointer ${outline}`}>
                 <input type="checkbox" checked={checked} disabled={!checked && selected.length >= 4} onChange={() => setSelected((prev) => checked ? prev.filter((id) => id !== restaurant.slug) : [...prev, restaurant.slug])} className={isDrink ? 'accent-[#F2A33A]' : 'accent-[#B3261E]'} />
                 <span className="min-w-0"><span className="block font-semibold text-sm">{restaurant.name}</span><span className={`block text-xs ${muted}`}>{restaurant.neighborhood} · {restaurant.cuisine}</span></span>
               </label>;
             })}
             {filtered.length === 0 && <p className={`text-sm ${muted}`}>Nu am găsit localuri pentru căutarea ta.</p>}
           </div>
-          <button type="button" onClick={create} disabled={busy || selected.length < 2} className={`btn-press px-4 py-2.5 rounded-[4px] font-bold text-sm disabled:opacity-45 ${primary}`}>
+          <button type="button" onClick={create} disabled={busy || selected.length < 2} className={`btn-press min-h-[44px] px-4 py-2.5 rounded-[4px] font-bold text-sm disabled:opacity-45 ${primary}`}>
             {busy ? 'Se creează…' : 'Creează sondajul'}
           </button>
         </div>
@@ -127,8 +127,8 @@ export function OutingPoll({ vertical, restaurants, pollId, onSelectRestaurant }
         <div className={`rounded-[6px] border p-4 space-y-3 ${panel}`}>
           <div className="flex items-center gap-2 font-bold"><Share2 className="w-4 h-4" /> Trimite linkul prietenilor</div>
           <p className={`text-sm ${muted}`}>Fiecare poate vota și vedea rezultatele, fără să-și facă un cont.</p>
-          <div className="flex gap-2"><input aria-label="Link către sondaj" readOnly value={url} onFocus={(e) => e.currentTarget.select()} className={`min-w-0 flex-1 rounded-[4px] border bg-transparent px-3 py-2 text-sm ${outline}`} />
-            <button type="button" onClick={copyLink} className={`btn-press inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] font-bold text-sm ${primary}`}>{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}{copied ? 'Copiat' : 'Copiază'}</button></div>
+          <div className="flex gap-2"><input aria-label="Link către sondaj" readOnly value={url} onFocus={(e) => e.currentTarget.select()} className={`min-w-0 flex-1 min-h-[44px] rounded-[4px] border bg-transparent px-3 py-2 text-[16px] sm:text-sm ${outline}`} />
+            <button type="button" onClick={copyLink} className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] font-bold text-sm shrink-0 ${primary}`}>{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}{copied ? 'Copiat' : 'Copiază'}</button></div>
         </div>
         {busy && !poll && <p className={muted}>Se încarcă sondajul…</p>}
         {poll && <div className="space-y-3">
@@ -144,7 +144,7 @@ export function OutingPoll({ vertical, restaurants, pollId, onSelectRestaurant }
               {dishes.length > 0 && <div><p className="text-xs font-bold uppercase tracking-wide">Din meniu</p><p className={`text-sm mt-1 ${muted}`}>{dishes.map((dish) => `${dish.name}${dish.priceRon > 0 ? ` · ${dish.priceRon} lei` : ''}`).join(' / ')}</p></div>}
               <div><p className="text-xs font-bold uppercase tracking-wide">Ce spun localnicii</p><p className={`text-sm mt-1 ${muted}`}>{localReview ? `„${localReview.text}” — ${localReview.authorName}` : 'Nu avem încă o recenzie de la un localnic verificat.'}</p></div>
               <p className={`text-xs ${muted}`}>{restaurant.address}{restaurant.hours ? ` · ${restaurant.hours}` : ''}</p>
-              <div className="flex flex-wrap gap-2 items-center"><button type="button" onClick={() => vote(restaurant.slug)} disabled={busy} aria-pressed={poll.myVote === restaurant.slug} className={`btn-press px-4 py-2 rounded-[4px] font-bold text-sm disabled:opacity-45 ${poll.myVote === restaurant.slug ? primary : `border ${outline}`}`}>{poll.myVote === restaurant.slug ? '✓ Votul tău' : 'Votează'}</button><span className={`text-sm ${muted}`}>{votes} {votes === 1 ? 'vot' : 'voturi'}</span><button type="button" onClick={() => onSelectRestaurant(restaurant)} className={`ml-auto text-sm font-bold underline underline-offset-2 ${muted}`}>Vezi localul</button></div>
+              <div className="flex flex-wrap gap-2 items-center"><button type="button" onClick={() => vote(restaurant.slug)} disabled={busy} aria-pressed={poll.myVote === restaurant.slug} className={`btn-press min-h-[44px] px-4 py-2 rounded-[4px] font-bold text-sm disabled:opacity-45 ${poll.myVote === restaurant.slug ? primary : `border ${outline}`}`}>{poll.myVote === restaurant.slug ? '✓ Votul tău' : 'Votează'}</button><span className={`text-sm ${muted}`}>{votes} {votes === 1 ? 'vot' : 'voturi'}</span><button type="button" onClick={() => onSelectRestaurant(restaurant)} className={`ml-auto min-h-[44px] inline-flex items-center text-sm font-bold underline underline-offset-2 ${muted}`}>Vezi localul</button></div>
             </article>;
           })}
           <p className={`text-xs ${muted}`}>Poți schimba votul alegând alt local. Votul este asociat acestui browser.</p>

@@ -288,8 +288,8 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
             <span className={muted}>{resume.stops.map(({ restaurant }) => restaurant.name).join(' → ')} · {resume.saved.finished ? 'terminat, mai ai review-urile' : `oprirea ${resume.saved.current + 1} din ${resume.stops.length}`}</span>
           </p>
           <span className="flex shrink-0 gap-2">
-            <button type="button" onClick={() => { clearLiveTour(); setResume(null); }} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Renunță</button>
-            <button type="button" onClick={resumeTour} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] px-4 py-2 text-[12px] font-bold ${primary}`}>Continuă turul<ArrowRight className="h-3.5 w-3.5" /></button>
+            <button type="button" onClick={() => { clearLiveTour(); setResume(null); }} className={`btn-press min-h-[44px] rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Renunță</button>
+            <button type="button" onClick={resumeTour} className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 rounded-[4px] px-4 py-2 text-[12px] font-bold ${primary}`}>Continuă turul<ArrowRight className="h-3.5 w-3.5" /></button>
           </span>
         </div>}
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -345,7 +345,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
             <label htmlFor="taste-note" className="block text-[13px] font-bold">Altceva? <span className={`font-normal ${muted}`}>(opțional)</span></label>
             <textarea id="taste-note" maxLength={300} rows={2} value={note} onChange={(event) => { setThemed(null); setNote(event.target.value); }}
               placeholder="De exemplu: fără pizza, ceva dulce la final"
-              className={`w-full rounded-[4px] border px-3 py-2 text-[14px] ${input}`} />
+              className={`w-full min-h-[44px] rounded-[4px] border px-3 py-2 text-[16px] sm:text-[14px] ${input}`} />
             {excluded.length > 0 && <p className={`text-[12px] ${muted}`}>Evităm: {excluded.map(labelOf).join(', ')}.</p>}
             {parsedNote?.needsClarification && <p className={`text-[12px] ${muted}`}>Nu putem verifica alergii, ingrediente sau alte restricții alimentare. Confirmă aceste detalii direct cu localul.</p>}
           </div>
@@ -368,7 +368,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
           </fieldset>
           <div className="space-y-1.5">
             <label htmlFor="taste-budget" className="block text-[13px] font-bold">Buget maxim de persoană (lei)</label>
-            <input id="taste-budget" type="number" inputMode="numeric" min="1" step="1" value={budget} onChange={(event) => setBudget(event.target.value)} className={`w-full max-w-[12rem] rounded-[4px] border px-3 py-2 text-[14px] ${input}`} />
+            <input id="taste-budget" type="number" inputMode="numeric" min="1" step="1" value={budget} onChange={(event) => setBudget(event.target.value)} className={`w-full max-w-[12rem] min-h-[44px] rounded-[4px] border px-3 py-2 text-[16px] sm:text-[14px] ${input}`} />
             {budgetValid && people > 1 && <p className={`text-[12px] ${muted}`}>Până la {budgetValue * people} lei pentru toți {people}.</p>}
           </div>
         </div>}
@@ -379,7 +379,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" aria-pressed={when === 'now'} onClick={() => setWhen('now')} className={chip(when === 'now')}>Acum</button>
               <button type="button" aria-pressed={when === 'later'} onClick={() => setWhen('later')} className={chip(when === 'later')}><Clock className="h-3.5 w-3.5" />La o anumită oră</button>
-              {when === 'later' && <input type="time" aria-label="Ora de plecare" value={time} onChange={(event) => setTime(event.target.value)} className={`rounded-[4px] border px-3 py-2 text-[14px] ${input}`} />}
+              {when === 'later' && <input type="time" aria-label="Ora de plecare" value={time} onChange={(event) => setTime(event.target.value)} className={`min-h-[44px] rounded-[4px] border px-3 py-2 text-[16px] sm:text-[14px] ${input}`} />}
             </div>
             <p className={`text-[12px] ${muted}`}>Alegem doar localuri deschise pe durata turului.</p>
           </fieldset>
@@ -427,16 +427,16 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
             {travel === 'car' && carBlocked && <p role="alert" className="text-[12px] font-semibold">Alege alt mod de deplasare ca să continui.</p>}
             {carNeedsAck && <div role="alert" className={`flex flex-col gap-3 rounded-[6px] border p-3 text-[13px] sm:flex-row sm:items-center sm:justify-between ${isDrink ? 'border-[#F2A33A]' : 'border-[#B3261E]'}`}>
               <p className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span><strong>Șoferul nu bea deloc.</strong> În România toleranța la alcool la volan e zero. Stabiliți dinainte cine conduce.</span></p>
-              <button type="button" aria-pressed={driverAcknowledged} onClick={() => setDriverAcknowledged(!driverAcknowledged)} className={`btn-press shrink-0 rounded-[4px] border px-3 py-2 text-[12px] font-bold ${driverAcknowledged ? selected : border}`}>{driverAcknowledged ? '✓ Am înțeles' : 'Ok, am înțeles'}</button>
+              <button type="button" aria-pressed={driverAcknowledged} onClick={() => setDriverAcknowledged(!driverAcknowledged)} className={`btn-press min-h-[44px] shrink-0 rounded-[4px] border px-3 py-2 text-[12px] font-bold ${driverAcknowledged ? selected : border}`}>{driverAcknowledged ? '✓ Am înțeles' : 'Ok, am înțeles'}</button>
             </div>}
           </fieldset>
         </div>}
 
         <div className="flex items-center justify-between gap-3 pt-1">
           {step > 0
-            ? <button type="button" onClick={() => setStep(step - 1)} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><ArrowLeft className="h-4 w-4" />Înapoi</button>
-            : <button type="button" onClick={() => setStarted(false)} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><ArrowLeft className="h-4 w-4" />Toate tururile</button>}
-          <button type="button" onClick={next} disabled={!canContinue} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] px-5 py-2.5 text-[13px] font-bold disabled:opacity-45 ${primary}`}>
+            ? <button type="button" onClick={() => setStep(step - 1)} className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><ArrowLeft className="h-4 w-4" />Înapoi</button>
+            : <button type="button" onClick={() => setStarted(false)} className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><ArrowLeft className="h-4 w-4" />Toate tururile</button>}
+          <button type="button" onClick={next} disabled={!canContinue} className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 rounded-[4px] px-5 py-2.5 text-[13px] font-bold disabled:opacity-45 ${primary}`}>
             {step === STEPS.length - 1 ? <><Sparkles className="h-4 w-4" />Creează traseul</> : <>Continuă<ArrowRight className="h-4 w-4" /></>}
           </button>
         </div>
@@ -449,8 +449,8 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
             <span className={muted}> · {people} {people === 1 ? 'persoană' : 'persoane'}{company ? ` · ${company.toLowerCase()}` : ''} · {departure ? clock(departure) : ''} · {mode.label.toLowerCase()} din {start?.label}</span>
           </p>
           <span className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setStep(themed ? STEPS.length - 1 : 0)} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Modifică alegerile</button>
-            <button type="button" onClick={() => { setStarted(false); setStep(0); }} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Toate tururile</button>
+            <button type="button" onClick={() => setStep(themed ? STEPS.length - 1 : 0)} className={`btn-press min-h-[44px] rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Modifică alegerile</button>
+            <button type="button" onClick={() => { setStarted(false); setStep(0); }} className={`btn-press min-h-[44px] rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Toate tururile</button>
           </span>
         </div>
 
@@ -489,7 +489,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
                   </div>}
                   <p className={`text-[12px] ${muted}`}>Potrivire pentru {labelOf(category).toLowerCase()}.</p>
                   {maybeClosed && <p className="flex items-center gap-1.5 text-[12px] font-semibold"><AlertTriangle className="h-3.5 w-3.5" />S-ar putea să fie închis la ora sosirii. Verifică programul.</p>}
-                  <button type="button" onClick={() => onSelectRestaurant(restaurant)} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Vezi localul <ArrowRight className="w-3.5 h-3.5" /></button>
+                  <button type="button" onClick={() => onSelectRestaurant(restaurant)} className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Vezi localul <ArrowRight className="w-3.5 h-3.5" /></button>
                 </div>
               </li>;
             })}
@@ -507,8 +507,8 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
             </div>}
             <p className={`text-[12px] ${muted}`}>Orele și prețurile sunt orientative. Verifică ruta și programul localurilor înainte de plecare.</p>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={startLive} className={`btn-press inline-flex items-center gap-2 rounded-[4px] px-4 py-2.5 text-[13px] font-bold ${primary}`}><Flag className="w-4 h-4" />Pornește turul</button>
-              {mapsLink && <a href={mapsLink} target="_blank" rel="noreferrer" className={`btn-press inline-flex items-center gap-2 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><Navigation className="w-4 h-4" />Deschide traseul în Google Maps</a>}
+              <button type="button" onClick={startLive} className={`btn-press min-h-[44px] inline-flex items-center gap-2 rounded-[4px] px-4 py-2.5 text-[13px] font-bold ${primary}`}><Flag className="w-4 h-4" />Pornește turul</button>
+              {mapsLink && <a href={mapsLink} target="_blank" rel="noreferrer" className={`btn-press min-h-[44px] inline-flex items-center gap-2 rounded-[4px] border px-4 py-2.5 text-[13px] font-bold ${border}`}><Navigation className="w-4 h-4" />Deschide traseul în Google Maps</a>}
             </div>
             {themed && (tour.stops.length < themed.stops || droppedCategories.length > 0) && <p className={`text-[12px] ${muted}`}>Traseul e mai scurt decât turul „{themed.name}”, așa că nu primești ștampila pentru el. Încearcă altă oră.</p>}
           </div>

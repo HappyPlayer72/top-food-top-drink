@@ -16,7 +16,7 @@ const ICON_LABELS: Record<string, string> = {
   heart: 'Inimă',
   cat: 'Pisică',
 };
-const inputClass = 'min-h-11 w-full rounded-[4px] border border-o-line bg-o-card px-3 text-[15px] text-o-fg';
+const inputClass = 'min-h-11 w-full rounded-[4px] border border-o-line bg-o-card px-3 text-[16px] text-o-fg sm:text-[15px]';
 
 export type ProgramView = { rewardTitle: string; stampsRequired: number; icon: string } | null;
 

@@ -107,7 +107,7 @@ function ReviewCard({ venueId, review: r, index }: { venueId: string; review: Re
         {r.text ? <p className="mt-5 max-w-prose break-words text-[16px] leading-relaxed sm:pl-[62px]">{r.text}</p> : null}
 
         {r.replies.map((x, i) => (
-          <div key={i} className="mt-5 rounded-[4px] border-l-4 border-o-fg bg-o-quiet p-4 sm:ml-[62px]">
+          <div key={i} className="mt-5 rounded-[4px] border border-o-line bg-o-quiet p-4 sm:ml-[62px]">
             <p className="text-[13px] font-semibold">Răspunsul localului</p>
             <p className="mt-1 max-w-prose break-words text-[15px] leading-relaxed">{x.text}</p>
           </div>

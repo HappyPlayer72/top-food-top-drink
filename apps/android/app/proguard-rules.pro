@@ -1,0 +1,2 @@
+-keep class ro.topfood.app.data.model.** { *; }
+-keepclassmembers class ro.topfood.app.data.model.** { *; }

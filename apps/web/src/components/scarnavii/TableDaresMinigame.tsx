@@ -334,7 +334,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
                 key={tier}
                 type="button"
                 onClick={() => setIntensity(tier)}
-                className={`btn-press px-3 py-1.5 rounded-[4px] text-[12px] font-semibold border ${
+                className={`btn-press min-h-[44px] px-3 py-2 rounded-[4px] text-[12px] font-semibold border ${
                   intensity === tier
                     ? isDrink
                       ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -349,7 +349,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
             ))}
           </div>
 
-          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+          <label className="min-h-[44px] inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
             <input
               type="checkbox"
               checked={usePlayerTracker}
@@ -370,7 +370,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Adaugă nume la masă..."
                 aria-label="Adaugă nume la masă"
-                className={`flex-1 px-3 py-2 rounded-[4px] border text-[13px] focus:outline-none ${
+                className={`flex-1 min-w-0 min-h-[44px] px-3 py-2 rounded-[4px] border text-[16px] sm:text-[14px] ${
                   isDrink
                     ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder-[#F4EEE2]/45'
                     : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder-[#8C7B70]'
@@ -379,7 +379,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
               <button
                 type="submit"
                 disabled={!newName.trim() || players.length >= 12}
-                className={`btn-press inline-flex items-center gap-1 px-3.5 py-2 rounded-[4px] text-[13px] font-bold disabled:opacity-45 ${
+                className={`btn-press min-h-[44px] inline-flex items-center gap-1 px-3.5 py-2 rounded-[4px] text-[13px] font-bold disabled:opacity-45 shrink-0 ${
                   isDrink
                     ? 'bg-[#1E4335] border border-[#2D5947] text-[#F4EEE2]'
                     : 'bg-[#3A2418] text-white'
@@ -416,9 +416,9 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
                         type="button"
                         onClick={() => handleRemovePlayer(p.id)}
                         aria-label={`Elimină ${p.name}`}
-                        className="opacity-65 hover:opacity-100"
+                        className="min-w-[44px] min-h-[44px] -my-2 -mr-2.5 inline-flex items-center justify-center opacity-70 hover:opacity-100 rounded"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -433,7 +433,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
             type="button"
             onClick={spinDare}
             disabled={isSpinning || pool.length === 0}
-            className={`btn-press inline-flex items-center gap-2 px-5 py-3 rounded-[4px] font-bold text-[14px] disabled:opacity-45 ${
+            className={`btn-press min-h-[44px] inline-flex items-center gap-2 px-5 py-3 rounded-[4px] font-bold text-[14px] disabled:opacity-45 ${
               isDrink
                 ? 'bg-[#F2A33A] text-[#17382C] hover:brightness-105'
                 : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
@@ -453,7 +453,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
             <button
               type="button"
               onClick={resetScores}
-              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-3 rounded-[4px] border text-[13px] font-semibold ${
+              className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2]'
                   : 'border-[#D6CFC5] text-[#3A2418]'
@@ -515,7 +515,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
                 type="button"
                 disabled={roundOutcome !== null}
                 onClick={() => markOutcome('done')}
-                className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold disabled:opacity-50 ${
+                className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold disabled:opacity-50 ${
                   isDrink
                     ? 'bg-[#F2A33A] text-[#17382C]'
                     : 'bg-[#3A2418] text-white'
@@ -528,7 +528,7 @@ export const TableDaresMinigame: React.FC<TableDaresMinigameProps> = ({
                 type="button"
                 disabled={roundOutcome !== null}
                 onClick={() => markOutcome('pass')}
-                className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] border text-[13px] font-semibold disabled:opacity-50 ${
+                className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2.5 rounded-[4px] border text-[13px] font-semibold disabled:opacity-50 ${
                   isDrink
                     ? 'border-[#2D5947] text-[#F4EEE2]'
                     : 'border-[#D6CFC5] text-[#6E5649]'

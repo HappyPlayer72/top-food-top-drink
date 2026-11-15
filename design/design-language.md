@@ -35,16 +35,15 @@ TopFood & TopDrink is a single product with two distinct editorial atmospheres:
   - Hairline border (`--color-hairline`): `#E6DFD5`
   - Sponsored card (`--color-sponsored-food`): `#F2EFE9`
 - **TopFood Dark (`html.dark`)**:
-  - Base background: `#22262E`
-  - Cards & elevated layers: `#2B303A` / `#313743`
-  - Primary ink: `#F4EEE2` | Muted ink: `#B6BAC4`
+  - Base background: `#211f1d`
+  - Cards & elevated layers: `#302c29`
+  - Primary ink: `#f7f1e8` | Muted ink: `#cdc1b5`
 - **TopDrink Public ([`TopFoodShell.tsx`](../apps/web/src/components/TopFoodShell.tsx))**:
   - Always renders on `#17382C` (`--color-sticla`) with `#F4EEE2` text and `--color-sponsored-drink` (`#1E4335`) for sponsored items.
 - **Owner Portal (`.owner-shell` `--o-*` tokens in `globals.css`)**:
   - Light food: `--o-bg: #FBF6EA`, `--o-fg: #3A2418`, `--o-card: #F5EFE2`, `--o-accent: #B3261E`, `--o-quiet: #F2EFE9`
-  - Dark food: `--o-bg: #22262E`, `--o-fg: #F4EEE2`, `--o-card: #2B303A`
-  - Light drink (`[data-vertical="drink"]`): `--o-bg: #F6F3EB`, `--o-fg: #17382C`, `--o-card: #FBF9F3`, `--o-accent: #17382C`
-  - Dark drink (`html.dark [data-vertical="drink"]`): `--o-bg: #17382C`, `--o-fg: #F4EEE2`, `--o-card: #143025`, `--o-accent: #F2A33A`
+  - Dark food: `--o-bg: #211f1d`, `--o-fg: #f7f1e8`, `--o-card: #302c29`
+  - Drink (`[data-vertical="drink"]`, all modes): `--o-bg: #17382C`, `--o-fg: #F4EEE2`, `--o-card: #143025`, `--o-accent: #F2A33A`
 
 ---
 

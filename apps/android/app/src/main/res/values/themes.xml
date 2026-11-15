@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.TopFood" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#FBF6EA</item>
+        <item name="android:navigationBarColor">#FBF6EA</item>
+    </style>
+</resources>
