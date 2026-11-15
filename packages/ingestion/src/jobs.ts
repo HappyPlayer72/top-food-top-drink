@@ -208,7 +208,7 @@ export async function discoverSocialLinks(db: Db, citySlug: string, opts: { stal
   const todo = await db
     .select({ id: venues.id, name: venues.name, vertical: venues.vertical })
     .from(venues)
-    .where(and(eq(venues.citySlug, citySlug), eq(venues.status, "active"), sql`(${venues.socialSearchedAt} is null or ${venues.socialSearchedAt} < ${since})`))
+    .where(and(eq(venues.citySlug, citySlug), eq(venues.status, "active"), sql`(${venues.socialSearchedAt} is null or ${venues.socialSearchedAt} < ${since.toISOString()}::timestamptz)`))
     .orderBy(sql`${venues.honestScore} desc nulls last`)
     .limit(opts.maxVenues ?? 1000);
   const outcome = { venues: 0, links: 0, errors: [] as string[] };

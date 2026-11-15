@@ -10,6 +10,7 @@ import {
   forbidden,
   invalid,
   matchCandidates,
+  socialSubmissions,
   moderationDecisions,
   notFound,
   ownerClaims,
@@ -218,4 +219,28 @@ export async function decideSuspiciousAccount(db: Db, adminId: string, userId: s
     decision,
     decidedBy: adminId,
   });
+}
+
+/** Linkurile de social media găsite automat (jobul cauta-social), cele mai noi întâi, ca adminul să le poată verifica. */
+export async function autoSocialLinks(db: Db, adminId: string, limit = 100) {
+  await assertAdmin(db, adminId);
+  return db
+    .select({ id: socialSubmissions.id, url: socialSubmissions.url, platform: socialSubmissions.platform, title: socialSubmissions.title, via: socialSubmissions.discoveredVia, createdAt: socialSubmissions.createdAt, venue: { name: venues.name, slug: venues.slug, vertical: venues.vertical } })
+    .from(socialSubmissions)
+    .innerJoin(venues, eq(venues.id, socialSubmissions.venueId))
+    .where(and(isNotNull(socialSubmissions.discoveredVia), eq(socialSubmissions.status, "processed")))
+    .orderBy(sql`${socialSubmissions.createdAt} desc`)
+    .limit(limit);
+}
+
+/**
+ * Adminul scoate un link găsit greșit. Rândul rămâne (status „failed”, marcat scos de admin), ca o căutare
+ * viitoare să nu-l mai adauge din nou (url e unic).
+ */
+export async function removeSocialLink(db: Db, adminId: string, submissionId: string) {
+  await assertAdmin(db, adminId);
+  await db
+    .update(socialSubmissions)
+    .set({ status: "failed", analysis: { removedByAdmin: adminId, removedAt: new Date().toISOString() } })
+    .where(and(eq(socialSubmissions.id, submissionId), isNotNull(socialSubmissions.discoveredVia)));
 }

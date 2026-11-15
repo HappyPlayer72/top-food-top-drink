@@ -5,7 +5,6 @@
  * - Google Custom Search JSON API — GOOGLE_CSE_ID + GOOGLE_PLACES_API_KEY (dacă Google refuză, e sărit).
  * Întoarce doar linkuri TikTok / Instagram / Facebook / YouTube care chiar vorbesc despre local și Timișoara.
  */
-import { normalizeName } from "@tftd/matching";
 import { detectPlatform, type Platform } from "./social.ts";
 
 export type Provider = "youtube" | "brave" | "google_cse";
@@ -81,9 +80,14 @@ export async function searchGoogleCse(query: string): Promise<SearchHit[]> {
 
 const SEARCHERS: Record<Provider, (q: string) => Promise<SearchHit[]>> = { youtube: searchYouTube, brave: searchBrave, google_cse: searchGoogleCse };
 
+/** Litere mici, fără diacritice și semne (spre deosebire de normalizeName din matching, păstrează și orașul). */
+const plain = (t: string) => t.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-z0-9]+/g, " ").trim();
+
 /** Cuvintele din nume care contează (fără „restaurant”, „bar” etc.). */
 const GENERIC = new Set(["restaurant", "restaurantul", "bistro", "bar", "pub", "cafe", "caffe", "cafenea", "club", "pizzeria", "pizza", "the", "si", "de", "la", "lounge", "timisoara"]);
-const keyWords = (name: string) => normalizeName(name).split(" ").filter((w) => w.length >= 3 && !GENERIC.has(w));
+const keyWords = (name: string) => plain(name).split(" ").filter((w) => w.length >= 3 && !GENERIC.has(w));
+
+const safeDecode = (u: string) => { try { return decodeURIComponent(u); } catch { return u; } };
 
 /** Linkul curățat (fără parametri de urmărire), ca același clip să nu intre de două ori. */
 export function cleanUrl(url: string): string {
@@ -113,9 +117,9 @@ export function relevantLinks(venueName: string, hits: SearchHit[], limit = 3): 
     if (!platform) continue;
     const url = cleanUrl(h.url);
     if (seen.has(url)) continue;
-    const text = normalizeName(`${h.title} ${h.snippet} ${decodeURIComponent(url)}`);
-    const nameOk = words.every((w) => text.includes(w));
-    const cityOk = text.includes("timisoara") || text.includes("temeswar") || words.some((w) => normalizeName(url).includes(w));
+    const text = ` ${plain(`${h.title} ${h.snippet} ${safeDecode(url)}`)} `;
+    const nameOk = words.every((w) => text.includes(` ${w} `));
+    const cityOk = text.includes("timisoara") || text.includes("temeswar") || words.some((w) => plain(url).includes(w));
     if (!nameOk || !cityOk) continue;
     if ((perPlatform.get(platform) ?? 0) >= 2) continue;
     seen.add(url);
