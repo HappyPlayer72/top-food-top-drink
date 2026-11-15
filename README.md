@@ -39,6 +39,9 @@ Deschide [http://localhost:3000](http://localhost:3000) (`TopFood`), [http://loc
 | `npm run dev -w @topfood/web` | Pornește aplicația web Next.js (`@topfood/web`) |
 | `npm run build:web` | Compilează aplicația Next.js pentru producție |
 | `npm run dev -w @tftd/worker` | Pornește worker-ul cu cele 6 task-uri programate (cron) |
+| `npm run android:export-catalog` | Regenerează catalogul offline Android (`apps/android/app/src/main/assets/timisoara_catalog.json`) |
+| `npm run android:test` | Rulează testele unitare Kotlin (`testDebugUnitTest`) pentru aplicația Android |
+| `npm run android:build` | Rulează testele unitare și construiește `app-debug.apk` (`testDebugUnitTest assembleDebug`) |
 | `npm test` | Rulează suita completă de teste Vitest |
 | `npm run typecheck` | Verifică tipurile TypeScript în workspace |
 
@@ -49,6 +52,7 @@ Deschide [http://localhost:3000](http://localhost:3000) (`TopFood`), [http://loc
 | Zonă | Pachet / Path | Rol |
 |---|---|---|
 | Frontend Next.js 15 | [`apps/web`](apps/web/README.md) (`@topfood/web`) | Pagini publice TopFood/TopDrink, Fidelitate QR, Scârnavii, profil `/u/[username]`, `/owner`, `/admin`, API OG/share |
+| Aplicație Android nativă | [`apps/android`](docs/ANDROID-PORT.md) (`@topfood/android`) | Kotlin + Jetpack Compose + Material 3 (`ro.topfood.app`): TopFood/TopDrink, Hartă, Luna asta, Scârnăvii, Fidelitate QR, mod hibrid `/api/v1/*` + offline |
 | Worker programat | [`apps/worker`](apps/worker/README.md) (`@tftd/worker`) | 6 joburi `croner` (TZ `Europe/Bucharest`): ingestie, procesare linkuri, recalcul scoruri, clasament lunar |
 | Contract API | [`packages/api`](packages/api/README.md) (`@tftd/api`) | Strat unic între `@topfood/web` / `@tftd/worker` și pachetele de domeniu |
 | Bază de date | [`packages/db`](packages/db/README.md) (`@tftd/db`) | Drizzle ORM, 32 tabele (`schema.ts` + `ensure.ts`), Docker PostgreSQL + `pgvector` |

@@ -1,0 +1,13 @@
+{
+  "duration": 20,
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#s1-hook", "bySec": 0.1 },
+    { "kind": "before", "a": "#s1-hook", "b": "#s1-verdict" },
+    { "kind": "before", "a": "#s2-bot", "b": "#s2-local" },
+    { "kind": "before", "a": "#s2-local", "b": "#s2-punch" },
+    { "kind": "staysInFrame", "selector": ".venue-card" },
+    { "kind": "staysInFrame", "selector": ".nora-card" },
+    { "kind": "staysInFrame", "selector": ".coaster-panel" },
+    { "kind": "keepsMoving", "withinSelector": "#root", "maxStaticSec": 3.0 }
+  ]
+}

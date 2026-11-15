@@ -107,3 +107,36 @@ Machine-readable specifications:
 ## 5. Offline / No-Postgres Development Mode
 
 If `DATABASE_URL` is not configured, read endpoints (`GET /api/v1/config`, `GET /api/v1/venues`, `GET /api/v1/venues/{slug}`, `GET /api/v1/search`, `GET /api/v1/leaderboard`, `GET /api/v1/weekend`, `GET /api/v1/reviewers`, `POST /api/v1/taste-tour`) automatically fall back to the static Timișoara dataset with `backendOnline: false` in the response payload, while authenticated write endpoints return HTTP `503` with `{ error: { code: "offline" } }`.
+
+---
+
+## 6. Implemented Native Android Module (`apps/android`, `ro.topfood.app`)
+
+The native Jetpack Compose + Material 3 Android application lives under `apps/android/` (`@topfood/android`):
+
+### Package & Module Layout
+
+- **`ro.topfood.app.data.model`** (`Models.kt`, `DomainLogic.kt`): Full Kotlin domain models matching `/api/v1/*`, weighted Bayesian score recalculation (`2.0x` local / `1.3x` verified visit / `0.2x` paid influencer), tourist-trap tiering, Rule #3 sponsored cap (`<= 3`, blocked `>= 80`), walking Tasting Tour planner, and monthly voting merge logic.
+- **`ro.topfood.app.data.network`** (`TopFoodApi.kt`): Retrofit + OkHttp client targeting `/api/v1/*` with `Authorization: Bearer <token>` and `X-Voter-Token` persistence, configurable Base URL (default `http://10.0.2.2:3000`).
+- **`ro.topfood.app.data.repository`** (`TopFoodRepository.kt`): Hybrid repository pairing live `/api/v1/*` sync with bundled `assets/timisoara_catalog.json` offline fallback and `SharedPreferences` persistence.
+- **`ro.topfood.app.ui.theme`** (`Theme.kt`): Dual-face visual tokens (`TopFoodLightPalette`, `TopFoodDarkPalette`, `TopDrinkPalette`) aligned with `design/tokens.json`.
+- **`ro.topfood.app.ui.components`** (`BrandPrimitives.kt`): Native Compose `CarouStrip`, `ScoreBadge`, `LocalnicBadge`, `TuristBadge`, `InfluencerBadge`, `SponsoredPill`, `TrapBadge`, `LocalVsTouristBars`, `AvertizareaCard`, `CrowdMeter`, `EmployeeEcusonCard`, and `QrCodeCanvas`.
+- **`ro.topfood.app.ui.screens`**: `EditorialListScreen`, `MapScreen`, `MonthlyTopScreen`, `ScarnaviiScreen`, `FidelityScreen`, `VenueDetailSheet`, and `AccountSheet`.
+- **`ro.topfood.app`** (`MainViewModel.kt`, `TopFoodAppShell.kt`, `MainActivity.kt`): Unified state holder, 5-tab Material 3 navigation shell, and `topfood://` + `https://topfood.ro/...` App Links handling.
+- **`apps/android/app/src/test/java/ro/topfood/app/DomainLogicTest.kt`**: JUnit 4 tests for domain scoring, filtering, trap rules, Tasting Tour planning, and monthly vote aggregation.
+
+### Build & Test Commands
+
+```bash
+# Export offline Timisoara seed catalog + design tokens into app/src/main/assets/
+npm run android:export-catalog
+
+# Run Kotlin JUnit tests
+npm run android:test
+
+# Run unit tests and assemble app-debug.apk
+npm run android:build
+
+# Or invoke Gradle directly inside apps/android (with JAVA_HOME set to Android Studio JBR / JDK 17+)
+./gradlew testDebugUnitTest assembleDebug
+```

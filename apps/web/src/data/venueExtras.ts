@@ -999,8 +999,9 @@ export function getVenueWeeklyHours(restaurant: Restaurant): WeeklyHoursEntry[] 
   if (restaurant.weeklyHours && restaurant.weeklyHours.length > 0) {
     return restaurant.weeklyHours;
   }
-  if (VENUE_EXTRAS[restaurant.id]?.weeklyHours) {
-    return VENUE_EXTRAS[restaurant.id].weeklyHours;
+  const extra = VENUE_EXTRAS[restaurant.id];
+  if (extra?.weeklyHours) {
+    return extra.weeklyHours;
   }
   const fallback = restaurant.hours.replace(/^[^:]+:\s*/, '');
   return makeDailyHours(fallback, fallback, fallback, fallback);
@@ -1010,8 +1011,9 @@ export function getVenueMenu(restaurant: Restaurant): MenuCategory[] {
   if (restaurant.menuCategories && restaurant.menuCategories.length > 0) {
     return restaurant.menuCategories;
   }
-  if (VENUE_EXTRAS[restaurant.id]?.menuCategories) {
-    return VENUE_EXTRAS[restaurant.id].menuCategories;
+  const extra = VENUE_EXTRAS[restaurant.id];
+  if (extra?.menuCategories) {
+    return extra.menuCategories;
   }
   return [
     {
@@ -1036,7 +1038,7 @@ export function getTodayDayName(): string {
     'Vineri',
     'Sâmbătă',
   ];
-  return days[new Date().getDay()];
+  return days[new Date().getDay()] ?? 'Luni';
 }
 
 interface VenueProfileExtras {

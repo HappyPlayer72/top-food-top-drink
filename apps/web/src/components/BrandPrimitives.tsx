@@ -36,13 +36,26 @@ export const CarouMark: React.FC<{ size?: number; className?: string }> = ({
   </svg>
 );
 
-/**
- * 2. CarouStrip — Horizontal tablecloth bar (appears at most ONCE per screen: hero divider or under score)
- */
-export const CarouStrip: React.FC<{
+type StripCellPair = readonly [top: string, bottom: string];
+
+const FOOD_STRIP_CELLS: readonly StripCellPair[] = [
+  ['#FAF5F0', '#E08A84'],
+  ['#E08A84', '#C94A42'],
+  ['#C94A42', '#B3261E'],
+];
+
+const DRINK_STRIP_CELLS: readonly StripCellPair[] = [
+  ['#F4EEE2', '#D7B48A'],
+  ['#D7B48A', '#E59B56'],
+  ['#E59B56', '#F2A33A'],
+];
+
+const HorizontalWeaveStrip: React.FC<{
+  cells: readonly StripCellPair[];
+  tailColor: string;
   height?: number;
   className?: string;
-}> = ({ height = 10, className = '' }) => {
+}> = ({ cells, tailColor, height = 10, className = '' }) => {
   const cell = Math.max(4, Math.round(height / 2));
   return (
     <div
@@ -50,26 +63,50 @@ export const CarouStrip: React.FC<{
       style={{ height }}
       aria-hidden="true"
     >
-      {/* Left 2-row gingham weave */}
+      {/* Left 2-row stepped weave */}
       <div className="flex shrink-0">
-        <div className="flex flex-col">
-          <div style={{ width: cell, height: cell, backgroundColor: '#FAF5F0' }} />
-          <div style={{ width: cell, height: cell, backgroundColor: '#E08A84' }} />
-        </div>
-        <div className="flex flex-col">
-          <div style={{ width: cell, height: cell, backgroundColor: '#E08A84' }} />
-          <div style={{ width: cell, height: cell, backgroundColor: '#C94A42' }} />
-        </div>
-        <div className="flex flex-col">
-          <div style={{ width: cell, height: cell, backgroundColor: '#C94A42' }} />
-          <div style={{ width: cell, height: cell, backgroundColor: '#B3261E' }} />
-        </div>
+        {cells.map(([top, bottom], idx) => (
+          <div key={idx} className="flex flex-col">
+            <div style={{ width: cell, height: cell, backgroundColor: top }} />
+            <div style={{ width: cell, height: cell, backgroundColor: bottom }} />
+          </div>
+        ))}
       </div>
-      {/* Solid Carou extension */}
-      <div className="flex-1 bg-[#B3261E]" />
+      {/* Solid extension */}
+      <div className="flex-1" style={{ backgroundColor: tailColor }} />
     </div>
   );
 };
+
+/**
+ * 2. CarouStrip — Horizontal tablecloth bar (appears at most ONCE per screen: hero divider or under score)
+ */
+export const CarouStrip: React.FC<{
+  height?: number;
+  className?: string;
+}> = ({ height = 10, className = '' }) => (
+  <HorizontalWeaveStrip
+    cells={FOOD_STRIP_CELLS}
+    tailColor="#B3261E"
+    height={height}
+    className={className}
+  />
+);
+
+/**
+ * 2b. DrinkStrip — Horizontal Chihlimbar bar for topdrink (mirrors CarouStrip geometry)
+ */
+export const DrinkStrip: React.FC<{
+  height?: number;
+  className?: string;
+}> = ({ height = 10, className = '' }) => (
+  <HorizontalWeaveStrip
+    cells={DRINK_STRIP_CELLS}
+    tailColor="#F2A33A"
+    height={height}
+    className={className}
+  />
+);
 
 /**
  * 3. CoasterMark — Halba / cana de bere (mug icon for topdrink wordmark)

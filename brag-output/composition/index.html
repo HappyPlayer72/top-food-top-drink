@@ -1,0 +1,1441 @@
+<!doctype html>
+<html lang="ro" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>TopFood &amp; TopDrink · Timișoara</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --carou: #b3261e;
+        --cafea: #3a2418;
+        --muted-cafea: #6e5649;
+        --mustar: #e0a526;
+        --localnic: #2d5130;
+        --turist-ink: #6b4f2a;
+        --turist-line: #a78452;
+        --sticla: #17382c;
+        --chihlimbar: #f2a33a;
+        --spuma: #f4eee2;
+        --carton: #b98a5e;
+        --paper: #fbf6ea;
+        --card: #faf8f5;
+        --sponsored-food: #f2efe9;
+        --hairline: #e6dfd5;
+        --hairline-strong: #d6cfc5;
+        --font-sans: "Archivo", "Segoe UI", Roboto, sans-serif;
+        --pulse: 0;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--paper);
+        color: var(--cafea);
+        font-family: var(--font-sans);
+        font-variation-settings: "wdth" 100;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .font-display {
+        font-family: var(--font-sans);
+        font-variation-settings: "wdth" 62, "wght" 800;
+        font-stretch: 62%;
+        font-weight: 800;
+        letter-spacing: -0.015em;
+      }
+
+      .font-display-light {
+        font-family: var(--font-sans);
+        font-variation-settings: "wdth" 62, "wght" 300;
+        font-stretch: 62%;
+        font-weight: 300;
+        letter-spacing: -0.01em;
+      }
+
+      .num {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Signature TopFood CarouStrip gingham weave */
+      .carou-strip {
+        width: 100%;
+        height: 18px;
+        display: flex;
+        align-items: stretch;
+        flex-shrink: 0;
+      }
+      .carou-strip .weave {
+        display: flex;
+        flex-shrink: 0;
+      }
+      .carou-strip .weave .col {
+        display: flex;
+        flex-direction: column;
+      }
+      .carou-strip .weave .cell {
+        width: 9px;
+        height: 9px;
+      }
+      .carou-strip .solid {
+        flex: 1;
+        background: var(--carou);
+      }
+
+      .scene-pad {
+        flex: 1;
+        padding: 46px 96px 56px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      /* Brand Header Bar */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .wordmark {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .wordmark-text {
+        font-size: 36px;
+        line-height: 1;
+      }
+
+      .pill-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 22px;
+        border-radius: 6px;
+        font-size: 28px;
+        font-weight: 700;
+        border: 2px solid var(--hairline-strong);
+        background: var(--card);
+        color: var(--cafea);
+      }
+
+      /* LocalnicBadge & TrapBadge */
+      .badge-localnic {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--localnic);
+        color: #ffffff;
+        border: 2px solid var(--localnic);
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.88);
+        border-radius: 5px;
+        padding: 8px 18px;
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.1;
+        white-space: nowrap;
+      }
+
+      .badge-turist {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        color: var(--turist-ink);
+        border: 2px solid var(--turist-line);
+        border-radius: 5px;
+        padding: 7px 16px;
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.1;
+        white-space: nowrap;
+      }
+
+      .badge-trap {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--mustar);
+        color: var(--cafea);
+        border-radius: 5px;
+        padding: 9px 18px;
+        font-size: 28px;
+        font-weight: 800;
+        line-height: 1.1;
+        white-space: nowrap;
+      }
+
+      /* ================== SCENE 1: HOOK ================== */
+      .s1-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 56px;
+        align-items: center;
+        margin: auto 0;
+      }
+
+      .s1-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .s1-eyebrow {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--carou);
+        letter-spacing: 0.01em;
+      }
+
+      .s1-h1 {
+        font-size: 98px;
+        line-height: 0.96;
+        color: var(--cafea);
+      }
+
+      .s1-verdict {
+        font-size: 74px;
+        line-height: 1.02;
+        color: var(--carou);
+      }
+
+      .s1-sub {
+        font-size: 34px;
+        line-height: 1.35;
+        color: var(--muted-cafea);
+        max-width: 680px;
+      }
+
+      .venue-card {
+        background: var(--card);
+        border: 2px solid var(--hairline-strong);
+        border-radius: 12px;
+        padding: 36px 38px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        box-shadow: 0 20px 44px rgba(58, 36, 24, calc(0.08 + var(--pulse) * 0.08));
+      }
+
+      .venue-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+      }
+
+      .venue-name {
+        font-size: 46px;
+        line-height: 1.05;
+        color: var(--cafea);
+      }
+
+      .venue-meta {
+        margin-top: 8px;
+        font-size: 28px;
+        color: var(--muted-cafea);
+      }
+
+      .score-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 12px 22px;
+        border-radius: 10px;
+        background: var(--paper);
+        border: 2px solid var(--carou);
+        flex-shrink: 0;
+      }
+
+      .score-box .big {
+        font-size: 72px;
+        line-height: 0.95;
+        color: var(--carou);
+      }
+
+      .score-box .lbl {
+        margin-top: 6px;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--cafea);
+        white-space: nowrap;
+      }
+
+      .lvt-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .lvt-row {
+        display: grid;
+        grid-template-columns: 206px 1fr 78px;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .lvt-track {
+        height: 22px;
+        background: var(--sponsored-food);
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid var(--hairline-strong);
+      }
+
+      .lvt-fill {
+        height: 100%;
+        border-radius: 999px;
+        transform-origin: left center;
+      }
+
+      .lvt-fill.local {
+        background: var(--localnic);
+      }
+
+      .lvt-fill.tourist {
+        background: var(--turist-line);
+      }
+
+      .lvt-val {
+        font-size: 40px;
+        line-height: 1;
+        text-align: right;
+        color: var(--cafea);
+      }
+
+      .trap-panel {
+        background: #fff8e6;
+        border: 2px solid var(--mustar);
+        border-radius: 10px;
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .trap-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .trap-idx {
+        font-size: 38px;
+        color: var(--cafea);
+      }
+
+      .trap-reason {
+        font-size: 29px;
+        line-height: 1.3;
+        color: var(--cafea);
+        font-weight: 600;
+      }
+
+      /* ================== SCENE 2: WEIGHING ENGINE ================== */
+      .s2-head {
+        text-align: center;
+        margin-top: 8px;
+      }
+
+      .s2-title {
+        font-size: 82px;
+        line-height: 1.02;
+        color: var(--cafea);
+      }
+
+      .s2-sub {
+        margin-top: 12px;
+        font-size: 32px;
+        color: var(--muted-cafea);
+      }
+
+      .duel-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 44px;
+        margin: 28px 0;
+      }
+
+      .duel-card {
+        background: var(--card);
+        border: 2px solid var(--hairline-strong);
+        border-radius: 12px;
+        padding: 34px 38px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 20px;
+        min-height: 410px;
+        box-shadow: 0 18px 38px rgba(58, 36, 24, calc(0.06 + var(--pulse) * 0.06));
+      }
+
+      .duel-card.local {
+        border-color: var(--localnic);
+        border-width: 3px;
+        background: #f6faf6;
+      }
+
+      .duel-who {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .duel-author {
+        font-size: 36px;
+        font-weight: 800;
+        color: var(--cafea);
+      }
+
+      .duel-quote {
+        font-size: 36px;
+        line-height: 1.32;
+        color: var(--cafea);
+        font-weight: 500;
+      }
+
+      .duel-signals {
+        font-size: 29px;
+        color: var(--muted-cafea);
+      }
+
+      .duel-weight-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        border-top: 2px solid var(--hairline);
+        padding-top: 18px;
+      }
+
+      .duel-weight-lbl {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--muted-cafea);
+      }
+
+      .duel-weight-val {
+        font-size: 76px;
+        line-height: 0.95;
+      }
+
+      .duel-card.bot .duel-weight-val {
+        color: var(--carou);
+      }
+
+      .duel-card.local .duel-weight-val {
+        color: var(--localnic);
+      }
+
+      .punch-banner {
+        background: var(--cafea);
+        color: var(--spuma);
+        border-radius: 12px;
+        padding: 26px 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        text-align: center;
+      }
+
+      .punch-banner .text {
+        font-size: 46px;
+        line-height: 1.1;
+      }
+
+      .punch-banner .accent {
+        color: var(--chihlimbar);
+      }
+
+      /* ================== SCENE 3: TOPFOOD #1 ================== */
+      .s3-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+        margin: auto 0;
+      }
+
+      .sponsored-strip {
+        background: var(--sponsored-food);
+        border: 2px solid var(--hairline-strong);
+        border-radius: 10px;
+        padding: 20px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .sponsored-badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 4px;
+        background: var(--cafea);
+        color: var(--spuma);
+        font-size: 28px;
+        font-weight: 700;
+      }
+
+      .sponsored-copy {
+        font-size: 30px;
+        color: var(--cafea);
+        font-weight: 600;
+      }
+
+      .nora-card {
+        background: var(--card);
+        border: 3px solid var(--cafea);
+        border-radius: 14px;
+        padding: 40px 44px;
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+        box-shadow: 0 24px 54px rgba(58, 36, 24, calc(0.10 + var(--pulse) * 0.08));
+      }
+
+      .nora-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 32px;
+      }
+
+      .nora-rank {
+        font-size: 92px;
+        line-height: 0.85;
+        color: var(--carou);
+        flex-shrink: 0;
+      }
+
+      .nora-title {
+        font-size: 68px;
+        line-height: 1;
+        color: var(--cafea);
+      }
+
+      .nora-sub {
+        margin-top: 10px;
+        font-size: 30px;
+        color: var(--muted-cafea);
+      }
+
+      .plate-score-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+
+      .plate-score {
+        width: 136px;
+        height: 136px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 7px solid var(--carou);
+        box-shadow: inset 0 0 0 6px var(--paper);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .plate-score .val {
+        font-size: 62px;
+        line-height: 1;
+        color: var(--carou);
+      }
+
+      .plate-score-lbl {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--carou);
+        white-space: nowrap;
+      }
+
+      .nora-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+        border-top: 2px solid var(--hairline);
+        padding-top: 22px;
+      }
+
+      .order-chip {
+        background: var(--paper);
+        border: 2px solid var(--hairline-strong);
+        border-radius: 8px;
+        padding: 12px 22px;
+        font-size: 30px;
+        color: var(--cafea);
+        font-weight: 600;
+      }
+
+      .order-chip b {
+        color: var(--carou);
+      }
+
+      /* ================== SCENE 4: TOPDRINK FLIP ================== */
+      .scene-drink {
+        background: var(--sticla);
+        color: var(--spuma);
+      }
+
+      .drink-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .mode-switch {
+        display: inline-flex;
+        align-items: center;
+        background: #10281f;
+        border: 2px solid #285443;
+        border-radius: 10px;
+        padding: 6px;
+        gap: 6px;
+        position: relative;
+      }
+
+      .mode-btn {
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-size: 28px;
+        font-weight: 800;
+      }
+
+      .mode-btn.off {
+        color: #c9c1ae;
+      }
+
+      .mode-btn.on {
+        background: var(--chihlimbar);
+        color: var(--sticla);
+      }
+
+      .drink-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 56px;
+        align-items: center;
+        margin: auto 0;
+      }
+
+      .drink-kicker {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--chihlimbar);
+      }
+
+      .drink-h2 {
+        margin-top: 14px;
+        font-size: 80px;
+        line-height: 1;
+        color: var(--spuma);
+      }
+
+      .drink-meta {
+        margin-top: 16px;
+        font-size: 32px;
+        color: #dfd8c8;
+      }
+
+      .drink-pills {
+        margin-top: 32px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+      }
+
+      .drink-pill {
+        background: #1e4335;
+        border: 2px solid #2f6550;
+        color: var(--spuma);
+        border-radius: 8px;
+        padding: 14px 24px;
+        font-size: 29px;
+        font-weight: 700;
+      }
+
+      .drink-pill span {
+        color: var(--chihlimbar);
+      }
+
+      .coaster-panel {
+        background: #1e4335;
+        border: 2px solid #2f6550;
+        border-radius: 16px;
+        padding: 44px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+        text-align: center;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28),
+          0 0 calc(20px + var(--pulse) * 32px) rgba(242, 163, 58, calc(0.08 + var(--pulse) * 0.20));
+      }
+
+      .coaster-score {
+        width: 240px;
+        height: 240px;
+        border-radius: 9999px;
+        background: var(--spuma);
+        color: var(--sticla);
+        border: 9px solid var(--carton);
+        box-shadow: inset 0 0 0 7px rgba(185, 138, 94, 0.28);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .coaster-score .num {
+        font-size: 104px;
+        line-height: 0.9;
+      }
+
+      .coaster-when {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--spuma);
+      }
+
+      .crowd-meter {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .crowd-segs {
+        display: flex;
+        gap: 10px;
+      }
+
+      .crowd-seg {
+        width: 52px;
+        height: 14px;
+        border-radius: 3px;
+        background: #285443;
+      }
+
+      .crowd-seg.on {
+        background: var(--chihlimbar);
+      }
+
+      .crowd-label {
+        font-size: 29px;
+        color: #f4eee2;
+        font-weight: 600;
+      }
+
+      /* ================== SCENE 5: OUTRO ================== */
+      .s5-center {
+        margin: auto 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 32px;
+      }
+
+      .s5-marks {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 44px;
+        flex-wrap: wrap;
+      }
+
+      .s5-mark-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px 34px;
+        border-radius: 12px;
+        border: 2px solid var(--hairline-strong);
+        background: var(--card);
+      }
+
+      .s5-mark-pill.drink {
+        background: var(--sticla);
+        border-color: var(--sticla);
+        color: var(--spuma);
+      }
+
+      .s5-mark-pill .name {
+        font-size: 46px;
+        line-height: 1;
+      }
+
+      .s5-headline {
+        font-size: 92px;
+        line-height: 1;
+        color: var(--cafea);
+        max-width: 1400px;
+      }
+
+      .s5-headline .accent {
+        color: var(--carou);
+      }
+
+      .s5-tagline {
+        font-size: 36px;
+        color: var(--muted-cafea);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Audio Layer -->
+      <audio
+        id="bg-music"
+        data-timeline-role="music"
+        data-start="0"
+        data-duration="20"
+        data-track-index="10"
+        data-volume="0.32"
+        data-fade-in="0.35"
+        data-fade-out="1.4"
+        src="assets/music/happy-beats-business-moves-vol-9-by-ende-dot-app.mp3"
+      ></audio>
+      <audio id="sfx-trap" data-start="1.00" data-duration="0.19" data-track-index="11" data-volume="0.68" src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+      <audio id="sfx-cut-2" data-start="3.66" data-duration="0.15" data-track-index="12" data-volume="0.65" src="assets/sfx/impact/impactSoft_medium_004.ogg"></audio>
+      <audio id="sfx-card-bot" data-start="4.20" data-duration="0.6" data-track-index="13" data-volume="0.65" src="assets/sfx/casino/card-slide-1.ogg"></audio>
+      <audio id="sfx-card-local" data-start="4.72" data-duration="0.11" data-track-index="14" data-volume="0.70" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-punch-30" data-start="5.76" data-duration="0.13" data-track-index="15" data-volume="0.65" src="assets/sfx/interface/bong_001.ogg"></audio>
+      <audio id="sfx-cut-3" data-start="8.40" data-duration="0.14" data-track-index="16" data-volume="0.65" src="assets/sfx/impact/impactSoft_medium_002.ogg"></audio>
+      <audio id="sfx-nora-pop" data-start="9.48" data-duration="0.01" data-track-index="17" data-volume="0.62" src="assets/sfx/interface/click_003.ogg"></audio>
+      <audio id="sfx-toggle-drink" data-start="12.60" data-duration="0.6" data-track-index="18" data-volume="0.72" src="assets/sfx/interface/switch_007.ogg"></audio>
+      <audio id="sfx-vibe-click" data-start="13.68" data-duration="0.06" data-track-index="19" data-volume="0.58" src="assets/sfx/ui/click2.ogg"></audio>
+      <audio id="sfx-outro-drop" data-start="16.82" data-duration="0.19" data-track-index="20" data-volume="0.68" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-outro-bell" data-start="17.20" data-duration="1.48" data-track-index="21" data-volume="0.62" src="assets/sfx/impact/impactBell_heavy_000.ogg"></audio>
+
+      <!-- ==================== SCENE 1: HOOK (0.00 -> 3.70) ==================== -->
+      <section id="scene-1" class="scene clip" data-start="0" data-duration="3.70" data-track-index="0">
+        <div class="carou-strip" aria-hidden="true">
+          <div class="weave">
+            <div class="col"><div class="cell" style="background:#FAF5F0"></div><div class="cell" style="background:#E08A84"></div></div>
+            <div class="col"><div class="cell" style="background:#E08A84"></div><div class="cell" style="background:#C94A42"></div></div>
+            <div class="col"><div class="cell" style="background:#C94A42"></div><div class="cell" style="background:#B3261E"></div></div>
+          </div>
+          <div class="solid"></div>
+        </div>
+        <div class="scene-pad">
+          <div class="topbar">
+            <div class="wordmark">
+              <svg width="42" height="42" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect x="1" y="1" width="30" height="30" rx="5" fill="#B3261E" stroke="#9E1F18" stroke-width="2" />
+                <rect x="4" y="4" width="12" height="12" rx="1.5" fill="#D96B63" />
+                <rect x="16" y="4" width="12" height="12" rx="1.5" fill="#C44037" />
+                <rect x="4" y="16" width="12" height="12" rx="1.5" fill="#C44037" />
+                <rect x="16" y="16" width="12" height="12" rx="1.5" fill="#B3261E" />
+              </svg>
+              <span class="wordmark-text"><span class="font-display">topfood</span><span class="font-display-light">/timișoara</span></span>
+            </div>
+            <div class="pill-tag">Ghidul localnicilor</div>
+          </div>
+
+          <div class="s1-grid">
+            <div class="s1-copy">
+              <div class="s1-eyebrow">Același local · Google vs. realitate</div>
+              <h1 id="s1-hook" class="font-display s1-h1">Pe Google: 4,5★.</h1>
+              <div id="s1-verdict" class="font-display s1-verdict">În realitate: capcană turistică.</div>
+              <p id="s1-sub" class="s1-sub">Vezi cine a dat nota și cât e prețul.</p>
+            </div>
+
+            <div id="s1-card" class="venue-card">
+              <div class="venue-head">
+                <div>
+                  <h2 class="font-display venue-name">Terasa Miorița (Piața Unirii)</h2>
+                  <p class="venue-meta">Cetate · Pe Google: 4,5★</p>
+                </div>
+                <div class="score-box">
+                  <span id="s1-score-val" class="font-display num big">5,8</span>
+                  <span class="lbl">Scor Onest</span>
+                </div>
+              </div>
+
+              <div class="lvt-rows">
+                <div class="lvt-row">
+                  <div>
+                    <span class="badge-localnic">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                      Localnici
+                    </span>
+                  </div>
+                  <div class="lvt-track"><div id="s1-bar-local" class="lvt-fill local" style="width: 51%"></div></div>
+                  <span class="font-display num lvt-val">5,1</span>
+                </div>
+                <div class="lvt-row">
+                  <div><span class="badge-turist">Turiști</span></div>
+                  <div class="lvt-track"><div id="s1-bar-tourist" class="lvt-fill tourist" style="width: 84%"></div></div>
+                  <span class="font-display num lvt-val">8,4</span>
+                </div>
+              </div>
+
+              <div id="s1-trap" class="trap-panel">
+                <div class="trap-top">
+                  <span class="badge-trap">
+                    <svg width="22" height="22" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M8 2L14.4 13.4H1.6L8 2Z" stroke="#3A2418" stroke-width="1.6" stroke-linejoin="round" />
+                      <rect x="7.35" y="6" width="1.3" height="3.8" rx="0.5" fill="#3A2418" />
+                      <circle cx="8" cy="11.3" r="0.8" fill="#3A2418" />
+                    </svg>
+                    Capcană turistică
+                  </span>
+                  <span class="font-display num trap-idx">82 / 100</span>
+                </div>
+                <div class="trap-reason">Prețuri cu 59% peste medie · 68% review-uri ocazionale</div>
+              </div>
+            </div>
+          </div>
+          <div style="height: 4px"></div>
+        </div>
+      </section>
+
+      <!-- ==================== SCENE 2: WEIGHING ENGINE (3.70 -> 8.44) ==================== -->
+      <section id="scene-2" class="scene clip" data-start="3.70" data-duration="4.74" data-track-index="1">
+        <div class="carou-strip" aria-hidden="true">
+          <div class="weave">
+            <div class="col"><div class="cell" style="background:#FAF5F0"></div><div class="cell" style="background:#E08A84"></div></div>
+            <div class="col"><div class="cell" style="background:#E08A84"></div><div class="cell" style="background:#C94A42"></div></div>
+            <div class="col"><div class="cell" style="background:#C94A42"></div><div class="cell" style="background:#B3261E"></div></div>
+          </div>
+          <div class="solid"></div>
+        </div>
+        <div class="scene-pad">
+          <div id="s2-head" class="s2-head">
+            <h2 class="font-display s2-title">Nu ștergem review-uri. Le cântărim.</h2>
+            <p class="s2-sub">6 semnale de falsitate filtrează automat rafalele și conturile noi.</p>
+          </div>
+
+          <div class="duel-grid">
+            <article id="s2-bot" class="duel-card bot">
+              <div>
+                <div class="duel-who">
+                  <span class="duel-author">cont creat ieri</span>
+                  <span class="badge-turist">1 review, fără poze</span>
+                </div>
+                <p class="duel-quote" style="margin-top: 24px">„Super! Recomand!”</p>
+                <p class="duel-signals" style="margin-top: 22px">Semnale: rafală, text generic · 73% șansă de fals</p>
+              </div>
+              <div class="duel-weight-row">
+                <span class="duel-weight-lbl">Greutate în Scor Onest</span>
+                <span class="font-display num duel-weight-val">0,08</span>
+              </div>
+            </article>
+
+            <article id="s2-local" class="duel-card local">
+              <div>
+                <div class="duel-who">
+                  <span class="duel-author">Doamna Elena</span>
+                  <span class="badge-localnic">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    Localnic din Iosefin
+                  </span>
+                </div>
+                <p class="duel-quote" style="margin-top: 24px">„Ciorbă de burtă bună, porție mare, dar servirea a durat 40 de minute.”</p>
+                <p class="duel-signals" style="margin-top: 22px">Vizită confirmată cu GPS · 0% șansă de fals</p>
+              </div>
+              <div class="duel-weight-row">
+                <span class="duel-weight-lbl">Greutate în Scor Onest</span>
+                <span class="font-display num duel-weight-val">2,6</span>
+              </div>
+            </article>
+          </div>
+
+          <div id="s2-punch" class="punch-banner">
+            <span class="font-display text">
+              Un localnic verificat cântărește cât <span class="accent">~30 de boți.</span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SCENE 3: TOPFOOD #1 (8.44 -> 12.65) ==================== -->
+      <section id="scene-3" class="scene clip" data-start="8.44" data-duration="4.21" data-track-index="2">
+        <div class="carou-strip" aria-hidden="true">
+          <div class="weave">
+            <div class="col"><div class="cell" style="background:#FAF5F0"></div><div class="cell" style="background:#E08A84"></div></div>
+            <div class="col"><div class="cell" style="background:#E08A84"></div><div class="cell" style="background:#C94A42"></div></div>
+            <div class="col"><div class="cell" style="background:#C94A42"></div><div class="cell" style="background:#B3261E"></div></div>
+          </div>
+          <div class="solid"></div>
+        </div>
+        <div class="scene-pad">
+          <div class="topbar">
+            <div class="wordmark">
+              <svg width="42" height="42" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect x="1" y="1" width="30" height="30" rx="5" fill="#B3261E" stroke="#9E1F18" stroke-width="2" />
+                <rect x="4" y="4" width="12" height="12" rx="1.5" fill="#D96B63" />
+                <rect x="16" y="4" width="12" height="12" rx="1.5" fill="#C44037" />
+                <rect x="4" y="16" width="12" height="12" rx="1.5" fill="#C44037" />
+                <rect x="16" y="16" width="12" height="12" rx="1.5" fill="#B3261E" />
+              </svg>
+              <span class="wordmark-text"><span class="font-display">topfood</span><span class="font-display-light">/timișoara</span></span>
+            </div>
+            <div class="pill-tag">Clasament organic · Banii nu cumpără locul</div>
+          </div>
+
+          <div class="s3-wrap">
+            <div id="s3-sponsored" class="sponsored-strip">
+              <div style="display:flex;align-items:center;gap:18px">
+                <span class="sponsored-badge">Sponsorizat</span>
+                <span class="sponsored-copy">Vinto Gastro Wine Bar · Separat fizic de top</span>
+              </div>
+              <span class="sponsored-copy" style="color:#B3261E">Sponsorizat. Nu schimbă scorul.</span>
+            </div>
+
+            <article id="s3-nora" class="nora-card">
+              <div class="nora-top">
+                <div style="display:flex;gap:28px;align-items:flex-start">
+                  <span class="font-display num nora-rank">#1</span>
+                  <div>
+                    <h2 class="font-display nora-title">Restaurant Nora</h2>
+                    <p class="nora-sub">Dâmbovița / Iosefin · Românesc &amp; Sârbesc · 35–65 lei</p>
+                    <p class="nora-sub" style="color:#3A2418;font-weight:600;margin-top:14px">
+                      Instituție de cartier pentru plescaviță sârbească, ciorbă de burtă și preț onest.
+                    </p>
+                  </div>
+                </div>
+                <div class="plate-score-wrap">
+                  <div class="plate-score">
+                    <span id="s3-nora-score" class="font-display num val">9,1</span>
+                  </div>
+                  <span class="plate-score-lbl">Scor Onest</span>
+                </div>
+              </div>
+
+              <div class="lvt-rows">
+                <div class="lvt-row">
+                  <div>
+                    <span class="badge-localnic">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                      Localnici
+                    </span>
+                  </div>
+                  <div class="lvt-track"><div id="s3-bar-local" class="lvt-fill local" style="width: 94%"></div></div>
+                  <span class="font-display num lvt-val">9,4</span>
+                </div>
+                <div class="lvt-row">
+                  <div><span class="badge-turist">Turiști</span></div>
+                  <div class="lvt-track"><div id="s3-bar-tourist" class="lvt-fill tourist" style="width: 82%"></div></div>
+                  <span class="font-display num lvt-val">8,2</span>
+                </div>
+              </div>
+
+              <div id="s3-chips" class="nora-bottom">
+                <div class="order-chip"><b>Recomandat:</b> Plescaviță sârbească · 44 lei</div>
+                <div class="order-chip">Indice capcană: <b>9 / 100</b></div>
+                <div class="order-chip">Livrare proprie + Wolt</div>
+              </div>
+            </article>
+          </div>
+          <div style="height: 4px"></div>
+        </div>
+      </section>
+
+      <!-- ==================== SCENE 4: TOPDRINK FLIP (12.65 -> 16.86) ==================== -->
+      <section id="scene-4" class="scene scene-drink clip" data-start="12.65" data-duration="4.21" data-track-index="3">
+        <div class="scene-pad">
+          <div class="drink-toggle-row">
+            <div class="wordmark">
+              <svg width="44" height="44" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M20.5 13.5H24C25.933 13.5 27.5 15.067 27.5 17V21.5C27.5 23.433 25.933 25 24 25H20.5" stroke="#B98A5E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+                <rect x="5" y="10" width="16" height="18" rx="3.5" fill="#F2A33A" stroke="#B98A5E" stroke-width="2" />
+                <path d="M5.5 11.5C4.5 11.5 4 10.5 4.3 9.2C4.7 7.3 6.5 6.2 8.3 6.6C9.3 4.8 11.8 4.2 13.7 5.2C15.2 4.3 17.5 4.8 18.4 6.5C20.3 6.2 21.8 7.6 21.8 9.5C21.8 10.7 21.2 11.5 20.2 11.5H18.5V13.2C18.5 13.9 17.9 14.4 17.2 14.4C16.5 14.4 16 13.9 16 13.2V11.5H5.5Z" fill="#F4EEE2" stroke="#B98A5E" stroke-width="1.6" stroke-linejoin="round" />
+              </svg>
+              <span class="wordmark-text"><span class="font-display">topdrink</span><span class="font-display-light">/timișoara</span></span>
+            </div>
+
+            <div id="s4-switch" class="mode-switch">
+              <span class="mode-btn off">TopFood</span>
+              <span class="mode-btn on">TopDrink</span>
+            </div>
+          </div>
+
+          <div class="drink-grid">
+            <div>
+              <div class="drink-kicker">Pentru seara de vineri · același motor</div>
+              <h2 id="s4-title" class="font-display drink-h2">The 80's Pub</h2>
+              <p class="drink-meta">Str. Arieș nr. 19 (Elisabetin) · Retro &amp; rock până la 04:30 · Bere 15 lei</p>
+
+              <div id="s4-pills" class="drink-pills">
+                <div class="drink-pill"><span>Scor de vineri noaptea:</span> separat de marți</div>
+                <div class="drink-pill"><span>Fidelitate QR:</span> rotativ la 60s</div>
+                <div class="drink-pill"><span>Scârnavii:</span> 6 jocuri de masă &amp; sondaj</div>
+              </div>
+            </div>
+
+            <div id="s4-coaster" class="coaster-panel">
+              <div class="coaster-score">
+                <span id="s4-score-val" class="font-display num">8,4</span>
+              </div>
+              <div class="coaster-when">Scor Onest · vineri–sâmbătă noaptea</div>
+              <div class="crowd-meter">
+                <div class="crowd-segs">
+                  <div class="crowd-seg on"></div>
+                  <div class="crowd-seg on"></div>
+                  <div class="crowd-seg on"></div>
+                  <div class="crowd-seg on"></div>
+                  <div id="s4-seg-5" class="crowd-seg on"></div>
+                </div>
+                <div class="crowd-label">Vibe Check live: Plin / petrecere · acum 5 min</div>
+              </div>
+            </div>
+          </div>
+          <div style="height: 4px"></div>
+        </div>
+      </section>
+
+      <!-- ==================== SCENE 5: OUTRO (16.86 -> 20.00) ==================== -->
+      <section id="scene-5" class="scene clip" data-start="16.86" data-duration="3.14" data-track-index="4">
+        <div class="carou-strip" aria-hidden="true">
+          <div class="weave">
+            <div class="col"><div class="cell" style="background:#FAF5F0"></div><div class="cell" style="background:#E08A84"></div></div>
+            <div class="col"><div class="cell" style="background:#E08A84"></div><div class="cell" style="background:#C94A42"></div></div>
+            <div class="col"><div class="cell" style="background:#C94A42"></div><div class="cell" style="background:#B3261E"></div></div>
+          </div>
+          <div class="solid"></div>
+        </div>
+        <div class="scene-pad">
+          <div class="s5-center">
+            <div id="s5-marks" class="s5-marks">
+              <div class="s5-mark-pill">
+                <svg width="44" height="44" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                  <rect x="1" y="1" width="30" height="30" rx="5" fill="#B3261E" stroke="#9E1F18" stroke-width="2" />
+                  <rect x="4" y="4" width="12" height="12" rx="1.5" fill="#D96B63" />
+                  <rect x="16" y="4" width="12" height="12" rx="1.5" fill="#C44037" />
+                  <rect x="4" y="16" width="12" height="12" rx="1.5" fill="#C44037" />
+                  <rect x="16" y="16" width="12" height="12" rx="1.5" fill="#B3261E" />
+                </svg>
+                <span class="name"><span class="font-display">topfood</span><span class="font-display-light">/timișoara</span></span>
+              </div>
+              <div class="s5-mark-pill drink">
+                <svg width="44" height="44" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                  <path d="M20.5 13.5H24C25.933 13.5 27.5 15.067 27.5 17V21.5C27.5 23.433 25.933 25 24 25H20.5" stroke="#B98A5E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+                  <rect x="5" y="10" width="16" height="18" rx="3.5" fill="#F2A33A" stroke="#B98A5E" stroke-width="2" />
+                  <path d="M5.5 11.5C4.5 11.5 4 10.5 4.3 9.2C4.7 7.3 6.5 6.2 8.3 6.6C9.3 4.8 11.8 4.2 13.7 5.2C15.2 4.3 17.5 4.8 18.4 6.5C20.3 6.2 21.8 7.6 21.8 9.5C21.8 10.7 21.2 11.5 20.2 11.5H18.5V13.2C18.5 13.9 17.9 14.4 17.2 14.4C16.5 14.4 16 13.9 16 13.2V11.5H5.5Z" fill="#F4EEE2" stroke="#B98A5E" stroke-width="1.6" stroke-linejoin="round" />
+                </svg>
+                <span class="name"><span class="font-display">topdrink</span><span class="font-display-light">/timișoara</span></span>
+              </div>
+            </div>
+
+            <h1 id="s5-headline" class="font-display s5-headline">
+              Timișoara pe gustate, <span class="accent">nu pe ghicite.</span>
+            </h1>
+            <p id="s5-tagline" class="s5-tagline">
+              Fără capcane turistice. Fără review-uri cumpărate.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // Precomputed beat times & intensities from happy-beats-business-moves-vol-9-by-ende-dot-app.music-cues.json
+      const MUSIC_BEATS = [
+        { t: 1.07, e: 0.86 }, { t: 1.59, e: 0.92 }, { t: 2.12, e: 1.00 }, { t: 2.65, e: 0.96 },
+        { t: 3.18, e: 0.96 }, { t: 3.70, e: 1.00 }, { t: 4.23, e: 1.00 }, { t: 4.75, e: 0.94 },
+        { t: 5.28, e: 0.99 }, { t: 5.80, e: 0.95 }, { t: 6.34, e: 1.00 }, { t: 6.86, e: 0.94 },
+        { t: 7.40, e: 0.92 }, { t: 7.92, e: 0.99 }, { t: 8.44, e: 0.99 }, { t: 8.96, e: 0.95 },
+        { t: 9.50, e: 0.94 }, { t: 10.01, e: 0.96 }, { t: 10.54, e: 1.00 }, { t: 11.06, e: 0.93 },
+        { t: 11.60, e: 0.99 }, { t: 12.12, e: 0.95 }, { t: 12.65, e: 1.00 }, { t: 13.18, e: 0.96 },
+        { t: 13.70, e: 0.94 }, { t: 14.22, e: 0.93 }, { t: 14.76, e: 0.95 }, { t: 15.28, e: 0.94 },
+        { t: 15.81, e: 0.92 }, { t: 16.34, e: 0.93 }, { t: 16.86, e: 0.95 }, { t: 17.38, e: 0.92 },
+        { t: 17.91, e: 0.91 }, { t: 18.44, e: 0.88 }, { t: 18.96, e: 0.72 }, { t: 19.48, e: 0.48 }
+      ];
+
+      function sampleBeatEnergy(t) {
+        let energy = 0.15;
+        for (let i = 0; i < MUSIC_BEATS.length; i++) {
+          const dt = t - MUSIC_BEATS[i].t;
+          if (dt >= -0.08 && dt <= 0.36) {
+            const env = dt < 0 ? (dt + 0.08) / 0.08 : Math.exp(-dt * 9.0);
+            const v = env * MUSIC_BEATS[i].e;
+            if (v > energy) energy = v;
+          }
+        }
+        return energy;
+      }
+
+      const fmtRo = (n) => n.toFixed(1).replace(".", ",");
+
+      function buildTimeline() {
+        const tl = gsap.timeline({
+          paused: true,
+          onUpdate: () => {
+            const p = sampleBeatEnergy(tl.time());
+            document.documentElement.style.setProperty("--pulse", p.toFixed(3));
+          },
+        });
+
+        // Anchor timeline length at exactly 20.0s
+        tl.set("#root", { opacity: 1 }, 20);
+
+        // ---- SCENE 1 (0.00 -> 3.70): Frame 0 already shows Hook & Card ----
+        tl.fromTo(
+          "#s1-verdict",
+          { opacity: 0, y: 18, filter: "blur(6px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.38, ease: "power4.out" },
+          0.72
+        );
+        tl.fromTo(
+          "#s1-sub",
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.36, ease: "power3.out" },
+          0.65
+        );
+        tl.fromTo(
+          "#s1-bar-local",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.55, ease: "expo.out" },
+          0.55
+        );
+        tl.fromTo(
+          "#s1-bar-tourist",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.55, ease: "expo.out" },
+          0.70
+        );
+        // beat-locked: 1.07s (strong beat / trap verdict)
+        tl.fromTo(
+          "#s1-trap",
+          { opacity: 0, y: 16, scale: 0.97 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "back.out(1.4)" },
+          1.05
+        );
+        const s1Num = { v: 4.5 };
+        tl.to(
+          s1Num,
+          {
+            v: 5.8,
+            duration: 0.75,
+            ease: "power3.out",
+            onUpdate: () => {
+              const el = document.getElementById("s1-score-val");
+              if (el) el.textContent = fmtRo(s1Num.v);
+            },
+          },
+          0.40
+        );
+
+        // ---- SCENE 2 (3.70 -> 8.44): Weighing Engine ----
+        // beat-locked: 3.70s
+        tl.fromTo(
+          "#s2-head",
+          { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, duration: 0.35, ease: "power4.out" },
+          3.70
+        );
+        // beat-grid: 4.23s bot card
+        tl.fromTo(
+          "#s2-bot",
+          { opacity: 0, x: -36 },
+          { opacity: 1, x: 0, duration: 0.42, ease: "power3.out" },
+          4.23
+        );
+        // beat-grid: 4.75s local card
+        tl.fromTo(
+          "#s2-local",
+          { opacity: 0, x: 36 },
+          { opacity: 1, x: 0, duration: 0.42, ease: "power3.out" },
+          4.75
+        );
+        // beat-locked: 5.80s (~30 bots punchline)
+        tl.fromTo(
+          "#s2-punch",
+          { opacity: 0, y: 20, scale: 0.97 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.38, ease: "back.out(1.3)" },
+          5.80
+        );
+
+        // ---- SCENE 3 (8.44 -> 12.65): TopFood #1 ----
+        // beat-locked: 8.44s
+        tl.fromTo(
+          "#s3-sponsored",
+          { opacity: 0, y: -14 },
+          { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" },
+          8.44
+        );
+        // beat-grid: 8.96s Nora card
+        tl.fromTo(
+          "#s3-nora",
+          { opacity: 0, y: 24, scale: 0.98 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "expo.out" },
+          8.92
+        );
+        const noraNum = { v: 0.0 };
+        tl.to(
+          noraNum,
+          {
+            v: 9.1,
+            duration: 0.70,
+            ease: "power3.out",
+            onUpdate: () => {
+              const el = document.getElementById("s3-nora-score");
+              if (el) el.textContent = fmtRo(noraNum.v);
+            },
+          },
+          8.96
+        );
+        tl.fromTo(
+          "#s3-bar-local",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.50, ease: "expo.out" },
+          9.40
+        );
+        tl.fromTo(
+          "#s3-bar-tourist",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.50, ease: "expo.out" },
+          9.52
+        );
+        // beat-grid: 10.01s order & trap chips
+        tl.fromTo(
+          "#s3-chips",
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.36, ease: "power3.out" },
+          10.01
+        );
+
+        // ---- SCENE 4 (12.65 -> 16.86): TopDrink Flip ----
+        // beat-locked: 12.65s
+        tl.fromTo(
+          "#s4-switch",
+          { scale: 0.94, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.30, ease: "back.out(1.6)" },
+          12.65
+        );
+        tl.fromTo(
+          "#s4-title",
+          { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, duration: 0.36, ease: "power4.out" },
+          12.78
+        );
+        // beat-grid: 13.18s coaster panel
+        tl.fromTo(
+          "#s4-coaster",
+          { opacity: 0, scale: 0.94 },
+          { opacity: 1, scale: 1, duration: 0.45, ease: "expo.out" },
+          13.18
+        );
+        const drinkNum = { v: 0.0 };
+        tl.to(
+          drinkNum,
+          {
+            v: 8.4,
+            duration: 0.65,
+            ease: "power3.out",
+            onUpdate: () => {
+              const el = document.getElementById("s4-score-val");
+              if (el) el.textContent = fmtRo(drinkNum.v);
+            },
+          },
+          13.18
+        );
+        // beat-grid: 13.70s Vibe Check 5th segment + ecosystem pills
+        tl.fromTo(
+          "#s4-seg-5",
+          { opacity: 0.2, scaleY: 0.6 },
+          { opacity: 1, scaleY: 1, duration: 0.25, ease: "power2.out" },
+          13.70
+        );
+        tl.fromTo(
+          "#s4-pills",
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.42, ease: "power3.out" },
+          13.75
+        );
+
+        // ---- SCENE 5 (16.86 -> 20.00): Outro Lockup ----
+        // beat-locked: 16.86s
+        tl.fromTo(
+          "#s5-marks",
+          { opacity: 0, y: 20, scale: 0.96 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.42, ease: "expo.out" },
+          16.86
+        );
+        // beat-grid: 17.38s
+        tl.fromTo(
+          "#s5-headline",
+          { opacity: 0, y: 18, filter: "blur(6px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.42, ease: "power4.out" },
+          17.22
+        );
+        tl.fromTo(
+          "#s5-tagline",
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.38, ease: "power3.out" },
+          17.52
+        );
+
+        return tl;
+      }
+
+      function register() {
+        const tl = buildTimeline();
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        Promise.race([
+          document.fonts.ready,
+          new Promise((resolve) => setTimeout(resolve, 2500)),
+        ]).then(register);
+      } else {
+        register();
+      }
+    </script>
+  </body>
+</html>
