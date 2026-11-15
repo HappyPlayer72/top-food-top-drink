@@ -70,3 +70,21 @@ it("verificarea contului social generează cod și acordă rolul influencer cân
   expect(done.influencer).toBe(true);
   expect(updates.length).toBeGreaterThan(0);
 });
+
+it("înregistrare: max 5 conturi noi pe oră de pe același dispozitiv", async () => {
+  const { register, resetRegisterRateLimit, MAX_REGISTRATIONS } = await import("./auth.ts");
+  resetRegisterRateLimit();
+  // baza simulată: niciun cont existent, insert-ul întoarce un rând
+  const db = {
+    select: () => ({ from: () => ({ where: async () => [] }) }),
+    insert: () => ({ values: () => ({ returning: async () => [{ id: "u1", username: "x" }] }) }),
+  } as never;
+  const input = (i: number) => ({ username: `user_${i}`, displayName: "T", password: "parola-lunga-1", email: `u${i}@exemplu.ro` });
+  const now = new Date("2026-11-15T10:00:00Z");
+  for (let i = 0; i < MAX_REGISTRATIONS; i++) await register(db, input(i), { clientKey: "dispozitiv-1", now }).catch(() => undefined);
+  await expect(register(db, input(99), { clientKey: "dispozitiv-1", now })).rejects.toThrow(/Prea multe conturi noi/);
+  // alt dispozitiv nu e afectat; după o oră se poate din nou
+  await expect(register(db, input(100), { clientKey: "dispozitiv-2", now }).then(() => "ok", (e: Error) => (/Prea multe/.test(e.message) ? "blocat" : "ok"))).resolves.toBe("ok");
+  await expect(register(db, input(101), { clientKey: "dispozitiv-1", now: new Date(now.getTime() + 61 * 60_000) }).then(() => "ok", (e: Error) => (/Prea multe/.test(e.message) ? "blocat" : "ok"))).resolves.toBe("ok");
+  resetRegisterRateLimit();
+});

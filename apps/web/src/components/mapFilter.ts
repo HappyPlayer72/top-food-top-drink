@@ -1,4 +1,4 @@
-import type { Restaurant, TrapTier } from '../types';
+import type { Restaurant, TrapTier, Vertical } from '../types';
 import { matchesMapTastes, type MapTaste } from './mapTasteFilter';
 
 export type MapVerticalFilter = 'all' | 'food' | 'drink';
@@ -8,6 +8,7 @@ export interface MapFilterOptions {
   tierFilter: TrapTier | 'all';
   selectedTastes: MapTaste[];
   query: string;
+  preferredVertical?: Vertical;
 }
 
 /** Filters venues shown on the shared map by vertical, trap tier, tastes, and text query. */
@@ -16,7 +17,7 @@ export function filterMapRestaurants(
   options: MapFilterOptions
 ): Restaurant[] {
   const normalizedQuery = options.query.trim().toLowerCase();
-  return restaurants.filter((r) => {
+  const filtered = restaurants.filter((r) => {
     if (options.verticalFilter !== 'all' && r.vertical !== options.verticalFilter) {
       return false;
     }
@@ -35,6 +36,18 @@ export function filterMapRestaurants(
     }
     return true;
   });
+
+  if (options.preferredVertical === 'drink' && options.verticalFilter === 'all') {
+    const drinks: Restaurant[] = [];
+    const foods: Restaurant[] = [];
+    for (const r of filtered) {
+      if (r.vertical === 'drink') drinks.push(r);
+      else foods.push(r);
+    }
+    return [...drinks, ...foods];
+  }
+
+  return filtered;
 }
 
 /** Computes trap-tier counts for the currently selected vertical scope. */

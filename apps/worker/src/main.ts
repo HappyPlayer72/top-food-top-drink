@@ -16,6 +16,7 @@ export const SCHEDULE: Record<JobName, string> = {
   "proceseaza-linkuri": "* * * * *", // la fiecare minut
   "recalculeaza-scoruri": "0 2 * * *", // complet noaptea; review-urile noi le prinde jobul de mai jos
   "leaderboard-lunar": "5 0 1 * *", // pe 1 ale lunii, 00:05
+  "cauta-social": "0 5 * * 2", // marți, 05:00 (fără IMPORT_CONFIRM=da doar simulează)
 };
 
 const db = createDb();

@@ -9,6 +9,7 @@ Populează baza cu orașul **Timișoara** (zone turistice, 14 cartiere și preț
 | [`load.ts`](load.ts) | Orașul + cele 30 de locale reale, apoi conturile de test. `-- --reset` șterge tot (doar pe baza locală) |
 | [`test-accounts.ts`](test-accounts.ts) | Conturile cu care testăm: `test.user` / `TestUser2026!`, `test.owner` / `TestOwner2026!` (pornește fără local, își revendică unul din `/owner`), `test.admin` / `TestAdmin2026!`. Doar pe baza locală |
 | [`export-google.ts`](export-google.ts) | Salvează în snapshot ce e acum în bază după un import Google (rulat doar de cine face importul) |
+| [`dev-reviews.ts`](dev-reviews.ts) | `npm run seed:dev`: 50 de conturi „Nume (DevAccount)” cu 184 de review-uri de test (din [`data/dev-reviews.json`](data/dev-reviews.json), scrise de agenți Claude Haiku după review-urile Google), ca să vedem site-ul cu review-uri de pe platformă. Doar local; `-- --remove` le șterge |
 | [`smoke.ts`](smoke.ts) | Test de fum cap-coadă pe `@tftd/api`, logat pe conturile de test, într-o tranzacție anulată la final (baza rămâne neschimbată) |
 | [`generate.ts`](generate.ts) | Generator de review-uri sintetice **doar pentru testele unitare** ale algoritmilor (`scenarios.test.ts`); nu ajunge în bază |
 

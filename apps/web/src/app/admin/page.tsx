@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { moderation, monetization, ServiceError, visits } from '@tftd/api';
-import { createAd, decideClaim, decideMatch, decideReceipt, decideReport, decideSuspicious, deleteAd } from './actions';
+import { createAd, decideClaim, decideMatch, decideReceipt, decideReport, decideSuspicious, deleteAd, removeSocialLink, grantPartnership, cancelPartnership } from './actions';
 import { currentUserId, getDb } from './server';
+import { asc, eq } from 'drizzle-orm';
+import { venues } from '@tftd/db';
 import { ClaimDetails, MatchDetails, ReceiptDetails, ReportDetails, SuspiciousAccountDetails } from './details';
 
 export const metadata = { title: 'Moderare — TOP FOOD / TOP DRINK', robots: { index: false, follow: false } };
@@ -14,12 +16,18 @@ export default async function AdminPage() {
   let items: Awaited<ReturnType<typeof moderation.queue>>;
   let ads: Awaited<ReturnType<typeof monetization.listAdSlots>>;
   let receipts: Awaited<ReturnType<typeof visits.receiptQueue>>;
+  let socialLinks: Awaited<ReturnType<typeof moderation.autoSocialLinks>>;
+  let partnerships: Awaited<ReturnType<typeof monetization.listPartnerships>>;
+  let venueOptions: { id: string; name: string; vertical: 'food' | 'drink' }[];
   try {
     const db = getDb();
-    [items, ads, receipts] = await Promise.all([
+    [items, ads, receipts, socialLinks, partnerships, venueOptions] = await Promise.all([
       moderation.queue(db, userId),
       monetization.listAdSlots(db, userId),
       visits.receiptQueue(db, userId),
+      moderation.autoSocialLinks(db, userId),
+      monetization.listPartnerships(db, userId),
+      db.select({ id: venues.id, name: venues.name, vertical: venues.vertical }).from(venues).where(eq(venues.status, 'active')).orderBy(asc(venues.name)),
     ]);
   } catch (error) {
     if (error instanceof ServiceError && error.code === 'forbidden') {
@@ -64,11 +72,38 @@ export default async function AdminPage() {
           <form className="flex gap-2"><input type="hidden" name="id" value={m.id} /><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'confirm')}>Confirmă potrivirea</button><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
       </section>
+      <section className="space-y-4" aria-labelledby="social"><h2 id="social" className="text-2xl font-bold">Linkuri de pe social media găsite automat</h2>
+        <p>Apar pe pagina localului cu „Găsit automat”. Scoate-l pe cel care nu e despre acest local.</p>
+        {!socialLinks.length && <p>Nu există linkuri găsite automat.</p>}
+        {socialLinks.length > 0 && <ul className="space-y-2">{socialLinks.map((l) => <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
+          <span className="min-w-0"><strong>{l.venue.name}</strong> · {l.platform}{l.title ? <>: {l.title}</> : null}<br />
+            <a className="break-all underline" href={l.url} target="_blank" rel="noopener noreferrer" aria-label={`Deschide postarea ${l.platform} pentru ${l.venue.name} (se deschide într-o filă nouă)`}>{l.url}</a></span>
+          <form action={removeSocialLink}><input type="hidden" name="id" value={l.id} /><button className="rounded border px-3 py-2">Scoate linkul<span className="sr-only"> pentru {l.venue.name}, {l.platform}{l.title ? `: ${l.title}` : ''}</span></button></form>
+        </li>)}</ul>}
+      </section>
       <section className="space-y-4" aria-labelledby="claims"><h2 id="claims" className="text-2xl font-bold">Revendicări</h2>
         {!items.claims.length && <p>Nu există revendicări în așteptare.</p>}
         {items.claims.map((c) => <article key={c.id} className="space-y-2 rounded border p-4"><ClaimDetails claim={c} />
           <form className="flex gap-2"><input type="hidden" name="id" value={c.id} /><button className="rounded border px-3 py-2" formAction={decideClaim.bind(null, 'approve')}>Aprobă</button><button className="rounded border px-3 py-2" formAction={decideClaim.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
+      </section>
+      <section className="space-y-4" aria-labelledby="sponsor"><h2 id="sponsor" className="text-2xl font-bold">Sponsorizat (demo, fără plată)</h2>
+        <p className="text-sm text-cafea-deschis">Până la plata reală, aici pui un local în banda „Sponsorizat”. Apare separat, etichetat, și nu schimbă scorul sau locul în top. O capcană turistică (indice ≥ 80) nu poate fi sponsorizată.</p>
+        <form action={grantPartnership} className="grid gap-3 rounded border bg-hartie/80 p-4 sm:grid-cols-3">
+          <label className="text-sm font-medium sm:col-span-3">Localul<select name="venueId" required className="mt-1 w-full rounded border p-2" defaultValue="">
+            <option value="" disabled>Alege localul</option>
+            <optgroup label="TOP FOOD">{venueOptions.filter((v) => v.vertical === 'food').map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+            <optgroup label="TOP DRINK">{venueOptions.filter((v) => v.vertical === 'drink').map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+          </select></label>
+          <label className="text-sm font-medium">Plan<select name="plan" className="mt-1 w-full rounded border p-2" defaultValue="highlight"><option value="highlight">Highlight (apare la Sponsorizat)</option><option value="basic">Basic (blog, statistici, fidelitate)</option></select></label>
+          <label className="text-sm font-medium">Durată (zile)<input name="days" type="number" min={1} max={365} defaultValue={30} className="mt-1 w-full rounded border p-2" /></label>
+          <div className="flex items-end"><button className="rounded border bg-carou px-3 py-2 text-white">Pune la Sponsorizat</button></div>
+        </form>
+        {!partnerships.length && <p>Niciun parteneriat activ.</p>}
+        {partnerships.length > 0 && <ul className="space-y-2">{partnerships.map((p) => <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
+          <span><strong>{p.venue.name}</strong> · {p.plan === 'highlight' ? 'Highlight' : 'Basic'} · {p.status === 'paid' ? 'activ' : 'în așteptarea plății'} până pe {new Date(p.endsAt).toLocaleDateString('ro-RO')}</span>
+          <form action={cancelPartnership}><input type="hidden" name="id" value={p.id} /><button type="submit" className="rounded border px-3 py-2">Oprește<span className="sr-only"> parteneriatul pentru {p.venue.name}</span></button></form>
+        </li>)}</ul>}
       </section>
       <section className="space-y-4" aria-labelledby="ads"><h2 id="ads" className="text-2xl font-bold">Bannere reclamă (SlotReclamă)</h2>
         <p className="text-sm text-cafea-deschis">Apar exclusiv în slotul de banner dedicat orașului (etichetat „Reclamă”) și nu influențează niciodată scorul sau clasamentul.</p>

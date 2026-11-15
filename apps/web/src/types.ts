@@ -146,6 +146,10 @@ export interface MonthlyAwards {
 export interface VenueVideo {
   url: string;
   platform: string;
+  /** Titlul postării (din căutare sau din oEmbed), dacă îl avem */
+  title?: string;
+  /** null = trimis de un utilizator; altfel unde l-a găsit căutarea automată */
+  discoveredVia?: 'youtube' | 'brave' | 'google_cse' | null;
   dishes: string[];
   prices: { item: string; priceLei: number }[];
   isPaid: boolean;

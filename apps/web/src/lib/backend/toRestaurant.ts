@@ -328,17 +328,24 @@ export function toRestaurant(
       isEmployeeOfMonth: i === 0 && t.mentionsThisMonth > 0 && t.mentionsThisMonth === Math.max(...p.team.map((x) => x.mentionsThisMonth)),
       monthLabel: 'angajatul lunii',
     })),
-    videos: p.videos.map((vid) => toVenueVideo(vid.url, vid.platform, vid.analysis as SocialAnalysis | null)),
+    videos: p.videos.map((vid) => toVenueVideo(vid.url, vid.platform, vid.analysis as SocialAnalysis | null, { title: vid.title, discoveredVia: vid.discoveredVia })),
   };
 }
 
 /** Transformă analiza unui link social într-un card video pentru UI. */
-export function toVenueVideo(url: string, platform: string, a: SocialAnalysis | null): VenueVideo {
+export function toVenueVideo(
+  url: string,
+  platform: string,
+  a: SocialAnalysis | null,
+  found: { title?: string | null; discoveredVia?: VenueVideo['discoveredVia'] } = {},
+): VenueVideo {
   const isPaid = !!a?.isAd;
   const hasExplicit = (a?.adSignals ?? []).some((s) => /#|reclam|sponsor|ad\b/i.test(s));
   return {
     url,
     platform,
+    title: found.title ?? a?.embed?.title ?? undefined,
+    discoveredVia: found.discoveredVia ?? null,
     dishes: a?.dishes ?? [],
     prices: a?.priceMentioned != null ? [{ item: 'Menționat în video', priceLei: a.priceMentioned }] : [],
     isPaid,

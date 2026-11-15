@@ -47,6 +47,7 @@ import {
   getVenueWarnings,
   getVenueWeeklyHours,
 } from '../data/venueExtras';
+import { getVenueMonthlyCategoryAwards } from '../data/monthlyCategoryTops';
 import {
   AvertizareaCard,
   MugScore,
@@ -59,10 +60,15 @@ import {
   TuristBadge,
   PartnerBadge,
   TrapBadge,
+  TrophyMedalBadge,
 } from './BrandPrimitives';
 import { EMPTY_VISIT_PROOF, VisitProofField, type VisitProofState } from './VisitProofField';
 import { attachReceipt } from '@/app/actions/visits';
 import { reviewFormToken } from '@/app/actions/user';
+
+
+/** Numele platformelor cum le scrie lumea. */
+const PLATFORM_LABEL: Record<string, string> = { tiktok: 'TikTok', instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube' };
 
 export interface RestaurantDetailModalProps {
   restaurant: Restaurant | null;
@@ -890,6 +896,48 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                     />
                   </div>
                 )}
+
+                {(() => {
+                  const monthlyCategoryAwards = getVenueMonthlyCategoryAwards(
+                    isDrink ? 'drink' : 'food',
+                    restaurant.slug
+                  );
+                  if (monthlyCategoryAwards.length === 0) return null;
+                  const medalName = (r: 1 | 2 | 3) =>
+                    r === 1 ? 'Aur · Locul 1' : r === 2 ? 'Argint · Locul 2' : 'Bronz · Locul 3';
+
+                  return (
+                    <div
+                      aria-label="Distincții din votul lunii"
+                      className="flex flex-wrap items-stretch gap-2.5 pt-1.5"
+                    >
+                      {monthlyCategoryAwards.map((award) => (
+                        <div
+                          key={award.categoryId}
+                          className={`inline-flex items-center gap-2.5 px-3 py-2 rounded-[4px] border ${
+                            isDrink
+                              ? 'bg-[#143025] border-[#2D5947] text-[#F4EEE2]'
+                              : 'bg-[#FAF8F5] border-[#E6DFD5] text-[#3A2418]'
+                          }`}
+                        >
+                          <TrophyMedalBadge rank={award.rank} categoryId={award.categoryId} size="md" />
+                          <div className="min-w-0 leading-tight">
+                            <div
+                              className={`text-[10px] font-bold uppercase tracking-[0.06em] ${
+                                isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'
+                              }`}
+                            >
+                              Votul lunii · {medalName(award.rank)}
+                            </div>
+                            <div className="font-display text-[17px] leading-tight mt-0.5">
+                              {award.categoryTitle}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Dreapta: scorul ca în clasament — farfurie (food) / halbă (drink) + „Scor Onest” */}
@@ -2212,7 +2260,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
           {/* VIDEOURI DIN COMUNITATE (Item 2: embed TikTok/IG/YouTube + „Lipește un link”) */}
           {((restaurant.videos && restaurant.videos.length > 0) || onSubmitVideo) && (
             <section
-              aria-label="Videouri din comunitate"
+              aria-label="Pe social media"
               className={`pt-5 border-t space-y-3.5 ${
                 isDrink ? 'border-[#285443]' : 'border-[#E6DFD5]'
               }`}
@@ -2220,7 +2268,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
               <div className="flex items-center gap-2">
                 <Film className="w-5 h-5 opacity-75" aria-hidden="true" />
                 <h2 className="font-display text-[28px] sm:text-[32px] leading-none">
-                  Videouri din comunitate
+                  Pe social media
                 </h2>
               </div>
 
@@ -2236,33 +2284,32 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider">
-                          <span>{vid.platform}</span>
+                          <span>{PLATFORM_LABEL[vid.platform] ?? vid.platform}</span>
                           {(vid.isPaid || vid.adSignal !== 'organic') && (
-                            <span className="rounded bg-[#B3261E]/15 px-1.5 py-0.5 text-[#B3261E]">
+                            <span className={`rounded px-1.5 py-0.5 ${isDrink ? 'bg-[#B3261E]/25 text-[#FFB4AB]' : 'bg-[#B3261E]/15 text-[#B3261E]'}`}>
                               {vid.adSignal === 'marcat_reclama' ? 'Marcat reclamă' : 'Posibil reclamă'}
                             </span>
                           )}
                         </div>
-                        {src ? (
+                        {/* Titlul înaintea clipului, ca cititoarele de ecran să știe ce urmează */}
+                        {vid.title && <h3 className="text-[13px] font-semibold leading-snug">{vid.title}</h3>}
+                        {src && (
                           <div className="aspect-video w-full overflow-hidden rounded-[4px] bg-black/20">
                             <iframe
                               src={src}
-                              title={`Video ${restaurant.name} (${vid.platform})`}
+                              title={`Video: ${vid.title ?? restaurant.name} (${PLATFORM_LABEL[vid.platform] ?? vid.platform})`}
                               className="h-full w-full border-0"
                               allowFullScreen
                               loading="lazy"
                             />
                           </div>
-                        ) : (
-                          <a
-                            href={vid.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block truncate text-[13px] font-semibold underline"
-                          >
-                            Deschide clipul pe {vid.platform} →
-                          </a>
                         )}
+                        <a href={vid.url} target="_blank" rel="noopener noreferrer" className="inline-block text-[13px] font-semibold underline">
+                          Deschide pe {PLATFORM_LABEL[vid.platform] ?? vid.platform}<span className="sr-only">: {vid.title ?? restaurant.name} (se deschide într-o filă nouă)</span>
+                        </a>
+                        <p className={`text-[12px] ${isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}`}>
+                          {vid.discoveredVia ? `Găsit automat pe ${PLATFORM_LABEL[vid.platform] ?? vid.platform}` : 'Trimis de un utilizator'}
+                        </p>
                         {(vid.dishes.length > 0 || vid.prices.length > 0) && (
                           <p className={`text-[12px] ${isDrink ? 'text-[#F4EEE2]/75' : 'text-[#6E5649]'}`}>
                             {vid.dishes.length > 0 && <>Menționat: {vid.dishes.join(', ')}</>}
@@ -2277,7 +2324,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                 </div>
               ) : (
                 <p className={`text-[13px] ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>
-                  Încă nu există videouri adăugate pentru acest local.
+                  Încă nu avem postări de pe social media despre acest local.
                 </p>
               )}
 

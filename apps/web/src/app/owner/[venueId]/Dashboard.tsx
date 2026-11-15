@@ -30,10 +30,10 @@ const SECTIONS = [
 
 type Section = (typeof SECTIONS)[number]['id'];
 
-// Aceleași poze de rezervă ca pe paginile publice.
+// Aceleași ilustrații neutre ca pe paginile publice (nu o fotografie care ar părea a localului).
 const PLACEHOLDER_PHOTO = {
-  food: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=80',
-  drink: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80',
+  food: '/placeholder-food.svg',
+  drink: '/placeholder-drink.svg',
 };
 
 export async function Dashboard({ venueId, section }: { venueId: string; section: string }) {
