@@ -378,7 +378,7 @@ export const BrandWordmark: React.FC<{
         <span className="font-display">
           {isDrink ? 'topdrink' : 'topfood'}
         </span>
-        <span className="font-display-light opacity-90">/timișoara</span>
+        <span className="brand-city font-display-light opacity-90">/timișoara</span>
       </span>
     </button>
   );

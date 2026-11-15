@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CarouMark, CoasterMark } from '@/components/BrandPrimitives';
+import { CarouMark, CarouStrip, CoasterMark } from '@/components/BrandPrimitives';
 import { ThemeToggle } from '@/components/owner/ThemeToggle';
 import { buttonClass } from '@/components/owner/ui-classes';
 import { getUserId } from '@/lib/server/session';
@@ -17,34 +17,37 @@ const linkClass = 'inline-flex min-h-11 items-center whitespace-nowrap rounded-[
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const userId = await getUserId();
   return (
-    <div className="owner-shell min-h-screen">
+    <div className="owner-shell min-h-screen overflow-x-clip">
+      <CarouStrip height={8} className="owner-food-only w-full" />
       <a href="#continut" className={`${buttonClass()} sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50`}>
         Sari la conținut
       </a>
       <header className="border-b border-o-line bg-o-bg">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <Link href="/owner" aria-label="Pentru proprietari, înapoi la localele tale" className="inline-flex min-h-11 items-center rounded-[4px]">
-            <span className="owner-food-only inline-flex items-center gap-2.5">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-1.5 px-2.5 py-3 min-[375px]:px-4 sm:gap-3">
+          <Link href="/owner" aria-label="Pentru proprietari, înapoi la localele tale" className="inline-flex min-h-11 min-w-0 items-center rounded-[4px]">
+            <span className="owner-food-only inline-flex items-center gap-2 sm:gap-2.5">
               <CarouMark size={28} />
-              <span className="text-[22px] leading-none sm:text-[26px]">
+              <span className="text-[20px] leading-none min-[375px]:text-[22px] sm:text-[26px]">
                 <span className="font-display">topfood</span>
-                <span className="font-display-light">/proprietari</span>
+                <span className="font-display-light hidden min-[420px]:inline">/proprietari</span>
               </span>
             </span>
-            <span className="owner-drink-only items-center gap-2.5">
+            <span className="owner-drink-only items-center gap-2 sm:gap-2.5">
               <CoasterMark size={28} />
-              <span className="text-[22px] leading-none sm:text-[26px]">
+              <span className="text-[20px] leading-none min-[375px]:text-[22px] sm:text-[26px]">
                 <span className="font-display">topdrink</span>
-                <span className="font-display-light">/proprietari</span>
+                <span className="font-display-light hidden min-[420px]:inline">/proprietari</span>
               </span>
             </span>
           </Link>
-          <nav className="flex items-center gap-1 sm:gap-2">
+          <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Link href="/topfood/timisoara" className={`owner-food-only ${linkClass}`}>
-              Vezi topul
+              <span className="min-[375px]:hidden">Top</span>
+              <span className="hidden min-[375px]:inline">Vezi topul</span>
             </Link>
             <Link href="/topdrink/timisoara" className={`owner-drink-only ${linkClass}`}>
-              Vezi topul
+              <span className="min-[375px]:hidden">Top</span>
+              <span className="hidden min-[375px]:inline">Vezi topul</span>
             </Link>
             <ThemeToggle />
             {userId ? (

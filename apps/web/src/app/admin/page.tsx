@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
   const userId = await currentUserId();
-  if (!userId) return <div className="doodle-wallpaper min-h-screen"><main className="mx-auto max-w-4xl p-6"><h1>Moderare</h1><p>Autentifică-te pentru a accesa această pagină.</p><Link href="/owner">Autentificare</Link></main></div>;
+  if (!userId) return <div className="min-h-screen bg-hartie text-cafea"><main className="mx-auto max-w-4xl p-6"><h1>Moderare</h1><p>Autentifică-te pentru a accesa această pagină.</p><Link href="/owner" className="mt-3 inline-flex min-h-11 items-center rounded border px-4 py-2 font-semibold">Autentificare</Link></main></div>;
 
   let items: Awaited<ReturnType<typeof moderation.queue>>;
   let ads: Awaited<ReturnType<typeof monetization.listAdSlots>>;
@@ -23,20 +23,20 @@ export default async function AdminPage() {
     ]);
   } catch (error) {
     if (error instanceof ServiceError && error.code === 'forbidden') {
-      return <div className="doodle-wallpaper min-h-screen"><main className="mx-auto max-w-4xl p-6"><h1>Acces interzis</h1><p>Doar administratorii pot accesa moderarea.</p></main></div>;
+      return <div className="min-h-screen bg-hartie text-cafea"><main className="mx-auto max-w-4xl p-6"><h1>Acces interzis</h1><p>Doar administratorii pot accesa moderarea.</p></main></div>;
     }
     throw error;
   }
 
   return (
-    <div className="doodle-wallpaper min-h-screen"><main className="mx-auto max-w-4xl space-y-10 p-6 text-cafea">
-      <header><Link href="/topfood/timisoara">← Înapoi la top</Link><h1 className="mt-4 text-3xl font-bold">Moderare</h1><p>Elemente care așteaptă o decizie.</p></header>
+    <div className="min-h-screen bg-hartie text-cafea"><main className="mx-auto max-w-4xl space-y-10 p-4 text-cafea sm:p-6">
+      <header><Link href="/topfood/timisoara" className="inline-flex min-h-11 items-center font-semibold hover:underline">← Înapoi la top</Link><h1 className="mt-4 text-3xl font-bold">Moderare</h1><p>Elemente care așteaptă o decizie.</p></header>
       <section className="space-y-4" aria-labelledby="suspicious"><h2 id="suspicious" className="text-2xl font-bold">Conturi suspecte</h2>
         {!items.suspiciousAccounts.length && <p>Nu există conturi semnalate momentan.</p>}
         {items.suspiciousAccounts.map((acc) => <article key={acc.userId} className="space-y-3 rounded border bg-hartie/80 p-4"><SuspiciousAccountDetails account={acc} />
           <form action={decideSuspicious} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={acc.userId} />
-            <button className="rounded border bg-carou px-3 py-2 text-white" name="decision" value="hide_reviews">Ascunde review-urile suspecte</button>
-            <button className="rounded border px-3 py-2" name="decision" value="dismiss">Ignoră semnalarea</button>
+            <button className="min-h-11 rounded border bg-carou px-3 py-2 text-white" name="decision" value="hide_reviews">Ascunde review-urile suspecte</button>
+            <button className="min-h-11 rounded border px-3 py-2" name="decision" value="dismiss">Ignoră semnalarea</button>
           </form>
         </article>)}
       </section>
@@ -45,8 +45,8 @@ export default async function AdminPage() {
         {items.reports.map((r) => <article key={r.id} className="space-y-2 rounded border p-4">
           <p><strong>{r.targetType === 'review' ? (r.reportedBy ? 'Review raportat' : 'Review reținut de filtrul anti-bot (nu apare și nu contează până decizi)') : r.targetType === 'trap_appeal' ? 'Contestație capcană turistică' : `Raport: ${r.targetType}`}</strong></p>
           <ReportDetails report={r} />
-          <form className="flex flex-wrap gap-2"><input type="hidden" name="id" value={r.id} /><label>Notă <input className="rounded border p-2" name="note" maxLength={1000} /></label>
-            {r.targetType === 'review' ? <><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'hide')}>Ascunde review</button><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'keep')}>Păstrează review</button></> : <><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'accept')}>Acceptă</button><button className="rounded border px-3 py-2" formAction={decideReport.bind(null, 'reject')}>Respinge</button></>}
+          <form className="flex flex-wrap items-end gap-2"><input type="hidden" name="id" value={r.id} /><label className="flex flex-col gap-1">Notă <input className="min-h-11 rounded border p-2 text-[16px] sm:text-[14px]" name="note" maxLength={1000} /></label>
+            {r.targetType === 'review' ? <><button className="min-h-11 rounded border px-3 py-2" formAction={decideReport.bind(null, 'hide')}>Ascunde review</button><button className="min-h-11 rounded border px-3 py-2" formAction={decideReport.bind(null, 'keep')}>Păstrează review</button></> : <><button className="min-h-11 rounded border px-3 py-2" formAction={decideReport.bind(null, 'accept')}>Acceptă</button><button className="min-h-11 rounded border px-3 py-2" formAction={decideReport.bind(null, 'reject')}>Respinge</button></>}
           </form>
         </article>)}
       </section>
@@ -54,31 +54,31 @@ export default async function AdminPage() {
         <p>Aprobă doar dacă bonul e de la acest local și din jurul datei vizitei. Aprobat, review-ul cântărește ×1,3. Poza se șterge după decizie.</p>
         {!receipts.length && <p>Nu există bonuri în așteptare.</p>}
         {receipts.map((p) => <article key={p.id} className="space-y-3 rounded border p-4"><ReceiptDetails proof={p} />
-          <form className="flex flex-wrap items-end gap-2"><input type="hidden" name="id" value={p.id} /><label className="flex flex-col">Notă (opțional) <input className="rounded border p-2" name="note" maxLength={500} placeholder="ex. bon de la alt local" /></label>
-            <button className="rounded border px-3 py-2" formAction={decideReceipt.bind(null, 'approve')}>Aprobă vizita</button><button className="rounded border px-3 py-2" formAction={decideReceipt.bind(null, 'reject')}>Respinge</button></form>
+          <form className="flex flex-wrap items-end gap-2"><input type="hidden" name="id" value={p.id} /><label className="flex flex-col gap-1">Notă (opțional) <input className="min-h-11 rounded border p-2 text-[16px] sm:text-[14px]" name="note" maxLength={500} placeholder="ex. bon de la alt local" /></label>
+            <button className="min-h-11 rounded border px-3 py-2" formAction={decideReceipt.bind(null, 'approve')}>Aprobă vizita</button><button className="min-h-11 rounded border px-3 py-2" formAction={decideReceipt.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
       </section>
       <section className="space-y-4" aria-labelledby="matches"><h2 id="matches" className="text-2xl font-bold">Potriviri de localuri</h2>
         {!items.matches.length && <p>Nu există potriviri în așteptare.</p>}
         {items.matches.map((m) => <article key={m.id} className="space-y-2 rounded border p-4"><MatchDetails match={m} />
-          <form className="flex gap-2"><input type="hidden" name="id" value={m.id} /><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'confirm')}>Confirmă potrivirea</button><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'reject')}>Respinge</button></form>
+          <form className="flex flex-wrap gap-2"><input type="hidden" name="id" value={m.id} /><button className="min-h-11 rounded border px-3 py-2" formAction={decideMatch.bind(null, 'confirm')}>Confirmă potrivirea</button><button className="min-h-11 rounded border px-3 py-2" formAction={decideMatch.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
       </section>
       <section className="space-y-4" aria-labelledby="claims"><h2 id="claims" className="text-2xl font-bold">Revendicări</h2>
         {!items.claims.length && <p>Nu există revendicări în așteptare.</p>}
         {items.claims.map((c) => <article key={c.id} className="space-y-2 rounded border p-4"><ClaimDetails claim={c} />
-          <form className="flex gap-2"><input type="hidden" name="id" value={c.id} /><button className="rounded border px-3 py-2" formAction={decideClaim.bind(null, 'approve')}>Aprobă</button><button className="rounded border px-3 py-2" formAction={decideClaim.bind(null, 'reject')}>Respinge</button></form>
+          <form className="flex flex-wrap gap-2"><input type="hidden" name="id" value={c.id} /><button className="min-h-11 rounded border px-3 py-2" formAction={decideClaim.bind(null, 'approve')}>Aprobă</button><button className="min-h-11 rounded border px-3 py-2" formAction={decideClaim.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
       </section>
       <section className="space-y-4" aria-labelledby="ads"><h2 id="ads" className="text-2xl font-bold">Bannere reclamă (SlotReclamă)</h2>
         <p className="text-sm text-cafea-deschis">Apar exclusiv în slotul de banner dedicat orașului (etichetat „Reclamă”) și nu influențează niciodată scorul sau clasamentul.</p>
         <form action={createAd} className="grid gap-3 rounded border bg-hartie/80 p-4 sm:grid-cols-2">
-          <label className="text-sm font-medium">Partener<input name="advertiser" required className="mt-1 w-full rounded border p-2" placeholder="Ex: Bere Timișoreana Artizanală" /></label>
-          <label className="text-sm font-medium">Secțiune<select name="vertical" className="mt-1 w-full rounded border p-2"><option value="food">TOP FOOD</option><option value="drink">TOP DRINK</option></select></label>
-          <label className="text-sm font-medium">URL banner / imagine<input name="creativeUrl" required className="mt-1 w-full rounded border p-2" placeholder="https://..." /></label>
-          <label className="text-sm font-medium">Link destinație<input name="linkUrl" required className="mt-1 w-full rounded border p-2" placeholder="https://... sau /topfood/timisoara/..." /></label>
-          <label className="text-sm font-medium">Durată (zile)<input name="days" type="number" min={1} max={365} defaultValue={30} className="mt-1 w-full rounded border p-2" /></label>
-          <div className="flex items-end"><button type="submit" className="rounded border bg-cafea px-4 py-2 text-hartie">Adaugă banner</button></div>
+          <label className="text-sm font-medium">Partener<input name="advertiser" required className="mt-1 min-h-11 w-full rounded border p-2 text-[16px] sm:text-[14px]" placeholder="Ex: Bere Timișoreana Artizanală" /></label>
+          <label className="text-sm font-medium">Secțiune<select name="vertical" className="mt-1 min-h-11 w-full rounded border p-2 text-[16px] sm:text-[14px]"><option value="food">TOP FOOD</option><option value="drink">TOP DRINK</option></select></label>
+          <label className="text-sm font-medium">URL banner / imagine<input name="creativeUrl" required className="mt-1 min-h-11 w-full rounded border p-2 text-[16px] sm:text-[14px]" placeholder="https://..." /></label>
+          <label className="text-sm font-medium">Link destinație<input name="linkUrl" required className="mt-1 min-h-11 w-full rounded border p-2 text-[16px] sm:text-[14px]" placeholder="https://... sau /topfood/timisoara/..." /></label>
+          <label className="text-sm font-medium">Durată (zile)<input name="days" type="number" min={1} max={365} defaultValue={30} className="mt-1 min-h-11 w-full rounded border p-2 text-[16px] sm:text-[14px]" /></label>
+          <div className="flex items-end"><button type="submit" className="min-h-11 rounded border bg-cafea px-4 py-2 text-hartie">Adaugă banner</button></div>
         </form>
         {!ads.length && <p>Nu există bannere configurate.</p>}
         {ads.map((ad) => (
@@ -87,7 +87,7 @@ export default async function AdminPage() {
               <p><strong>{ad.advertiser}</strong> · {ad.vertical.toUpperCase()} ({ad.placement})</p>
               <p>Afișări: {ad.impressions} · Click-uri: {ad.clicks}</p>
             </div>
-            <form action={deleteAd}><input type="hidden" name="id" value={ad.id} /><button className="rounded border px-3 py-1.5 text-sm">Șterge</button></form>
+            <form action={deleteAd}><input type="hidden" name="id" value={ad.id} /><button className="min-h-11 rounded border px-3 py-2 text-sm">Șterge</button></form>
           </article>
         ))}
       </section>

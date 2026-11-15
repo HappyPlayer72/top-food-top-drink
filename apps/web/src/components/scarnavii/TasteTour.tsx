@@ -95,10 +95,10 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
           <textarea id="taste-request" maxLength={300} rows={3} value={request}
             onChange={(event) => { setRequest(event.target.value); setParsed(null); setTour(null); setAttempted(false); }}
             placeholder="De exemplu: pizza și apoi o bere"
-            className={`w-full rounded-[4px] border px-3 py-2 text-[14px] ${input}`} />
+            className={`w-full rounded-[4px] border px-3 py-2.5 text-[16px] sm:text-[14px] ${input}`} />
           <p className={`text-[12px] ${muted}`}>Scrie pe scurt; apoi poți corecta categoriile pe care le-am recunoscut.</p>
         </div>
-        {!parsed && <button type="button" onClick={interpret} disabled={!request.trim()} className={`btn-press rounded-[4px] px-4 py-2.5 text-[13px] font-bold disabled:opacity-45 ${primary}`}>Continuă <ArrowRight className="inline w-4 h-4 ml-1" /></button>}
+        {!parsed && <button type="button" onClick={interpret} disabled={!request.trim()} className={`btn-press min-h-[44px] rounded-[4px] px-4 py-2.5 text-[13px] font-bold disabled:opacity-45 ${primary}`}>Continuă <ArrowRight className="inline w-4 h-4 ml-1" /></button>}
 
         {parsed && <div className="space-y-4">
           <fieldset className="space-y-2">
@@ -113,7 +113,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
                 return <button key={category.id} type="button" aria-pressed={active} onClick={() => {
                   setParsed({ ...parsed, categories: active ? parsed.categories.filter((id) => id !== category.id) : [...parsed.categories, category.id], excluded: parsed.excluded.filter((id) => id !== category.id) });
                   setTour(null); setAttempted(false);
-                }} className={`btn-press rounded-[4px] border px-3 py-2 text-[12px] font-semibold ${active ? selected : border}`}>{category.label}</button>;
+                }} className={`btn-press min-h-[44px] rounded-[4px] border px-3 py-2 text-[12px] font-semibold ${active ? selected : border}`}>{category.label}</button>;
               })}
             </div>
             {parsed.excluded.length > 0 && <p className={`text-[12px] ${muted}`}>Am exclus: {parsed.excluded.map((id) => TASTE_CATEGORIES.find((category) => category.id === id)?.label ?? id).join(', ')}. Apasă pe o categorie dacă vrei totuși să o incluzi.</p>}
@@ -122,20 +122,20 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label htmlFor="taste-budget" className="block text-[13px] font-bold">Buget maxim / persoană (lei)</label>
-              <input id="taste-budget" type="number" min="1" step="1" value={budget} onChange={(event) => { setBudget(event.target.value); setTour(null); setAttempted(false); }} className={`w-full rounded-[4px] border px-3 py-2 text-[14px] ${input}`} />
+              <input id="taste-budget" type="number" min="1" step="1" value={budget} onChange={(event) => { setBudget(event.target.value); setTour(null); setAttempted(false); }} className={`w-full min-h-[44px] rounded-[4px] border px-3 py-2 text-[16px] sm:text-[14px] ${input}`} />
             </div>
             <div className="space-y-1.5">
               <label htmlFor="taste-start" className="block text-[13px] font-bold">De unde pleci?</label>
-              <select id="taste-start" value={landmark} onChange={(event) => { setLandmark(Number(event.target.value)); setTour(null); setAttempted(false); }} className={`w-full rounded-[4px] border px-3 py-2 text-[14px] ${input}`}>
+              <select id="taste-start" value={landmark} onChange={(event) => { setLandmark(Number(event.target.value)); setTour(null); setAttempted(false); }} className={`w-full min-h-[44px] rounded-[4px] border px-3 py-2 text-[16px] sm:text-[14px] ${input}`}>
                 {LANDMARKS.map((point, index) => <option value={index} key={point.label}>{point.label}</option>)}
               </select>
             </div>
           </div>
           <fieldset className="space-y-2">
             <legend className="text-[13px] font-bold">Câte opriri ai timp să faci?</legend>
-            <div className="flex gap-2">{([2, 3] as const).map((count) => <button type="button" key={count} aria-pressed={stopCount === count} onClick={() => { setStopCount(count); setTour(null); setAttempted(false); }} className={`btn-press rounded-[4px] border px-4 py-2 text-[13px] font-semibold ${stopCount === count ? selected : border}`}>{count} localuri</button>)}</div>
+            <div className="flex gap-2">{([2, 3] as const).map((count) => <button type="button" key={count} aria-pressed={stopCount === count} onClick={() => { setStopCount(count); setTour(null); setAttempted(false); }} className={`btn-press min-h-[44px] rounded-[4px] border px-4 py-2 text-[13px] font-semibold ${stopCount === count ? selected : border}`}>{count} localuri</button>)}</div>
           </fieldset>
-          <button type="button" onClick={createTour} disabled={!parsed.categories.length || parsed.categories.length > stopCount || !budget || !Number.isFinite(Number(budget)) || Number(budget) <= 0} className={`btn-press rounded-[4px] px-5 py-2.5 text-[13px] font-bold disabled:opacity-45 ${primary}`}><Sparkles className="inline w-4 h-4 mr-1.5" />Creează traseul</button>
+          <button type="button" onClick={createTour} disabled={!parsed.categories.length || parsed.categories.length > stopCount || !budget || !Number.isFinite(Number(budget)) || Number(budget) <= 0} className={`btn-press min-h-[44px] rounded-[4px] px-5 py-2.5 text-[13px] font-bold disabled:opacity-45 ${primary}`}><Sparkles className="inline w-4 h-4 mr-1.5" />Creează traseul</button>
         </div>}
       </div>
 
@@ -160,7 +160,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
               <span className="block text-[12px] font-normal text-[#5E5E5E] whitespace-nowrap" translate="no">Google Maps</span>
             </div>}
             <p className={`text-[12px] ${muted}`}>Potrivire pentru {TASTE_CATEGORIES.find((entry) => entry.id === category)?.label.toLowerCase() ?? category}.</p>
-            <button type="button" onClick={() => onSelectRestaurant(restaurant)} className={`btn-press inline-flex items-center gap-1.5 rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Vezi localul <ArrowRight className="w-3.5 h-3.5" /></button>
+            <button type="button" onClick={() => onSelectRestaurant(restaurant)} className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 rounded-[4px] border px-3 py-2 text-[12px] font-bold ${border}`}>Vezi localul <ArrowRight className="w-3.5 h-3.5" /></button>
           </div>)}
         </div>
         <div className={`rounded-[6px] border p-4 space-y-3 ${panel}`}>
@@ -172,7 +172,7 @@ export const TasteTour: React.FC<TasteTourProps> = ({ vertical, restaurants, onS
             <span className="block text-[12px] font-normal text-[#5E5E5E] whitespace-nowrap" translate="no">Google Maps</span>
           </div>}
           <p className={`text-[12px] ${muted}`}>Prețurile sunt orientative și se pot schimba. Ordinea traseului este estimată; verifică ruta și programul localurilor înainte de plecare.</p>
-          {mapsLink && <a href={mapsLink} target="_blank" rel="noreferrer" className={`btn-press inline-flex items-center gap-2 rounded-[4px] px-4 py-2.5 text-[13px] font-bold ${primary}`}><Navigation className="w-4 h-4" />Deschide traseul în Google Maps</a>}
+          {mapsLink && <a href={mapsLink} target="_blank" rel="noreferrer" className={`btn-press min-h-[44px] inline-flex items-center gap-2 rounded-[4px] px-4 py-2.5 text-[13px] font-bold ${primary}`}><Navigation className="w-4 h-4" />Deschide traseul în Google Maps</a>}
         </div>
       </div>}
     </div>

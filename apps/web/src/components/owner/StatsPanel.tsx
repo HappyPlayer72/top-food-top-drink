@@ -1,6 +1,6 @@
 import { CalendarDays, MessageCircle } from 'lucide-react';
 import type { owner } from '@tftd/api';
-import { AvertizareaCard, CarouStrip, CoasterScore, LocalnicBadge, LocalVsTouristBars } from '@/components/BrandPrimitives';
+import { AvertizareaCard, CarouStrip, CoasterScore, LocalnicBadge, LocalVsTouristBars, PlateScore } from '@/components/BrandPrimitives';
 import { formatScore } from '@/types';
 import { AppealForm } from './AppealForm';
 import { EmptyState, SubHeading } from './ui';
@@ -47,10 +47,10 @@ export function StatsPanel({ venueId, venueName, stats, vertical, afterScore }: 
                 <span className="text-[13px] text-o-muted">Scor onest din 10</span>
               </div>
             ) : (
-              <>
-                <span className="font-display mt-3 block text-[120px] leading-[0.82] tabular-nums text-o-fg">{formatScore(scores.honest)}</span>
-                <span className="mt-3 text-[13px] text-o-muted">din 10 puncte</span>
-              </>
+              <div className="mt-4 flex flex-col items-start gap-3">
+                <PlateScore score={scores.honest} size="lg" />
+                <span className="text-[13px] text-o-muted">Scor onest din 10</span>
+              </div>
             )}
           </div>
 
@@ -164,39 +164,41 @@ export function StatsPanel({ venueId, venueName, stats, vertical, afterScore }: 
           Ultimele 6 luni
         </SubHeading>
         {months.length ? (
-          <table className="w-full border-collapse text-left tabular-nums">
-            <thead>
-              <tr className="border-b border-o-line text-[13px] text-o-muted">
-                <th scope="col" className="py-2.5 pr-3 font-semibold">Luna</th>
-                <th scope="col" className="py-2.5 pr-3 font-semibold">
-                  <LocalnicBadge label="Localnici" size="xs" />
-                </th>
-                <th scope="col" className="py-2.5 font-semibold">Turiști</th>
-              </tr>
-            </thead>
-            <tbody>
-              {months.map((m) => (
-                <tr key={m} className="border-b border-o-line align-top">
-                  <th scope="row" className="py-3 pr-3 text-[15px] font-semibold capitalize">{monthName(m)}</th>
-                  {(['local', 'tourist'] as const).map((t) => {
-                    const c = cell(m, t);
-                    return (
-                      <td key={t} className="py-3 pr-3 last:pr-0">
-                        {c ? (
-                          <>
-                            <span className="font-display block text-[28px] leading-none">{formatScore(Number(c.avgRating))}</span>
-                            <span className="mt-1 block text-[13px] text-o-muted">{cate(Number(c.reviews), 'review', 'review-uri')}</span>
-                          </>
-                        ) : (
-                          <span className="text-o-muted" aria-label="fără review-uri">—</span>
-                        )}
-                      </td>
-                    );
-                  })}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left tabular-nums">
+              <thead>
+                <tr className="border-b border-o-line text-[13px] text-o-muted">
+                  <th scope="col" className="py-2.5 pr-3 font-semibold">Luna</th>
+                  <th scope="col" className="py-2.5 pr-3 font-semibold">
+                    <LocalnicBadge label="Localnici" size="xs" />
+                  </th>
+                  <th scope="col" className="py-2.5 font-semibold">Turiști</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {months.map((m) => (
+                  <tr key={m} className="border-b border-o-line align-top">
+                    <th scope="row" className="py-3 pr-3 text-[15px] font-semibold capitalize">{monthName(m)}</th>
+                    {(['local', 'tourist'] as const).map((t) => {
+                      const c = cell(m, t);
+                      return (
+                        <td key={t} className="py-3 pr-3 last:pr-0">
+                          {c ? (
+                            <>
+                              <span className="font-display block text-[28px] leading-none">{formatScore(Number(c.avgRating))}</span>
+                              <span className="mt-1 block text-[13px] text-o-muted">{cate(Number(c.reviews), 'review', 'review-uri')}</span>
+                            </>
+                          ) : (
+                            <span className="text-o-muted" aria-label="fără review-uri">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <EmptyState title="Niciun review în 6 luni" icon={<CalendarDays size={26} />}>Când vin review-uri, vezi aici cum se împart între localnici și turiști, lună de lună.</EmptyState>
         )}

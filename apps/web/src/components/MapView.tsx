@@ -1305,10 +1305,10 @@ export function MapView({
   return (
     <section
       aria-label="Harta Timișoara"
-      className={`relative w-full select-none overflow-hidden flex flex-col min-h-[440px] max-h-[920px] ${
+      className={`relative w-full select-none overflow-hidden flex flex-col min-h-[440px] max-h-[920px] h-[calc(100dvh-7rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:h-[calc(100dvh-4.5rem)] ${
         isDrink
-          ? 'h-[calc(100dvh-7rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:h-[calc(100dvh-4rem)] bg-[#17382C] text-[#F4EEE2]'
-          : 'h-[calc(100dvh-7.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:h-[calc(100dvh-4.5rem)] bg-white text-[#3A2418]'
+          ? 'bg-[#17382C] text-[#F4EEE2]'
+          : 'bg-white text-[#3A2418]'
       }`}
     >
       {/* Top Map Control Bar */}
@@ -1360,7 +1360,7 @@ export function MapView({
                     type="button"
                     aria-pressed={active}
                     onClick={() => setVerticalFilter(item.id)}
-                    className={`inline-flex items-center gap-1 px-2 min-h-[40px] md:min-h-[28px] py-1 rounded-[3px] text-[12px] font-semibold transition-colors whitespace-nowrap ${
+                    className={`inline-flex items-center gap-1 px-2.5 min-h-[44px] md:min-h-[32px] py-1 rounded-[3px] text-[12px] font-semibold transition-colors whitespace-nowrap ${
                       active
                         ? item.id === 'drink'
                           ? 'bg-[#17382C] text-[#F4EEE2] shadow-xs ring-1 ring-[#F2A33A]/60'
@@ -1674,7 +1674,7 @@ export function MapView({
                           <span className="tabular-nums shrink-0">{item.count}</span>
                         </div>
                         <div
-                          className={`text-[10px] mt-0.5 tabular-nums leading-tight ${
+                          className={`text-[11px] mt-0.5 tabular-nums leading-tight ${
                             isActive
                               ? 'opacity-95'
                               : isDrink
@@ -1690,13 +1690,13 @@ export function MapView({
                 </div>
 
                 <details className={`rounded-[8px] border px-3 py-2 ${isDrink ? 'border-[#336652] bg-[#143025]' : 'border-[#E6DFD5] bg-white'}`} aria-label="Filtre pentru mâncare și băutură">
-                  <summary className="cursor-pointer text-[13px] font-bold leading-6">
-                    <Utensils aria-hidden="true" className="mr-2 inline-block h-4 w-4 align-[-3px]" />
-                    Ce ai poftă? {selectedTastes.length > 0 && <span className="font-normal opacity-75">· {selectedTastes.length}</span>}
+                  <summary className="cursor-pointer min-h-[44px] flex items-center text-[13px] font-bold leading-6">
+                    <Utensils aria-hidden="true" className="mr-2 inline-block h-4 w-4 shrink-0" />
+                    <span>Ce ai poftă? {selectedTastes.length > 0 && <span className="font-normal opacity-75">· {selectedTastes.length}</span>}</span>
                   </summary>
                   <div className="flex justify-end">
                     {selectedTastes.length > 0 && (
-                      <button type="button" onClick={() => setSelectedTastes([])} className={`text-[11px] font-semibold underline underline-offset-2 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
+                      <button type="button" onClick={() => setSelectedTastes([])} className={`min-h-[44px] px-2.5 inline-flex items-center text-[12px] font-semibold underline underline-offset-2 ${isDrink ? 'text-[#F2A33A]' : 'text-[#B3261E]'}`}>
                         Șterge
                       </button>
                     )}
@@ -1707,14 +1707,14 @@ export function MapView({
                     { label: 'Regim alimentar', tastes: MAP_TASTES.slice(10) },
                   ].map(group => (
                     <div key={group.label} className="mt-3">
-                      <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-[0.1em] ${isDrink ? 'text-[#F4EEE2]/60' : 'text-[#8B7568]'}`}>{group.label}</p>
+                      <p className={`mb-1.5 text-[11px] font-bold uppercase tracking-[0.1em] ${isDrink ? 'text-[#F4EEE2]/70' : 'text-[#6E5649]'}`}>{group.label}</p>
                       <div className="flex flex-wrap gap-1.5">
                         {group.tastes.map(taste => {
                           const selected = selectedTastes.includes(taste.id);
                           const Icon = TASTE_ICONS[taste.id];
                           return (
                             <button key={taste.id} type="button" aria-pressed={selected} onClick={() => setSelectedTastes(current => selected ? current.filter(id => id !== taste.id) : [...current, taste.id])}
-                              className={`inline-flex min-h-[36px] items-center gap-1 rounded-[4px] border px-3 py-1.5 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${selected ? (isDrink ? 'border-[#F2A33A] bg-[#F2A33A] text-[#17382C]' : 'border-[#3A2418] bg-[#3A2418] text-white') : (isDrink ? 'border-[#47705C] text-[#F4EEE2] hover:border-[#F2A33A] hover:bg-[#1E4335]' : 'border-[#DED5CA] bg-[#FAF8F5] text-[#50392C] hover:border-[#9F8372] hover:bg-[#F2ECE5]')}`}>
+                              className={`inline-flex min-h-[44px] sm:min-h-[36px] items-center gap-1 rounded-[4px] border px-3 py-2 sm:py-1.5 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${selected ? (isDrink ? 'border-[#F2A33A] bg-[#F2A33A] text-[#17382C]' : 'border-[#3A2418] bg-[#3A2418] text-white') : (isDrink ? 'border-[#47705C] text-[#F4EEE2] hover:border-[#F2A33A] hover:bg-[#1E4335]' : 'border-[#DED5CA] bg-[#FAF8F5] text-[#50392C] hover:border-[#9F8372] hover:bg-[#F2ECE5]')}`}>
                               <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
                               {taste.label}
                               {selected && <Check aria-hidden="true" className="h-3 w-3" />}
@@ -1890,7 +1890,7 @@ export function MapView({
                           </span>
                           {r.touristTrapIndex >= 60 && (
                             <span
-                              className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-[2px]"
+                              className="inline-flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded-[2px]"
                               style={{
                                 backgroundColor: tierStyle.pinBg,
                                 color: tierStyle.pinText,

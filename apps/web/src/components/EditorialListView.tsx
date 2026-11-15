@@ -705,7 +705,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onClearCategory?.()}
-                    className="inline-flex items-center gap-1 font-semibold text-[#F4EEE2]/80 hover:text-white"
+                    className="min-h-[44px] inline-flex items-center gap-1 font-semibold text-[#F4EEE2]/80 hover:text-white"
                   >
                     <X className="h-3.5 w-3.5" /> Toate categoriile
                   </button>
@@ -796,7 +796,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                   </h2>
                   <Link
                     href="/topdrink/timisoara/weekend"
-                    className="text-[12px] font-semibold text-[#F2A33A] hover:underline"
+                    className="min-h-[44px] inline-flex items-center text-[12px] font-semibold text-[#F2A33A] hover:underline"
                   >
                     Tot programul →
                   </Link>
@@ -1109,7 +1109,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onClearCategory?.()}
-                  className="inline-flex items-center gap-1 font-semibold text-[#6E5649] hover:text-[#3A2418]"
+                  className="min-h-[44px] inline-flex items-center gap-1 font-semibold text-[#6E5649] hover:text-[#3A2418]"
                 >
                   <X className="h-3.5 w-3.5" /> Toate categoriile
                 </button>

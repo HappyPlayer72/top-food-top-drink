@@ -354,13 +354,13 @@ function FidelityWallet({
   const mutedText = isDrink ? 'text-[#A8BBAE]' : 'text-[#6E5649]';
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 stagger-fade-in">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-24 stagger-fade-in">
       {/* Top back bar */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <button
           type="button"
           onClick={onBack}
-          className={`btn-press inline-flex items-center gap-2 text-sm font-medium transition-colors ${
+          className={`btn-press min-h-[44px] inline-flex items-center gap-2 text-sm font-medium transition-colors ${
             isDrink
               ? 'text-[#A8BBAE] hover:text-[#F4EEE2]'
               : 'text-[#6E5649] hover:text-[#3A2418]'
@@ -386,7 +386,7 @@ function FidelityWallet({
             <button
               type="button"
               onClick={onRequireLogin}
-              className={`btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+              className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-medium transition-colors ${
                 isDrink
                   ? 'bg-[#143025] border-[#264D3E] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'bg-white border-[#E8E2D9] text-[#3A2418] hover:border-[#B3261E]'
@@ -458,7 +458,7 @@ function FidelityWallet({
           <button
             type="button"
             onClick={() => setToastMessage(null)}
-            className="opacity-70 hover:opacity-100"
+            className="w-11 h-11 -mr-2 -my-2 inline-flex items-center justify-center rounded-lg opacity-75 hover:opacity-100 shrink-0"
             aria-label="Închide notificarea"
           >
             <X className="w-4 h-4" />
@@ -526,7 +526,7 @@ function FidelityWallet({
                           {program.venueName}
                         </h2>
                         {program.isCustomVendor && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#E0A526]/20 text-[#E0A526] border border-[#E0A526]/40">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide bg-[#E0A526]/20 text-[#7A560B] dark:text-[#F2A33A] border border-[#E0A526]/50">
                             Nou înscris
                           </span>
                         )}
@@ -634,7 +634,7 @@ function FidelityWallet({
                       type="button"
                       onClick={() => void handleRedeem(program.id)}
                       disabled={isRedeeming}
-                      className="btn-press flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-90"
+                      className="btn-press flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-90"
                       style={{ backgroundColor: program.accentColor }}
                     >
                       {isRedeeming ? (
@@ -653,7 +653,7 @@ function FidelityWallet({
                     <button
                       type="button"
                       onClick={openScanner}
-                      className={`btn-press flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                      className={`btn-press flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
                         isDrink
                           ? 'bg-[#17382C] border-[#F2A33A]/50 text-[#F4EEE2] hover:bg-[#1E4738]'
                           : 'bg-[#FAF8F5] border-[#D9D0C3] text-[#3A2418] hover:border-[#3A2418]'
@@ -667,7 +667,7 @@ function FidelityWallet({
                   <button
                     type="button"
                     onClick={() => setExpandedQrProgramId(program.id)}
-                    className={`btn-press inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${
+                    className={`btn-press min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${
                       isDrink
                         ? 'border-[#264D3E] text-[#A8BBAE] hover:text-[#F4EEE2]'
                         : 'border-[#E8E2D9] text-[#6E5649] hover:text-[#3A2418]'
@@ -707,7 +707,7 @@ function FidelityWallet({
               <button
                 type="button"
                 onClick={() => setExpandedQrProgramId(null)}
-                className={`p-1 rounded-lg ${mutedText} hover:opacity-100`}
+                className={`w-11 h-11 -mr-2 -my-2 inline-flex items-center justify-center rounded-lg ${mutedText} hover:opacity-100 shrink-0`}
                 aria-label="Închide fereastra QR"
               >
                 <X className="w-5 h-5" />
@@ -734,7 +734,7 @@ function FidelityWallet({
                     setCopiedQrId(expandedProgram.id);
                     window.setTimeout(() => setCopiedQrId(null), 2000);
                   }}
-                  className={`btn-press inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border ${subtleSurface}`}
+                  className={`btn-press min-h-[44px] inline-flex items-center gap-1 px-3 py-2 rounded text-[12px] font-semibold border ${subtleSurface}`}
                   aria-label="Copiază codul QR"
                 >
                   {copiedQrId === expandedProgram.id ? (

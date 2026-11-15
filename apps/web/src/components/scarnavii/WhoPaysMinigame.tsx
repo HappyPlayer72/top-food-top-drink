@@ -605,7 +605,7 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
                 placeholder="ex. 240"
                 value={billAmount}
                 onChange={(e) => setBillAmount(e.target.value)}
-                className={`w-24 px-2.5 py-1.5 rounded-[4px] border text-[13px] tabular-nums focus:outline-none ${
+                className={`w-28 min-h-[44px] px-3 py-2 rounded-[4px] border text-[16px] sm:text-[14px] tabular-nums ${
                   isDrink
                     ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder-[#F4EEE2]/40'
                     : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder-[#8C7B70]'
@@ -628,7 +628,7 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
                     setMode(opt.id);
                     resetRound();
                   }}
-                  className={`btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[12px] font-semibold border disabled:opacity-50 ${
+                  className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] text-[12px] font-semibold border disabled:opacity-50 ${
                     active
                       ? isDrink
                         ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -664,7 +664,7 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
               placeholder="Nume persoană la masă..."
               aria-label="Nume persoană la masă"
               disabled={isRunning || bombActive}
-              className={`flex-1 px-3 py-2 rounded-[4px] border text-[13px] focus:outline-none ${
+              className={`flex-1 min-w-0 min-h-[44px] px-3 py-2 rounded-[4px] border text-[16px] sm:text-[14px] ${
                 isDrink
                   ? 'bg-[#122B22] border-[#2D5947] text-[#F4EEE2] placeholder-[#F4EEE2]/45 focus:border-[#F2A33A]'
                   : 'bg-white border-[#D6CFC5] text-[#3A2418] placeholder-[#8C7B70] focus:border-[#3A2418]'
@@ -678,7 +678,7 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
                 bombActive ||
                 players.length >= 12
               }
-              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] text-[13px] font-bold disabled:opacity-45 ${
+              className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] text-[13px] font-bold disabled:opacity-45 shrink-0 ${
                 isDrink
                   ? 'bg-[#1E4335] border border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'bg-[#3A2418] text-white hover:opacity-90'
@@ -694,13 +694,13 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
               type="button"
               disabled={isRunning || bombActive || players.length >= 12}
               onClick={handleAddDemoGroup}
-              className={`btn-press inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] border text-[11px] font-semibold disabled:opacity-45 ${
+              className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] border text-[12px] font-semibold disabled:opacity-45 ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2]/80 hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#6E5649] hover:text-[#3A2418]'
               }`}
             >
-              <UserPlus className="w-3 h-3" />
+              <UserPlus className="w-3.5 h-3.5" />
               <span>+ Gașcă (4 prieteni)</span>
             </button>
 
@@ -709,13 +709,13 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
                 type="button"
                 disabled={isRunning || bombActive}
                 onClick={handleResetPlayers}
-                className={`btn-press inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] border text-[11px] font-semibold disabled:opacity-45 ${
+                className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] border text-[12px] font-semibold disabled:opacity-45 ${
                   isDrink
                     ? 'border-[#2D5947] text-[#F4EEE2]/80 hover:border-[#F2A33A]'
                     : 'border-[#D6CFC5] text-[#6E5649] hover:text-[#3A2418]'
                 }`}
               >
-                <RotateCcw className="w-3 h-3" />
+                <RotateCcw className="w-3.5 h-3.5" />
                 <span>Resetează masa</span>
               </button>
             )}
@@ -774,7 +774,7 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
 
                 <div className="flex items-center gap-1 shrink-0">
                   {isSafe && (
-                    <span className="text-[10px] font-bold uppercase no-underline opacity-80">
+                    <span className="text-[11px] font-bold uppercase no-underline opacity-80">
                       Scăpat
                     </span>
                   )}
@@ -784,9 +784,9 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
                       type="button"
                       onClick={() => handleRemovePlayer(p.id)}
                       aria-label={`Elimină ${p.name}`}
-                      className="p-1 opacity-60 hover:opacity-100"
+                      className="min-w-[44px] min-h-[44px] -my-2 -mr-2 inline-flex items-center justify-center rounded opacity-65 hover:opacity-100"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -878,7 +878,9 @@ export const WhoPaysMinigame: React.FC<WhoPaysMinigameProps> = ({
             }`}
           >
             <div className="flex items-center justify-center gap-2 text-[12px] font-bold uppercase tracking-wider">
-              <Bomb className="w-4 h-4 animate-bounce" />
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full ring-2 ring-current/30">
+                <Bomb className="w-4 h-4" />
+              </span>
               <span>
                 {bombUrgency === 'critical'
                   ? 'Ticăie foarte tare! Pasează acum!'

@@ -18,7 +18,7 @@ import { MysteryDirections } from './scarnavii/MysteryDirections';
 import { WhoPaysMinigame } from './scarnavii/WhoPaysMinigame';
 import { OutingPoll } from './scarnavii/OutingPoll';
 import { TableDaresMinigame } from './scarnavii/TableDaresMinigame';
-import { TasteTour } from './scarnavii/TasteTour';
+import { TasteTour } from './scarnavii/TasteTour.tsx';
 
 export interface ScarnaviiViewProps {
   vertical: Vertical;
@@ -222,7 +222,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
             type="button"
             onClick={handleRollScarnavie}
             disabled={isRolling}
-            className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] text-[12px] font-bold disabled:opacity-50 ${
+            className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[4px] text-[12px] font-bold disabled:opacity-50 ${
               isDrink
                 ? 'bg-[#F2A33A] text-[#17382C] hover:brightness-105'
                 : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
@@ -257,11 +257,11 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
               const Icon = item.icon;
               const active = activeMode === item.id;
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveMode(item.id)}
-                  className={`btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[12px] font-semibold border ${
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveMode(item.id)}
+                    className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] text-[12px] font-semibold border ${
                     active
                       ? isDrink
                         ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -322,7 +322,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setCategoryFilter(tab.id)}
-                  className={`btn-press px-3.5 py-1.5 rounded-[4px] text-[12px] font-semibold border ${
+                  className={`btn-press min-h-[44px] px-3.5 py-2 rounded-[4px] text-[12px] font-semibold border ${
                     categoryFilter === tab.id
                       ? isDrink
                         ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -382,7 +382,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
                     <div className="relative z-10 flex h-full flex-col items-start">
                       <div className="mb-5 flex w-full items-start justify-between gap-3">
                         <span
-                          className="inline-flex rotate-[-2deg] items-center gap-1.5 rounded-[4px] border-2 border-current bg-white/25 px-3 py-1 text-[10px] font-black uppercase tracking-[0.13em] shadow-sm"
+                          className="inline-flex rotate-[-2deg] items-center gap-1.5 rounded-[4px] border-2 border-current bg-white/25 px-3 py-1 text-[11px] font-black uppercase tracking-[0.13em] shadow-sm"
                         >
                           <Icon className="h-3.5 w-3.5" />
                           <span>{item.tag}</span>
@@ -390,7 +390,7 @@ export const ScarnaviiView: React.FC<ScarnaviiViewProps> = ({
                         <span aria-hidden="true" className="font-display text-2xl font-black opacity-70">0{idx + 1}</span>
                       </div>
 
-                      <h2 className="max-w-[18rem] font-display text-[28px] font-black leading-[0.98] tracking-[-0.04em] sm:text-[32px]">
+                      <h2 className="max-w-[18rem] font-display text-[28px] font-black leading-[1.02] sm:text-[32px]">
                         {item.title}
                       </h2>
 

@@ -329,7 +329,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
           <button
             type="button"
             onClick={gpsActive ? stopGps : handleEnableGps}
-            className={`btn-press inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-[12px] font-semibold ${
+            className={`btn-press min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] border text-[12px] font-semibold ${
               gpsActive
                 ? isDrink
                   ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -353,7 +353,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
                   key={lm.id}
                   type="button"
                   onClick={() => handleSelectLandmark(lm.id)}
-                  className={`btn-press px-2.5 py-1 rounded-[4px] text-[12px] font-semibold border ${
+                  className={`btn-press min-h-[44px] px-3 py-2 rounded-[4px] text-[12px] font-semibold border ${
                     active
                       ? isDrink
                         ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -384,7 +384,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
                 key={opt.id}
                 type="button"
                 onClick={() => setDistanceFilter(opt.id)}
-                className={`btn-press px-2.5 py-1 rounded-[4px] text-[12px] font-semibold border ${
+                className={`btn-press min-h-[44px] px-3 py-2 rounded-[4px] text-[12px] font-semibold border ${
                   distanceFilter === opt.id
                     ? isDrink
                       ? 'bg-[#F2A33A] text-[#17382C] border-[#F2A33A]'
@@ -401,7 +401,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          <label className="inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
+          <label className="min-h-[44px] inline-flex items-center gap-2 text-[12px] cursor-pointer select-none">
             <input
               type="checkbox"
               checked={noTrapsOnly}
@@ -415,7 +415,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
             type="button"
             onClick={startMystery}
             disabled={pool.length === 0}
-            className={`btn-press inline-flex items-center gap-2 px-5 py-2.5 rounded-[4px] font-bold text-[14px] ${
+            className={`btn-press min-h-[44px] inline-flex items-center gap-2 px-5 py-2.5 rounded-[4px] font-bold text-[14px] ${
               isDrink
                 ? 'bg-[#F2A33A] text-[#17382C] hover:brightness-105'
                 : 'bg-[#B3261E] text-white hover:bg-[#9E1F18]'
@@ -463,7 +463,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
               }`}
               aria-label={`Direcția ${dirInfo.full}, ${Math.round(bearingDeg)} grade`}
             >
-              <span className="absolute top-1.5 text-[10px] font-bold opacity-55">
+              <span className="absolute top-1.5 text-[11px] font-bold opacity-65">
                 N
               </span>
               <div
@@ -562,7 +562,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
             <button
               type="button"
               onClick={() => setIsArrived(true)}
-              className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold ${
+              className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#3A2418] text-white'
@@ -576,7 +576,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
               type="button"
               disabled={unlockedClues >= 3}
               onClick={() => setUnlockedClues((c) => Math.min(3, c + 1))}
-              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold disabled:opacity-45 ${
+              className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold disabled:opacity-45 ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
@@ -594,7 +594,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
               <button
                 type="button"
                 onClick={handleSimulateStep}
-                className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
+                className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
                   isDrink
                     ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                     : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'
@@ -609,7 +609,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
               href={`https://www.google.com/maps/dir/?api=1&destination=${targetVenue.coordinates.lat},${targetVenue.coordinates.lng}&travelmode=walking`}
               target="_blank"
               rel="noopener noreferrer"
-              className={`btn-press inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
+              className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2]/85 hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#6E5649] hover:text-[#3A2418]'
@@ -667,7 +667,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
             <button
               type="button"
               onClick={() => onSelectRestaurant(targetVenue)}
-              className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold ${
+              className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2.5 rounded-[4px] text-[13px] font-bold ${
                 isDrink
                   ? 'bg-[#F2A33A] text-[#17382C]'
                   : 'bg-[#3A2418] text-white'
@@ -679,7 +679,7 @@ export const MysteryDirections: React.FC<MysteryDirectionsProps> = ({
             <button
               type="button"
               onClick={startMystery}
-              className={`btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
+              className={`btn-press inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2.5 rounded-[4px] border text-[13px] font-semibold ${
                 isDrink
                   ? 'border-[#2D5947] text-[#F4EEE2] hover:border-[#F2A33A]'
                   : 'border-[#D6CFC5] text-[#3A2418] hover:border-[#3A2418]'

@@ -73,5 +73,6 @@ Deschide [http://localhost:3000](http://localhost:3000) (`TopFood`), [http://loc
 - [Backend — ghid de integrare](docs/BACKEND.md) — funcțiile `@tftd/api` folosite de frontend și worker, format răspunsuri și erori
 - [Ghid demo (3–5 minute)](docs/DEMO.md) — scenariu pas cu pas cu conturi și URL-uri reale
 - [Deploy în producție](docs/DEPLOY.md) — PostgreSQL + `pgvector`, Next.js, worker `croner`, checklist producție
-- [Limbaj vizual & UI](design/README.md) — ghid în română (+ [Design Language Spec](design/design-language.md) în engleză)
+- [Limbaj vizual & UI](design/README.md) — ghid în română (+ [Design Language Spec](design/design-language.md) în engleză și [design/tokens.json](design/tokens.json))
+- [Android Native Porting Guide](docs/ANDROID-PORT.md) — contractul REST `/api/v1/*` ([OpenAPI 3.1](docs/openapi-v1.json)), autentificare `Bearer`, App Links și mapare ecrane Kotlin/Compose
 - [Ghid de contribuție](CONTRIBUTING.md) și [CLAUDE.md](CLAUDE.md) — convenții de cod, testare și structură
