@@ -6,24 +6,24 @@ Compared `docs/ARHITECTURA.md` (the spec) with the code on `oli` (14 Nov 2026). 
 
 | # | Feature | What exists | What's missing |
 | --- | --- | --- | --- |
-| 1 | **SEO URLs for leaderboard, categories, weekend, profiles** | `leaderboardPage`, `cityPage({category})`, `weekendEvents`, `userProfile` in `@tftd/api`; the shell shows these as in-app views | `/topfood/timisoara/top-luna` (+ `/2026-10`), `/…/categorie/pizza`, `/topdrink/timisoara/weekend`, `/u/{username}` all return **404**. Add `page.tsx` routes + sitemap entries |
-| 2 | **Paste a TikTok/Instagram link as a user** (MVP item 7 for users) | `submitSocialLink` in the API; owners can add videos (`actions-videos.ts`) | No user-facing "Lipește link" form on the venue page |
-| 3 | **Employee accepts the invite** (GDPR rule 7) | `owner.respondToInvite`, `owner.pendingInvites` | No screen where the invited employee accepts/declines or leaves the team |
-| 4 | **Ad banners** (`SlotReclamă`) | `ad_slots` table + `monetization` serves them | Never rendered on the city page; no admin form to create one |
-| 5 | **Saved venues ("vreau să merg")** | Saved in `localStorage` only | Not stored per account in the DB, lost on another device |
-| 6 | **Edit / delete own review** | — | Spec lists "scrie și editează review"; there's no `editReview` |
-| 7 | **Leaderboard share image** | Monthly top is computed and frozen | No Instagram/TikTok image (Next `ImageResponse` / `opengraph-image.tsx`); no Open Graph images on venue pages either |
-| 8 | **Monthly titles in UI** | `Revelația lunii`, `Localnicul lunii` computed in `packages/leaderboard` | Check they're shown; "Influencerul lunii" isn't computed |
+| 1 | ✅ **SEO URLs for leaderboard, categories, weekend, profiles** | `leaderboardPage`, `cityPage({category})`, `weekendEvents`, `userProfile` in `@tftd/api`; the shell shows these as in-app views | **Done:** routes under `apps/web/src/app/{topfood,topdrink}/timisoara/` (`top-luna`, `top-luna/[month]`, `categorie/[category]`, `weekend`), `u/[username]`, `sitemap.ts` |
+| 2 | ✅ **Paste a TikTok/Instagram link as a user** (MVP item 7 for users) | `submitSocialLink` in the API; owners can add videos (`actions-videos.ts`) | **Done:** `apps/web/src/components/SocialLinks.tsx` |
+| 3 | ✅ **Employee accepts the invite** (GDPR rule 7) | `owner.respondToInvite`, `owner.pendingInvites` | **Done:** `ProfileAccountExtras.tsx` + `respondToInvite` |
+| 4 | ✅ **Ad banners** (`SlotReclamă`) | `ad_slots` table + `monetization` serves them | **Done:** `adsFor` in `packages/api/src/pages.ts`; create/delete in `/admin` |
+| 5 | ✅ **Saved venues ("vreau să merg")** | Saved in `localStorage` only | **Done:** `saved_venues` table, `AccountClient.tsx` |
+| 6 | ✅ **Edit / delete own review** | — | **Done:** `editReview` / `deleteReview` in `packages/api/src/actions.ts` |
+| 7 | ✅ **Leaderboard share image** | Monthly top is computed and frozen | **Done:** `opengraph-image.tsx` (Instagram/TikTok image and Open Graph images) |
+| 8 | ✅ **Monthly titles in UI** | `Revelația lunii`, `Localnicul lunii` computed in `packages/leaderboard` | **Done** |
 
 ## B. Medium (new logic, still hackathon-sized)
 
 | # | Feature | Notes |
 | --- | --- | --- |
 | 9 | ~~**Visit verified by receipt photo** (×1.3 weight)~~ | **Done (14 Nov):** "Sunt aici acum" GPS check-in at the venue + receipt photo → `/admin` queue, badge on reviews, count in "Cum se calculează?" |
-| 10 | **pgvector for fake-review similarity** | `reviews.embedding vector(384)` column exists but is never filled or queried; similarity is a plain text comparison in `review-analysis/rules.ts` |
-| 11 | **Owner stats: views + score history** | Spec wants views and the score's evolution over time; no page-view tracking or score snapshots table |
-| 12 | **Admin: suspicious accounts** | Spec lists it in the admin queue; only reports, claims, matches and trap appeals exist |
-| 13 | **Rate limiting on login / vibe** | ~~Reviews~~ done (14 Nov, anti-bot system, see `docs/ANTI-BOT.md`); login, register and vibe still unlimited |
+| 10 | ✅ **pgvector for fake-review similarity** | **Done:** pgvector similarity in `packages/review-analysis` (previously the `embedding` column was unused and similarity was a plain text comparison) |
+| 11 | ✅ **Owner stats: views + score history** | **Done:** `packages/owner/src/owner.ts` |
+| 12 | ✅ **Admin: suspicious accounts** | **Done:** in `/admin` |
+| 13 | **Rate limiting on login / vibe** | Reviews done (14 Nov, anti-bot system, see `docs/ANTI-BOT.md`). Login done (`packages/accounts/src/auth.ts`); register and vibe still unlimited |
 | 14 | **Influencer verification** | `verified` link flag exists but no OAuth with TikTok/Instagram; follower count is manual |
 
 ## C. Post-hackathon (spec says out of scope now)
@@ -35,8 +35,12 @@ Compared `docs/ARHITECTURA.md` (the spec) with the code on `oli` (14 Nov 2026). 
 | 17 | Owner connections: Google Business Profile, Facebook, Instagram, TikTok | OAuth apps + review import |
 | 18 | Stripe for partnerships (Basic/Highlight) + invoices | Stripe keys; now `buyPartnership` is free |
 | 19 | Scheduled jobs in production | Worker on Railway/Render or Vercel Cron (see `docs/DEPLOY.md`) |
-| 20 | Real Timișoara venues | `GOOGLE_PLACES_API_KEY`, then `npm run import:real` |
+| 20 | ✅ Real Timișoara venues | **Done:** `seed/data/google-snapshot.json`, loaded by `npm run seed`; no Google key needed |
 | 21 | ML fraud model, more cities, reservations, "Top Pass" | — |
+
+## Also implemented
+
+- Social-media discovery (YouTube/Brave/Google CSE, `npm run import:social`, needs IMPORT_CONFIRM=da) — implemented on branch adi, PR pending.
 
 ## Bug fixed while setting up
 
@@ -58,6 +62,6 @@ topfood-db start
 npm run dev -w @topfood/web       # http://localhost:3000
 ```
 
-Done already: `npm install`, `.env` (with a generated `SESSION_SECRET`), `npm run db:migrate`, `npm run seed` (30 venues, 821 reviews, 82 users), `seed/test-accounts.ts`. `npm test` → 93/93 pass, `npm run typecheck` → clean.
+Done already: `npm install`, `.env` (with a generated `SESSION_SECRET`), `npm run db:migrate`, `npm run seed` (184 real venues and 919 Google reviews from `seed/data/google-snapshot.json`), optional `npm run seed:dev` (184 DevAccount test reviews), `seed/test-accounts.ts`. `npm test` → ~208 tests passing, `npm run typecheck` → clean.
 
-Test logins (local DB only): `test.user` / `test.owner` / `test.admin` (see `docs/DEMO.md`). The seed has no generated users or reviews.
+Test logins (local DB only): `test.user` / `test.owner` / `test.admin` (see `docs/DEMO.md`). Generated reviews come only from the optional `npm run seed:dev`.
