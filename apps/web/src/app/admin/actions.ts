@@ -107,3 +107,24 @@ export async function removeSocialLink(data: FormData) {
   revalidatePath('/admin');
   revalidatePath('/', 'layout');
 }
+
+/** Demo: pune un local la „Sponsorizat” fără plată (până la Stripe). Scorul și topul nu se schimbă. */
+export async function grantPartnership(data: FormData) {
+  const id = await adminId();
+  const venueId = String(data.get('venueId') ?? '');
+  const plan = data.get('plan') === 'basic' ? 'basic' : 'highlight';
+  const days = Number(data.get('days') ?? 30);
+  if (!venueId) throw new Error('Alege un local.');
+  await monetization.grantDemoPartnership(getDb(), id, venueId, plan, days);
+  revalidatePath('/admin');
+  revalidatePath('/', 'layout');
+}
+
+export async function cancelPartnership(data: FormData) {
+  const id = await adminId();
+  const partnershipId = String(data.get('id') ?? '');
+  if (!partnershipId) throw new Error('Parteneriat lipsă.');
+  await monetization.adminCancelPartnership(getDb(), id, partnershipId);
+  revalidatePath('/admin');
+  revalidatePath('/', 'layout');
+}
