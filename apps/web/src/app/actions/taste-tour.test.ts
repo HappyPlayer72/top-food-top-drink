@@ -1,7 +1,8 @@
 import { afterEach, expect, test, vi } from 'vitest';
 vi.mock('../../lib/server/db', () => ({ getDb: vi.fn() }));
 import { getDb } from '../../lib/server/db';
-import { getTasteTourGoogleData, PRICE_BANDS, WALK } from './taste-tour';
+import { getTasteTourGoogleData } from './taste-tour';
+import { PRICE_BANDS, WALK } from '../../lib/tasteTourEstimate';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.mocked(getDb).mockReset(); });
 

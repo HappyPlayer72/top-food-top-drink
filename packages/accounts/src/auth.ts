@@ -22,10 +22,30 @@ export async function verifyPassword(password: string, stored: string): Promise<
 
 const USERNAME = /^[a-z0-9._]{3,30}$/;
 
+/** Conturi noi permise de pe același dispozitiv (amprenta din site) într-o oră. */
+export const MAX_REGISTRATIONS = 5;
+export const REGISTER_WINDOW_MS = 60 * 60_000;
+const registrations = new Map<string, number[]>();
+
+/** Resetează limita la înregistrare (folosit în teste). */
+export function resetRegisterRateLimit() {
+  registrations.clear();
+}
+
 export async function register(
   db: Db,
   input: { username: string; displayName: string; password: string; email?: string; phone?: string; interests?: string[] },
+  opts: { clientKey?: string | null; now?: Date } = {},
 ) {
+  const now = opts.now ?? new Date();
+  if (opts.clientKey) {
+    const recent = (registrations.get(opts.clientKey) ?? []).filter((t) => t > now.getTime() - REGISTER_WINDOW_MS);
+    if (recent.length >= MAX_REGISTRATIONS) {
+      registrations.set(opts.clientKey, recent);
+      throw rateLimited("Prea multe conturi noi de pe acest dispozitiv. Încearcă din nou peste o oră.");
+    }
+    registrations.set(opts.clientKey, [...recent, now.getTime()]);
+  }
   const interests = parseInterests(input.interests ?? []);
   const username = input.username.trim().toLowerCase();
   if (!USERNAME.test(username)) throw invalid("Numele de utilizator: 3–30 caractere, doar litere mici, cifre, punct și underscore.");

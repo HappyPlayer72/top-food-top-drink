@@ -66,7 +66,7 @@ export async function registerUser(input: { name: string; email: string; passwor
       email,
       password: input.password,
       interests: input.interests ?? [],
-    });
+    }, { clientKey: await clientHash() });
     await setSession(u.id);
     return { ok: true, user: (await toUserAccount(getDb(), u.id))! };
   } catch (e) {

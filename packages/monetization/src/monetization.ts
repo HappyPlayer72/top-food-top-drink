@@ -184,3 +184,39 @@ export async function deleteAdSlot(db: Db, adminId: string, slotId: string) {
   if (!deleted) throw notFound("Slotul de reclamă");
   return deleted;
 }
+
+/**
+ * Demo, până la Stripe: adminul pune un local la „Sponsorizat” fără plată (parteneriat marcat plătit).
+ * Aceleași reguli ca la cumpărare: o capcană turistică sau un local cu review-uri suspecte nu poate fi sponsorizat.
+ * Nu atinge scorul sau locul în top (regula 1): sponsorizatele apar doar în banda lor.
+ */
+export async function grantDemoPartnership(db: Db, adminId: string, venueId: string, plan: "basic" | "highlight" = "highlight", days = 30, now = new Date()) {
+  await assertMonetizationAdmin(db, adminId);
+  if (!Number.isInteger(days) || days < 1 || days > 365) throw invalid("Durata e între 1 și 365 de zile.");
+  if (plan === "highlight") {
+    const reason = await highlightBlockedReason(db, venueId, now);
+    if (reason) throw forbidden(reason);
+  }
+  const [p] = await db
+    .insert(partnerships)
+    .values({ venueId, plan, startsAt: now, endsAt: new Date(now.getTime() + days * 86_400_000), paymentStatus: "paid" })
+    .returning();
+  return p!;
+}
+
+/** Parteneriatele active sau în așteptare, pentru /admin. */
+export async function listPartnerships(db: Db, adminId: string, now = new Date()) {
+  await assertMonetizationAdmin(db, adminId);
+  return db
+    .select({ id: partnerships.id, plan: partnerships.plan, status: partnerships.paymentStatus, endsAt: partnerships.endsAt, venue: { id: venues.id, name: venues.name, vertical: venues.vertical } })
+    .from(partnerships)
+    .innerJoin(venues, eq(venues.id, partnerships.venueId))
+    .where(and(gt(partnerships.endsAt, now), sql`${partnerships.paymentStatus} in ('paid', 'pending')`))
+    .orderBy(desc(partnerships.startsAt));
+}
+
+/** Adminul oprește un parteneriat (sponsorizarea dispare din bandă). */
+export async function adminCancelPartnership(db: Db, adminId: string, partnershipId: string) {
+  await assertMonetizationAdmin(db, adminId);
+  await db.update(partnerships).set({ paymentStatus: "cancelled" }).where(eq(partnerships.id, partnershipId));
+}

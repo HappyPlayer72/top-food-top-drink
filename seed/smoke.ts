@@ -9,7 +9,7 @@
  */
 import { sql } from "drizzle-orm";
 import {
-  accounts, addManually, cityPage, createDb, loyalty, moderation, owner, searchPlaces, ServiceError, submitSocialLinkNow, submitVibe, toggleHelpful,
+  accounts, addManually, cityPage, createDb, loyalty, moderation, monetization, owner, searchPlaces, ServiceError, submitSocialLinkNow, submitVibe, toggleHelpful,
   venuePage, writeReview,
 } from "@tftd/api";
 import { socialSubmissions, type Db } from "@tftd/db";
@@ -152,6 +152,18 @@ await root
     ok("test.admin aprobă → localul devine activ", (await db.query.venues.findFirst({ where: (v, { eq }) => eq(v.id, added.venueId) }))?.status === "active");
     const userDenied = await fails(moderation.queue(db, user.id));
     ok("test.user nu vede coada de moderare", userDenied instanceof ServiceError);
+
+    // ---------- Sponsorizat (demo): apare în bandă, dar scorul și locul în top rămân aceleași (regula 1) ----------
+    const before = await cityPage(db, { citySlug: "timisoara", vertical: "food", limit: 200 });
+    const target = before.top.find((v) => (v.touristTrapIndex ?? 0) < 80)!;
+    const userGrant = await fails(monetization.grantDemoPartnership(db, user.id, target.id));
+    ok("doar adminul poate sponsoriza (demo)", userGrant instanceof ServiceError);
+    await monetization.grantDemoPartnership(db, admin.id, target.id, "highlight", 30);
+    const afterSponsor = await cityPage(db, { citySlug: "timisoara", vertical: "food", limit: 200 });
+    ok("localul sponsorizat apare în banda Sponsorizat", afterSponsor.sponsored.some((s) => s.slug === target.slug), target.name);
+    const rankBefore = before.top.findIndex((v) => v.id === target.id);
+    const rankAfter = afterSponsor.top.findIndex((v) => v.id === target.id);
+    ok("sponsorizarea nu schimbă scorul sau locul în top", rankBefore === rankAfter && before.top[rankBefore]!.honestScore === afterSponsor.top[rankAfter]!.honestScore, `locul ${rankBefore + 1}`);
 
     // ---------- Link social care a eșuat o dată se poate retrimite (cere internet) ----------
     const retryUrl = "https://www.youtube.com/watch?v=jNQXAC9IVRw";

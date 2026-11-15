@@ -1,7 +1,7 @@
 /** Cele 5 joburi programate (apps/worker/README.md). Fiecare poate rula și o singură dată din linia de comandă. */
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { cities, reviewSubmissions, reviews, socialSubmissions, venues, visitProofs, type Db } from "@tftd/db";
-import { discoverVenues, google, linkKnownVenues, processSubmission, refreshCity } from "@tftd/ingestion";
+import { discoverSocialLinks, discoverVenues, google, linkKnownVenues, processSubmission, refreshCity, socialSearch } from "@tftd/ingestion";
 import { resolveCandidates } from "@tftd/matching";
 import { freezeMonth, lastMonth } from "@tftd/leaderboard";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
@@ -45,7 +45,38 @@ const toRefreshCount = async (db: Db, freshHours: number) =>
   ((await db.execute(sql`select count(*)::int as n from venue_sources s where s.source = 'google' and not exists (
       select 1 from reviews r where r.venue_id = s.venue_id and r.source = 'google' and r.created_at > now() - make_interval(hours => ${freshHours}))`)) as unknown as [{ n: number }])[0].n;
 
+/** Căutarea pe social media: aceleași reguli ca importul Google (confirmare, bază locală, plafon SOCIAL_MAX_REQUESTS). */
+async function socialGuard(estimate: number): Promise<boolean> {
+  const providers = socialSearch.activeProviders();
+  if (!providers.length) {
+    log("cauta-social", "sărit: nicio sursă configurată (GOOGLE_PLACES_API_KEY pentru YouTube, BRAVE_SEARCH_API_KEY, GOOGLE_CSE_ID)");
+    return false;
+  }
+  const host = new URL(process.env.DATABASE_URL ?? "postgres://localhost").hostname;
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(host) && process.env.IMPORT_TARGET !== "online") {
+    log("cauta-social", "oprit: DATABASE_URL nu e baza locală. Pune IMPORT_TARGET=online doar dacă vrei asta.");
+    return false;
+  }
+  const max = Number(process.env.SOCIAL_MAX_REQUESTS ?? 200);
+  if (process.env.IMPORT_CONFIRM !== "da") {
+    log("cauta-social", `simulare: ar face cam ${estimate * providers.length} căutări (${providers.join(", ")}; plafon ${max}). Nu am trimis nimic. Ca să ruleze: IMPORT_CONFIRM=da`);
+    return false;
+  }
+  socialSearch.limitSocialRequests(max);
+  return true;
+}
+
 export const JOBS = {
+  /** La cerere (sau săptămânal): postări pe social media despre fiecare local, prin API-uri oficiale. */
+  async "cauta-social"(db: Db) {
+    const staleDays = Number(process.env.SOCIAL_STALE_DAYS ?? 7);
+    const maxVenues = process.env.SOCIAL_MAX_VENUES ? Number(process.env.SOCIAL_MAX_VENUES) : undefined;
+    const [{ n }] = (await db.execute(sql`select count(*)::int as n from venues where status = active and (social_searched_at is null or social_searched_at < now() - make_interval(days => ${staleDays}))`)) as unknown as [{ n: number }];
+    if (!(await socialGuard(Math.min(n, maxVenues ?? n)))) return;
+    for (const city of await citySlugs(db)) log("cauta-social", city, await discoverSocialLinks(db, city, { staleDays, maxVenues }));
+    log("cauta-social", `căutări trimise: ${socialSearch.socialRequestsUsed()}`);
+  },
+
   /** Săptămânal, per oraș: locale noi de pe Google Places. */
   async "descopera-locale"(db: Db) {
     // IMPORT_MAX_PAGES: câte pagini de 20 de rezultate per căutare (implicit 1 = import mic și ieftin)

@@ -213,7 +213,7 @@ export async function venuePage(
     .orderBy(desc(posts.publishAt))
     .limit(10);
   const videos = await db
-    .select({ url: socialSubmissions.url, platform: socialSubmissions.platform, analysis: socialSubmissions.analysis })
+    .select({ url: socialSubmissions.url, platform: socialSubmissions.platform, analysis: socialSubmissions.analysis, discoveredVia: socialSubmissions.discoveredVia, title: socialSubmissions.title })
     .from(socialSubmissions)
     .where(and(eq(socialSubmissions.venueId, venue.id), eq(socialSubmissions.status, "processed")))
     .orderBy(desc(socialSubmissions.createdAt))

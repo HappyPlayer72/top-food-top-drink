@@ -11,12 +11,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { cities, createDb, reviews, touristZones, venueSources, venues, type Db, type OpeningHours } from "@tftd/db";
+import { cities, createDb, reviews, socialSubmissions, touristZones, venueSources, venues, type Db, type OpeningHours } from "@tftd/db";
 import { analyzeVenueReviews } from "@tftd/review-analysis";
 import { recalculateCity } from "@tftd/scoring";
 import { SEED_VENUES } from "./venues.ts";
 import { createTestAccounts } from "./test-accounts.ts";
 import type { GoogleSnapshot, SnapshotVenue } from "./export-google.ts";
+import type { SocialSnapshot } from "./export-social.ts";
 
 const SNAPSHOT = join(import.meta.dirname, "data", "google-snapshot.json");
 function loadSnapshot(): GoogleSnapshot | null {
@@ -118,6 +119,19 @@ async function main() {
       phone: s.phone, website: s.website, priceLevel: s.priceLevel, openingHours: (s.openingHours as OpeningHours | null) ?? null,
     });
     await loadGoogle(db, id, s);
+  }
+
+  // ---------- Linkurile de social media găsite automat (seed/data/social-snapshot.json), fără nicio căutare ----------
+  const SOCIAL = join(import.meta.dirname, "data", "social-snapshot.json");
+  if (existsSync(SOCIAL)) {
+    const social = JSON.parse(readFileSync(SOCIAL, "utf8")) as SocialSnapshot;
+    const ids = new Map((await db.select({ id: venues.id, slug: venues.slug, vertical: venues.vertical }).from(venues)).map((v) => [`${v.vertical}/${v.slug}`, v.id]));
+    const rows = social.links
+      .filter((l) => ids.has(`${l.vertical}/${l.venueSlug}`))
+      .map((l) => ({ venueId: ids.get(`${l.vertical}/${l.venueSlug}`)!, url: l.url, platform: l.platform, title: l.title, discoveredVia: l.via, analysis: l.analysis, status: "processed" as const }));
+    if (rows.length) await db.insert(socialSubmissions).values(rows).onConflictDoNothing();
+    await db.update(venues).set({ socialSearchedAt: new Date(social.exportedAt) });
+    console.log(`Social media: ${rows.length} linkuri din snapshot.`);
   }
 
   // ---------- Analiza review-urilor și scorurile (local, fără Google și fără Claude) ----------

@@ -67,6 +67,17 @@ Cheia Google e una singură și costă bani peste pragul gratuit (~1.000 de cere
 
 ---
 
+## 3b. Linkuri de pe social media (TikTok, Instagram, Facebook, YouTube)
+
+Pentru fiecare local, `npm run import:social` caută postări prin API-uri oficiale (fără scraping): **YouTube Data API v3**, **Brave Search API** și **Google Custom Search**. Păstrează max 3 linkuri care chiar pomenesc localul și Timișoara și le pune pe pagina localului, la „Pe social media”, cu „Găsit automat pe …” și eticheta „reclamă?”. Un admin poate scoate un link greșit din `/admin`.
+
+- Aceleași protecții ca la Google: fără `IMPORT_CONFIRM=da` doar simulează; pe o bază online cere `IMPORT_TARGET=online`; plafon `SOCIAL_MAX_REQUESTS` (implicit 200); un local nu se caută din nou timp de `SOCIAL_STALE_DAYS` (implicit 7).
+- Chei:
+  - YouTube: activează „YouTube Data API v3” în proiectul cheii Google (10.000 de unități pe zi gratuit; o căutare = 100).
+  - Brave: cont pe [brave.com/search/api](https://brave.com/search/api), planul gratuit, cheia în `BRAVE_SEARCH_API_KEY`.
+  - Google Custom Search: un motor pe [programmablesearchengine.google.com](https://programmablesearchengine.google.com), cu ID-ul în `GOOGLE_CSE_ID`, plus „Custom Search API” activat. Dacă Google nu-l mai acceptă, sursa e sărită.
+- După rulare: `npx tsx --env-file-if-exists=.env seed/export-social.ts` salvează linkurile în `seed/data/social-snapshot.json`, iar `npm run seed` le încarcă fără chei.
+
 ## 4. Worker-ul (după hackathon)
 
 Pe Vercel nu stă pornit permanent. Pentru demo nu e nevoie. După: `npm run start -w @tftd/worker` pe Railway/Render/Fly, cu aceleași variabile și `TZ=Europe/Bucharest`. Joburile Google din el se opresc singure fără `IMPORT_CONFIRM=da`, deci un worker pornit nu cheltuie nimic fără să vrei.

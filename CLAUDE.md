@@ -60,6 +60,12 @@ npm run build:web
 - **UI language is Romanian** across all user-facing copy, labels, errors (`ServiceError` messages), and categories. Code comments and technical docs follow module conventions (Romanian in backend/product docs, English in `CLAUDE.md` and `design/design-language.md`).
 - **Testing**: Co-located `*.test.ts` files run with Vitest (`vitest.config.ts`). Keep domain logic pure where possible so unit tests run without a live database.
 
+### Data
+
+- Real venues and reviews come from `seed/data/google-snapshot.json`: `npm run seed -- --reset`, no API keys needed.
+- `npm run import:real` and `npm run import:social` call paid APIs and only run with `IMPORT_CONFIRM=da`.
+- Never commit `.env` (gitignored). `.env.example` lists the keys.
+
 ## Key Documentation References
 
 - Architecture & Data Model: [`docs/ARHITECTURA.md`](docs/ARHITECTURA.md)
