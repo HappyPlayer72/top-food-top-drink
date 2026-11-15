@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
-import { type Restaurant, formatScore } from '../types';
+import { type Restaurant, formatScore, priceText } from '../types';
 import { CrowdMeter, LocalnicBadge, MugScore, PlateScore } from './BrandPrimitives';
 
 /**
@@ -76,8 +76,8 @@ export function FoodFeaturedCard({ venue, onSelect, badge, themed, children }: C
               <h3 className="font-display text-[24px] sm:text-[30px] leading-[1.05] text-[#3A2418] line-clamp-2 sm:truncate">{venue.name}</h3>
             </div>
             <div className="text-[13px] text-[#6E5649]">
-              {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood},{' '}
-              {venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}
+              {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood}
+              {priceText(venue, ', ')}
             </div>
           </div>
           <ScoreLabel themed={themed}>
@@ -133,8 +133,8 @@ export function FoodRow({ venue, onSelect, rank, staggerIdx, themed, children }:
         <div className="min-w-0 flex-1 space-y-1">
           <div className="font-bold text-[16px] sm:text-[17px] text-[#3A2418] leading-snug line-clamp-2 sm:truncate">{venue.name}</div>
           <div className="text-[12px] sm:text-[13px] text-[#6E5649] truncate">
-            {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood},{' '}
-            {venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}
+            {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood}
+            {priceText(venue, ', ')}
           </div>
           {children ?? (
             <>
@@ -183,7 +183,7 @@ export function DrinkFeaturedCard({ venue, onSelect, badge, themed, children }: 
               <h3 className="font-display text-[22px] sm:text-[26px] leading-[1.05] text-[#F4EEE2] line-clamp-2 sm:truncate">{venue.name}</h3>
             </div>
             <div className="text-[13px] text-[#F4EEE2]/75 leading-snug">
-              {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood}. {venue.priceRangeLabel}
+              {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood}{priceText(venue, '. ')}
             </div>
           </div>
           <ScoreLabel themed={themed} dark>
@@ -235,7 +235,7 @@ export function DrinkRow({ venue, onSelect, rank, staggerIdx, themed, children }
         <div className="min-w-0 flex-1">
           <div className="font-bold text-[16px] sm:text-[17px] leading-snug text-[#F4EEE2] line-clamp-2 sm:truncate">{venue.name}</div>
           <div className="text-[12px] sm:text-[13px] text-[#F4EEE2]/75 mt-0.5 leading-snug">
-            {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood}. {venue.priceRangeLabel}
+            {venue.shortCategory ?? venue.cuisine}, {venue.shortNeighborhood ?? venue.neighborhood}{priceText(venue, '. ')}
           </div>
           {children ?? (
             <>

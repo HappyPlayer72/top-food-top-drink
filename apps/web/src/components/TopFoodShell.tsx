@@ -995,6 +995,7 @@ export function TopFoodShell({
             onBack={() => navigateToSection('top')}
             onSelectRestaurant={(r) => setSelectedRestaurantId(r.id)}
             signedIn={backendOnline && !!currentUser}
+            userName={backendOnline ? currentUser?.name : null}
             onRequireLogin={() => handleOpenLogin()}
           />
         )}

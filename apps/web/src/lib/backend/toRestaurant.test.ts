@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Restaurant } from '../../types';
+import { priceText, type Restaurant } from '../../types';
 import { groupMenu, toRestaurant, toTopReviewer, toWeekendEvent, trapTier } from './toRestaurant';
 
 type VenuePage = Parameters<typeof toRestaurant>[0];
@@ -148,4 +148,14 @@ it('groupMenu: categoriile în ordinea primei apariții, fără categorie → ti
     ['Preparate', ['Pâine']],
   ]);
   expect(groups[0]!.items.map((i) => i.photoUrl)).toEqual(['/api/menu-photo/Burtă', undefined]);
+});
+
+it('fără prețuri în lei: arată nivelul de preț Google, nu „~0 lei”', () => {
+  const p = page();
+  const venue = { ...p.venue, priceMinLei: null, priceMaxLei: null };
+  const ctx = { now, categoryAvgPriceRon: null, isSponsored: false };
+  const mid = toRestaurant({ ...p, venue: { ...venue, priceLevel: 2 } } as VenuePage, ctx);
+  expect([mid.priceRangeLabel, mid.priceTier, priceText(mid, ', ')]).toEqual(['Preț mediu', '$$', ', Preț mediu']);
+  const unknown = toRestaurant({ ...p, venue: { ...venue, priceLevel: null } } as VenuePage, ctx);
+  expect(priceText(unknown, ', ')).toBe('');
 });

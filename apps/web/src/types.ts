@@ -462,6 +462,12 @@ export function formatScore(score: number): string {
   return score.toFixed(1).replace('.', ',');
 }
 
+/** Prețul afișat: interval/etichetă din date, altfel media; gol când nu știm nimic (niciodată „~0 lei”). */
+export function priceText(r: Pick<Restaurant, 'priceRangeLabel' | 'avgMealPriceRon'>, prefix = ''): string {
+  const t = r.priceRangeLabel ?? (r.avgMealPriceRon > 0 ? `~${r.avgMealPriceRon} lei` : '');
+  return t ? prefix + t : '';
+}
+
 /** Scorul Onest afișat: „—” cât timp localul nu are review-uri (în formulă scorul nu ajunge niciodată la 0). */
 export function formatHonest(score: number): string {
   return score > 0 ? formatScore(score) : '—';

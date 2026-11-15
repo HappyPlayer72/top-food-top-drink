@@ -38,6 +38,7 @@ import {
   Review,
   UserAccount,
   formatHonest, formatScore,
+  priceText,
 } from '../types';
 import {
   getTodayDayName,
@@ -811,8 +812,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({
                   }`}
                 >
                   {restaurant.shortCategory ?? restaurant.cuisine},{' '}
-                  {restaurant.shortNeighborhood ?? restaurant.neighborhood},{' '}
-                  {restaurant.priceRangeLabel ?? `~${restaurant.avgMealPriceRon} lei`}.{' '}
+                  {restaurant.shortNeighborhood ?? restaurant.neighborhood}
+                  {priceText(restaurant, ', ')}.{' '}
                   {restaurant.openUntilLabel ?? restaurant.hours}
                 </p>
 

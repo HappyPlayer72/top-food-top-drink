@@ -247,6 +247,7 @@ export async function venuePage(
       openLabel: open.label,
       priceMinLei: venue.priceMinLei,
       priceMaxLei: venue.priceMaxLei,
+      priceLevel: venue.priceLevel,
       drinkPrices: venue.drinkPrices,
       location: { lat: venue.location.y, lng: venue.location.x },
       photos: venue.photos,

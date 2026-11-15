@@ -11,7 +11,7 @@ import {
   Sparkles,
   Utensils,
 } from 'lucide-react';
-import { Restaurant, Vertical, formatHonest, formatScore } from '../../types';
+import { Restaurant, Vertical, formatHonest, formatScore, priceText } from '../../types';
 
 export interface PreferenceRecommenderProps {
   vertical: Vertical;
@@ -52,7 +52,7 @@ function matchesContext(r: Restaurant, context: ContextChoice): boolean {
 
   if (context === 'quick-lunch') {
     return (
-      r.avgMealPriceRon <= 55 ||
+      (r.avgMealPriceRon > 0 && r.avgMealPriceRon <= 55) ||
       hay.includes('prânz') ||
       hay.includes('rapid') ||
       hay.includes('street') ||
@@ -81,7 +81,7 @@ function matchesContext(r: Restaurant, context: ContextChoice): boolean {
 
 function matchesBudget(r: Restaurant, budget: BudgetChoice): boolean {
   if (budget === 'any') return true;
-  if (budget === 'budget') return r.priceTier === '$' || r.avgMealPriceRon <= 50;
+  if (budget === 'budget') return r.priceTier === '$' || (r.avgMealPriceRon > 0 && r.avgMealPriceRon <= 50);
   if (budget === 'mid') return r.priceTier === '$$';
   return r.priceTier === '$$$' || r.priceTier === '$$$$';
 }
@@ -120,7 +120,7 @@ function matchesVibe(r: Restaurant, vibe: VibeChoice | null): boolean {
       hay.includes('street') ||
       hay.includes('patiserie') ||
       hay.includes('sub 50') ||
-      r.avgMealPriceRon <= 45
+      (r.avgMealPriceRon > 0 && r.avgMealPriceRon <= 45)
     );
   }
   return (
@@ -624,8 +624,7 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
               </span>
               <span>· {currentPick.restaurant.cuisine}</span>
               <span>
-                · ~{currentPick.restaurant.avgMealPriceRon} lei (
-                {currentPick.restaurant.priceTier})
+                {priceText(currentPick.restaurant, '· ')}
               </span>
               <span className="inline-flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -740,8 +739,8 @@ export const PreferenceRecommender: React.FC<PreferenceRecommenderProps> = ({
                     <div className="text-[12px] opacity-75 truncate">
                       {alt.restaurant.shortNeighborhood ??
                         alt.restaurant.neighborhood}{' '}
-                      · {alt.restaurant.cuisine} · ~
-                      {alt.restaurant.avgMealPriceRon} lei
+                      · {alt.restaurant.cuisine}
+                      {priceText(alt.restaurant, ' · ')}
                     </div>
                   </button>
                 ))}

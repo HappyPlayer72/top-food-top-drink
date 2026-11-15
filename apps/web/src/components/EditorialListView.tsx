@@ -18,6 +18,7 @@ import {
   Vertical,
   WeekendEvent,
   formatHonest, formatScore,
+  priceText,
 } from '../types';
 import {
   AvertizareaCard,
@@ -372,7 +373,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         if (foodFilters.includes('deschis-acum') && !r.openNow) {
           return false;
         }
-        if (foodFilters.includes('sub-50-lei') && r.avgMealPriceRon > 50) {
+        if (foodFilters.includes('sub-50-lei') && !(r.avgMealPriceRon > 0 ? r.avgMealPriceRon <= 50 : r.priceTier === '$')) {
           return false;
         }
         if (foodFilters.includes('livrare') && !r.delivery?.available) {
@@ -547,9 +548,7 @@ export const EditorialListView: React.FC<EditorialListViewProps> = ({
         >
           {venue.shortCategory ?? venue.cuisine},{' '}
           {venue.shortNeighborhood ?? venue.neighborhood}
-          {isDrink
-            ? `. ${venue.priceRangeLabel}`
-            : `, ${venue.priceRangeLabel ?? `~${venue.avgMealPriceRon} lei`}`}
+          {priceText(venue, isDrink ? '. ' : ', ')}
         </div>
       </div>
       <span

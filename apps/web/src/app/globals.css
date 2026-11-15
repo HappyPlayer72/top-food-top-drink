@@ -1052,3 +1052,57 @@ html .tema-sticla.tema-iesiri { --tema: #F3B1D6; --tema-bg: #2A3F33; --tema-ink:
   border-color: #3A2418;
   color: #3A2418;
 }
+
+/* Jocurile de la masă (Scârnăvii): bon zimțat, ștampilă, cărți care se întorc, bombă care tremură. */
+.table-receipt {
+  /* mască de formă (marginea zimțată de jos), nu un gradient vizibil */
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 8px) no-repeat,
+    radial-gradient(circle 8px at 50% 0, #000 97%, transparent) bottom / 16px 8px repeat-x;
+  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 8px) no-repeat,
+    radial-gradient(circle 8px at 50% 0, #000 97%, transparent) bottom / 16px 8px repeat-x;
+}
+
+/* Culoare fixă în toate temele: carou pe hârtie (contrast ~6:1). */
+.table-stamp {
+  color: #B3261E;
+  border-color: #B3261E;
+  background-color: #FBF6EA;
+  animation: tableStampIn 260ms var(--ease-out) both;
+}
+
+@keyframes tableStampIn {
+  from { scale: 1.2; opacity: 0; }
+  to { scale: 1; opacity: 1; }
+}
+
+.table-flip { perspective: 600px; }
+.table-flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 450ms var(--ease-out);
+}
+.table-flip-inner.is-flipped { transform: rotateY(180deg); }
+.table-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.table-flip-front { transform: rotateY(180deg); }
+
+@keyframes tableShake {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  25% { translate: -3px 1px; rotate: -4deg; }
+  75% { translate: 3px -1px; rotate: 4deg; }
+}
+.table-shake-calm { animation: tableShake 700ms ease-in-out infinite; }
+.table-shake-fast { animation: tableShake 320ms ease-in-out infinite; }
+.table-shake-critical { animation: tableShake 140ms linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .table-stamp,
+  .table-shake-calm,
+  .table-shake-fast,
+  .table-shake-critical { animation: none; }
+  .table-flip-inner { transition: none; }
+}
