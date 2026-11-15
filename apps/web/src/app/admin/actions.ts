@@ -97,3 +97,13 @@ export async function decideReceipt(decision: string, data: FormData) {
   revalidatePath('/admin');
   revalidatePath('/', 'layout');
 }
+
+/** Scoate un link de social media găsit greșit de căutarea automată (nu mai apare pe pagina localului). */
+export async function removeSocialLink(data: FormData) {
+  const id = await adminId();
+  const submissionId = String(data.get('id') ?? '');
+  if (!submissionId) throw new Error('Link lipsă.');
+  await moderation.removeSocialLink(getDb(), id, submissionId);
+  revalidatePath('/admin');
+  revalidatePath('/', 'layout');
+}

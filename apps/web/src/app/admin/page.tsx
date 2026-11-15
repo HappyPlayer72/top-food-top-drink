@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { moderation, monetization, ServiceError, visits } from '@tftd/api';
-import { createAd, decideClaim, decideMatch, decideReceipt, decideReport, decideSuspicious, deleteAd } from './actions';
+import { createAd, decideClaim, decideMatch, decideReceipt, decideReport, decideSuspicious, deleteAd, removeSocialLink } from './actions';
 import { currentUserId, getDb } from './server';
 import { ClaimDetails, MatchDetails, ReceiptDetails, ReportDetails, SuspiciousAccountDetails } from './details';
 
@@ -14,12 +14,14 @@ export default async function AdminPage() {
   let items: Awaited<ReturnType<typeof moderation.queue>>;
   let ads: Awaited<ReturnType<typeof monetization.listAdSlots>>;
   let receipts: Awaited<ReturnType<typeof visits.receiptQueue>>;
+  let socialLinks: Awaited<ReturnType<typeof moderation.autoSocialLinks>>;
   try {
     const db = getDb();
-    [items, ads, receipts] = await Promise.all([
+    [items, ads, receipts, socialLinks] = await Promise.all([
       moderation.queue(db, userId),
       monetization.listAdSlots(db, userId),
       visits.receiptQueue(db, userId),
+      moderation.autoSocialLinks(db, userId),
     ]);
   } catch (error) {
     if (error instanceof ServiceError && error.code === 'forbidden') {
@@ -63,6 +65,15 @@ export default async function AdminPage() {
         {items.matches.map((m) => <article key={m.id} className="space-y-2 rounded border p-4"><MatchDetails match={m} />
           <form className="flex gap-2"><input type="hidden" name="id" value={m.id} /><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'confirm')}>Confirmă potrivirea</button><button className="rounded border px-3 py-2" formAction={decideMatch.bind(null, 'reject')}>Respinge</button></form>
         </article>)}
+      </section>
+      <section className="space-y-4" aria-labelledby="social"><h2 id="social" className="text-2xl font-bold">Linkuri de pe social media găsite automat</h2>
+        <p>Apar pe pagina localului cu „Găsit automat”. Scoate-l pe cel care nu e despre acest local.</p>
+        {!socialLinks.length && <p>Nu există linkuri găsite automat.</p>}
+        {socialLinks.length > 0 && <ul className="space-y-2">{socialLinks.map((l) => <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3">
+          <span className="min-w-0"><strong>{l.venue.name}</strong> · {l.platform}{l.title ? <>: {l.title}</> : null}<br />
+            <a className="break-all underline" href={l.url} target="_blank" rel="noopener noreferrer" aria-label={`Deschide postarea ${l.platform} pentru ${l.venue.name} (se deschide într-o filă nouă)`}>{l.url}</a></span>
+          <form action={removeSocialLink}><input type="hidden" name="id" value={l.id} /><button className="rounded border px-3 py-2">Scoate linkul<span className="sr-only"> pentru {l.venue.name}, {l.platform}{l.title ? `: ${l.title}` : ''}</span></button></form>
+        </li>)}</ul>}
       </section>
       <section className="space-y-4" aria-labelledby="claims"><h2 id="claims" className="text-2xl font-bold">Revendicări</h2>
         {!items.claims.length && <p>Nu există revendicări în așteptare.</p>}
